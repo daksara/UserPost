@@ -26,7 +26,12 @@ export default function ProfilePage() {
         <div className="profile-avatar" style={{ background: `hsl(${hue},60%,65%)` }}>
           {profile.username[0].toUpperCase()}
         </div>
-        <div className="profile-username">{profile.username}</div>
+        <div <div className="profile-username">
+          {profile.username}
+          {profile.is_verified && (
+            <span className="badge-official">Official</span>
+          )}
+        </div>
         <div className="profile-joined">Joined {new Date(profile.created_at).toLocaleDateString('en', { month: 'long', year: 'numeric' })}</div>
 
         <div className="profile-info-card">
