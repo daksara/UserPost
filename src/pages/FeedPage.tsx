@@ -63,6 +63,9 @@ function PostCard({ post, myId, onDelete, onComment, onDMClick }: {
         <div className="post-card__meta">
           <button className="post-card__username" onClick={() => !isOwn && onDMClick(post.profiles.username)}>
             {post.profiles.username}
+            {post.profiles.is_verified && (
+              <span className="badge-official">Official</span>
+            )}
           </button>
           <span className="post-card__time">{timeAgo(post.created_at)}</span>
         </div>
