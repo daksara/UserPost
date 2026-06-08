@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import {
-  getConversationList, getConversation, sendMessage, markMessagesRead,
-  softDeleteMessage, getUserByUsername, type Message, type Profile
+  getConversationList, getConversation, sendMessage, markMessagesRead, getUserByUsername, type Message, type Profile
 } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useRealtime } from '../hooks/useRealtime'
