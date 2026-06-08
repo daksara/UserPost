@@ -26,7 +26,7 @@ export default function ProfilePage() {
         <div className="profile-avatar" style={{ background: `hsl(${hue},60%,65%)` }}>
           {profile.username[0].toUpperCase()}
         </div>
-        <div <div className="profile-username">
+        <div className="profile-username">
           {profile.username}
           {profile.is_verified && (
             <span className="badge-official">Official</span>
