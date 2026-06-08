@@ -51,7 +51,7 @@ export interface Message {
 
 export async function signUp(username: string, password: string) {
   // Use username as email prefix — Supabase requires email format
-  const email = `${username.toLowerCase()}@userpost.app`
+  const email = `up.${username.toLowerCase()}@gmail.com`
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -62,7 +62,7 @@ export async function signUp(username: string, password: string) {
 }
 
 export async function signIn(username: string, password: string) {
-  const email = `${username.toLowerCase()}@userpost.app`
+  const email = `up.${username.toLowerCase()}@gmail.com`
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
   if (error) throw error
   return data
