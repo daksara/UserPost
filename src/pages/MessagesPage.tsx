@@ -163,7 +163,6 @@ export default function MessagesPage({ initialDM }: { initialDM?: string }) {
   const [convos, setConvos] = useState<Message[]>([])
   const [activePartner, setActivePartner] = useState<Profile | null>(null)
   const [composingDM, setComposingDM] = useState(false)
-  const prevInitialDM = useRef<string | undefined>(undefined)
 
   const fetchConvos = useCallback(async () => {
     if (!profile) return
