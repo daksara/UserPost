@@ -18,8 +18,8 @@ function timeAgo(iso: string) {
   return `${Math.floor(s / 86400)}d`
 }
 
-function Avatar({ username, size = 36 }: { username: string; size?: number }) {
-  return <UserAvatar username={username} size={size} />
+function Avatar({ username, size = 36, photoUrl }: { username: string; size?: number; photoUrl?: string | null }) {
+  return <UserAvatar username={username} size={size} photoUrl={photoUrl} />
 }
 
 // ── Thread View ────────────────────────────────────────────────────
@@ -79,7 +79,7 @@ function ThreadView({ partner, myId, onBack }: { partner: Profile; myId: string;
             <path d="M19 12H5M12 5l-7 7 7 7"/>
           </svg>
         </button>
-        <Avatar username={partner.username} size={32}/>
+        <Avatar username={partner.username} size={32} photoUrl={partner.photo_url}/>
         <span className="page-header__title">{partner.username}</span>
       </header>
 
@@ -274,7 +274,7 @@ function SwipeableConvoItem({
           cursor: 'pointer',
         }}
       >
-        <Avatar username={partner.username}/>
+        <Avatar username={partner.username} photoUrl={partner.photo_url}/>
         <div className="convo-item__info">
           <div className="convo-item__top">
             <span className="convo-item__name">{partner.username}</span>
