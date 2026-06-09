@@ -4,7 +4,7 @@ import { collection, onSnapshot } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import {
   getConversationList, getConversation, sendMessage, markMessagesRead,
-  getUserByUsername, type Message, type Profile
+  softDeleteMessage, getUserByUsername, type Message, type Profile
 } from '../lib/firebase'
 import { useAuth } from '../hooks/useAuth'
 import { useRealtime } from '../hooks/useRealtime'
@@ -27,6 +27,7 @@ function ThreadView({ partner, myId, onBack }: { partner: Profile; myId: string;
   const [messages, setMessages] = useState<Message[]>([])
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
+  const [selectedMsgId, setSelectedMsgId] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   const fetchMessages = useCallback(async () => {
@@ -61,6 +62,15 @@ function ThreadView({ partner, myId, onBack }: { partner: Profile; myId: string;
     }
   }
 
+  const handleDelete = async (msgId: string) => {
+    setSelectedMsgId(null)
+    try {
+      await softDeleteMessage(msgId, myId, partner.id)
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
   return (
     <div className="page page--thread">
       <header className="page-header">
@@ -76,12 +86,35 @@ function ThreadView({ partner, myId, onBack }: { partner: Profile; myId: string;
       <div className="thread-messages">
         {messages.map(msg => {
           const isOwn = msg.from_id === myId
+          const isSelected = selectedMsgId === msg.id
           return (
             <div key={msg.id} className={`bubble-wrap ${isOwn ? 'bubble-wrap--own' : ''}`}>
-              <div className={`bubble ${isOwn ? 'bubble--own' : 'bubble--them'}`}>
+              <div
+                className={`bubble ${isOwn ? 'bubble--own' : 'bubble--them'} ${isSelected ? 'bubble--selected' : ''}`}
+                onClick={() => setSelectedMsgId(isSelected ? null : msg.id)}
+                style={{ cursor: 'pointer', userSelect: 'none' }}
+              >
                 {msg.body}
               </div>
-              {/* Tidak ada timestamp, tidak ada reply/quote */}
+              {isSelected && isOwn && (
+                <button
+                  className="bubble-delete-btn"
+                  onClick={() => handleDelete(msg.id)}
+                  style={{
+                    marginTop: '4px',
+                    alignSelf: 'flex-end',
+                    background: '#ef4444',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '4px 10px',
+                    fontSize: '0.75rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Hapus
+                </button>
+              )}
             </div>
           )
         })}
@@ -144,12 +177,131 @@ function NewMessageSheet({ myId, onStart, onClose }: { myId: string; onStart: (p
   )
 }
 
-// ── Messages Page ──────────────────────────────────────────────────
+// ── Swipeable Convo Item ───────────────────────────────────────────
+function SwipeableConvoItem({
+  msg, profileId, onOpen, onDelete
+}: {
+  msg: Message
+  profileId: string
+  onOpen: () => void
+  onDelete: () => void
+}) {
+  const partner = msg.from_id === profileId ? msg.to_profile : msg.from_profile
+  const unread = msg.to_id === profileId && !msg.read_at
+  const [offsetX, setOffsetX] = useState(0)
+  const [isDragging, setIsDragging] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
+  const startX = useRef(0)
+  const DELETE_THRESHOLD = 80
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    startX.current = e.touches[0].clientX
+    setIsDragging(true)
+  }
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const dx = e.touches[0].clientX - startX.current
+    if (dx < 0) setOffsetX(Math.max(dx, -120))
+  }
+  const handleTouchEnd = () => {
+    setIsDragging(false)
+    if (offsetX <= -DELETE_THRESHOLD) {
+      setOffsetX(-80)
+    } else {
+      setOffsetX(0)
+    }
+  }
+
+  const handleClick = () => {
+    if (offsetX < -20) { setOffsetX(0); return }
+    onOpen()
+  }
+
+  if (showConfirm) {
+    return (
+      <div style={{
+        padding: '16px',
+        background: 'var(--bg-card)',
+        borderBottom: '1px solid var(--border)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '10px',
+      }}>
+        <p style={{ fontSize: '0.9rem', fontWeight: 600 }}>Delete conversation with {partner.username}?</p>
+        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>This will only remove it from your inbox. Their copy is unaffected.</p>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => { setShowConfirm(false); setOffsetX(0) }}
+            style={{ flex: 1, padding: '9px', borderRadius: 'var(--radius-xs)', border: '1.5px solid var(--border)', background: 'none', fontWeight: 600, fontSize: '0.85rem' }}
+          >Cancel</button>
+          <button
+            onClick={onDelete}
+            style={{ flex: 1, padding: '9px', borderRadius: 'var(--radius-xs)', border: 'none', background: 'var(--red)', color: '#fff', fontWeight: 700, fontSize: '0.85rem' }}
+          >Delete</button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ position: 'relative', overflow: 'hidden', borderBottom: '1px solid var(--border)' }}>
+      {/* Delete button behind */}
+      <div
+        style={{
+          position: 'absolute', right: 0, top: 0, bottom: 0,
+          width: '80px', background: 'var(--red)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}
+        onClick={() => setShowConfirm(true)}
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+        </svg>
+      </div>
+      {/* Swipeable row */}
+      <div
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onClick={handleClick}
+        style={{
+          transform: `translateX(${offsetX}px)`,
+          transition: isDragging ? 'none' : 'transform 0.2s ease',
+          background: 'var(--bg-card)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          padding: '12px 16px',
+          cursor: 'pointer',
+        }}
+      >
+        <Avatar username={partner.username}/>
+        <div className="convo-item__info">
+          <div className="convo-item__top">
+            <span className="convo-item__name">{partner.username}</span>
+            <span className="convo-item__time">{timeAgo(msg.created_at)}</span>
+          </div>
+          <div className="convo-item__preview">
+            {msg.from_id === profileId && <span style={{ color: 'var(--text-muted)' }}>You: </span>}
+            {msg.body.slice(0, 50)}{msg.body.length > 50 ? '…' : ''}
+          </div>
+        </div>
+        {unread && <span className="convo-item__badge"/>}
+      </div>
+    </div>
+  )
+}
+
+
 export default function MessagesPage({ initialDM }: { initialDM?: string }) {
   const { profile } = useAuth()
   const [convos, setConvos] = useState<Message[]>([])
   const [activePartner, setActivePartner] = useState<Profile | null>(null)
   const [composingDM, setComposingDM] = useState(false)
+  const [hiddenConvos, setHiddenConvos] = useState<Set<string>>(new Set())
+
+  const hideConvo = (partnerId: string) => {
+    setHiddenConvos(prev => new Set([...prev, partnerId]))
+  }
 
   const fetchConvos = useCallback(async () => {
     if (!profile) return
@@ -186,29 +338,30 @@ export default function MessagesPage({ initialDM }: { initialDM?: string }) {
       </header>
 
       <div className="convo-list">
-        {convos.length === 0 && (
+        {convos.filter(msg => {
+          const partner = msg.from_id === profile.id ? msg.to_profile : msg.from_profile
+          return !hiddenConvos.has(partner.id)
+        }).length === 0 && (
           <div className="feed__empty">No messages yet.</div>
         )}
-        {convos.map(msg => {
-          const partner = msg.from_id === profile.id ? msg.to_profile : msg.from_profile
-          const unread = msg.to_id === profile.id && !msg.read_at
-          return (
-            <button key={msg.id} className="convo-item" onClick={() => setActivePartner(partner)}>
-              <Avatar username={partner.username}/>
-              <div className="convo-item__info">
-                <div className="convo-item__top">
-                  <span className="convo-item__name">{partner.username}</span>
-                  <span className="convo-item__time">{timeAgo(msg.created_at)}</span>
-                </div>
-                <div className="convo-item__preview">
-                  {msg.from_id === profile.id && <span style={{ color: 'var(--text-muted)' }}>You: </span>}
-                  {msg.body.slice(0, 50)}{msg.body.length > 50 ? '…' : ''}
-                </div>
-              </div>
-              {unread && <span className="convo-item__badge"/>}
-            </button>
-          )
-        })}
+        {convos
+          .filter(msg => {
+            const partner = msg.from_id === profile.id ? msg.to_profile : msg.from_profile
+            return !hiddenConvos.has(partner.id)
+          })
+          .map(msg => {
+            const partner = msg.from_id === profile.id ? msg.to_profile : msg.from_profile
+            return (
+              <SwipeableConvoItem
+                key={msg.id}
+                msg={msg}
+                profileId={profile.id}
+                onOpen={() => setActivePartner(partner)}
+                onDelete={() => hideConvo(partner.id)}
+              />
+            )
+          })
+        }
       </div>
 
       {composingDM && (
