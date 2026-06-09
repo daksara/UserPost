@@ -8,6 +8,20 @@
     <meta name="apple-mobile-web-app-capable" content="yes"/>
     <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
     <title>UserPost</title>
+    <script>
+      // Terapkan tema tersimpan sebelum render untuk mencegah flicker (FOUC)
+      (function () {
+        try {
+          var t = localStorage.getItem('userpost-theme');
+          if (t === 'dark' || t === 'oled') {
+            document.documentElement.setAttribute('data-theme', t);
+            var c = t === 'oled' ? '#000000' : '#16161c';
+            var m = document.querySelector('meta[name="theme-color"]');
+            if (m) m.setAttribute('content', c);
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
