@@ -4,6 +4,7 @@ import { signOut, updateProfile, changePassword, deleteAccount, uploadProfilePho
 import { useAuth } from '../hooks/useAuth'
 import { useTheme, type Theme } from '../hooks/useTheme'
 import { getAvatarUrl } from '../components/Avatar'
+import { BadgeChip } from '../components/Badge'
 
 const THEME_OPTIONS: { value: Theme; label: string; icon: JSX.Element }[] = [
   {
@@ -301,14 +302,10 @@ export default function ProfilePage() {
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
           <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>{profile.username}</span>
-          {profile.is_verified && (
-            <span className="badge-official">
-              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 3 }}>
-                <path d="M9 12l2 2 4-4M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/>
-              </svg>
-              Official
-            </span>
-          )}
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'center' }}>
+            {profile.is_verified && <BadgeChip type="official"/>}
+            {profile.badge_type && <BadgeChip type={profile.badge_type}/>}
+          </div>
         </div>
 
         {/* Bio */}

@@ -3,10 +3,12 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import {
   getPosts, createPost, deletePost, addComment, deleteComment,
   getComments, subscribeToActivePosts, subscribeToAllComments,
-  type Post, type Comment,
+  grantBadge, revokeBadge,
+  type Post, type Comment, type Profile, type BadgeGrantType,
 } from '../lib/firebase'
 import { useAuth } from '../hooks/useAuth'
 import { UserAvatar } from '../components/Avatar'
+import { BadgeChip, BADGE_GRANT_TYPES } from '../components/Badge'
 
 function timeAgo(iso: string) {
   const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
@@ -131,13 +133,114 @@ function ExpiryBar({ expiresAt, createdAt }: { expiresAt: string; createdAt: str
   )
 }
 
-function PostCard({ post, myId, onDelete, onComment, onDeleteComment, onDMClick }: {
+function UserSheet({
+  target, isGranter, onDM, onClose, onGranted,
+}: {
+  target: Profile
+  isGranter: boolean
+  onDM: () => void
+  onClose: () => void
+  onGranted: () => void
+}) {
+  const [busy, setBusy] = useState<string | null>(null)
+  const [localBadge, setLocalBadge] = useState(target.badge_type)
+
+  const handleGrant = async (type: BadgeGrantType) => {
+    setBusy(type)
+    try {
+      await grantBadge(target.id, type)
+      setLocalBadge(type)
+      onGranted()
+    } catch { /* silently ignore */ }
+    finally { setBusy(null) }
+  }
+
+  const handleRevoke = async () => {
+    setBusy('revoke')
+    try {
+      await revokeBadge(target.id)
+      setLocalBadge(null)
+      onGranted()
+    } catch { /* silently ignore */ }
+    finally { setBusy(null) }
+  }
+
+  return (
+    <div className="sheet-overlay" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="sheet" style={{ gap: 14 }}>
+        <div className="sheet__handle"/>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <UserAvatar username={target.username} size={46} photoUrl={target.photo_url}/>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+              {target.username}
+              {target.is_verified && <BadgeChip type="official"/>}
+              {localBadge && <BadgeChip type={localBadge}/>}
+            </div>
+            {target.bio && (
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {target.bio}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <button className="btn-post" style={{ width: '100%' }} onClick={() => { onDM(); onClose() }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          Send DM to {target.username}
+        </button>
+
+        {isGranter && (
+          <div>
+            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Grant Badge
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {BADGE_GRANT_TYPES.map(type => (
+                <button
+                  key={type}
+                  className={`badge-${type}`}
+                  onClick={() => handleGrant(type)}
+                  disabled={busy !== null}
+                  style={{ padding: '5px 12px', fontSize: '0.72rem', opacity: busy === type ? 0.5 : 1 }}
+                >
+                  {busy === type ? '…' : type.charAt(0).toUpperCase() + type.slice(1)}
+                </button>
+              ))}
+            </div>
+            {localBadge && (
+              <button
+                onClick={handleRevoke}
+                disabled={busy !== null}
+                style={{
+                  marginTop: 10, background: 'none', border: '1.5px solid var(--border)',
+                  color: 'var(--red)', borderRadius: 'var(--radius-full)',
+                  padding: '6px 14px', fontSize: '0.75rem', fontWeight: 700,
+                  cursor: 'pointer', opacity: busy === 'revoke' ? 0.5 : 1,
+                }}
+              >
+                {busy === 'revoke' ? 'Removing…' : 'Revoke Badge'}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment, onDMClick, onRefreshPosts }: {
   post: Post
   myId: string
+  myProfile: Profile | null
   onDelete: (id: string) => void
   onComment: (postId: string, body: string) => Promise<Comment>
   onDeleteComment: (postId: string, commentId: string) => Promise<void>
   onDMClick: (username: string) => void
+  onRefreshPosts: () => void
 }) {
   const [showComments, setShowComments] = useState(false)
   const [localComments, setLocalComments] = useState<Comment[]>([])
@@ -148,7 +251,9 @@ function PostCard({ post, myId, onDelete, onComment, onDeleteComment, onDMClick 
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [commentCount, setCommentCount] = useState(post.comment_count)
   const prevCommentCountRef = useRef(post.comment_count)
+  const [sheetOpen, setSheetOpen] = useState(false)
   const isOwn = post.user_id === myId
+  const isGranter = myProfile?.is_verified === true
   const [, setTick] = useState(0)
 
   // Force re-render every 30s so expiry bar and hot counter stay live
@@ -218,20 +323,23 @@ function PostCard({ post, myId, onDelete, onComment, onDeleteComment, onDMClick 
           onCancel={() => setConfirmDelete(false)}
         />
       )}
+      {sheetOpen && !isOwn && (
+        <UserSheet
+          target={post.profiles}
+          isGranter={isGranter}
+          onDM={() => onDMClick(post.profiles.username)}
+          onClose={() => setSheetOpen(false)}
+          onGranted={() => { setSheetOpen(false); onRefreshPosts() }}
+        />
+      )}
 
       <div className="post-card__header">
         <UserAvatar username={post.profiles.username} size={36} photoUrl={post.profiles.photo_url} />
         <div className="post-card__meta">
-          <button className="post-card__username" onClick={() => !isOwn && onDMClick(post.profiles.username)}>
+          <button className="post-card__username" onClick={() => { if (!isOwn) setSheetOpen(true) }}>
             {post.profiles.username}
-            {post.profiles.is_verified && (
-              <span className="badge-official">
-                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 3 }}>
-                  <path d="M9 12l2 2 4-4M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/>
-                </svg>
-                Official
-              </span>
-            )}
+            {post.profiles.is_verified && <BadgeChip type="official"/>}
+            {post.profiles.badge_type && <BadgeChip type={post.profiles.badge_type}/>}
           </button>
           <span className="post-card__time" style={{ color: expiringSoon ? 'var(--red)' : undefined }}>
             {expiry ?? 'expired'}
@@ -501,10 +609,12 @@ export default function FeedPage({ onDMClick }: { onDMClick: (username: string) 
             key={post.id}
             post={post}
             myId={profile?.id ?? ''}
+            myProfile={profile ?? null}
             onDelete={handleDelete}
             onComment={handleComment}
             onDeleteComment={handleDeleteComment}
             onDMClick={onDMClick}
+            onRefreshPosts={refreshPosts}
           />
         ))}
       </div>
