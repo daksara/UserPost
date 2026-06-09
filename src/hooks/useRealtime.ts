@@ -1,15 +1,24 @@
+// src/hooks/useRealtime.ts
+// Drop-in replacement for the Supabase useRealtime hook.
+// Uses Firestore onSnapshot to listen for changes.
+
 import { useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { db } from '../lib/firebase'
+import { collection, onSnapshot } from 'firebase/firestore'
 
-type Table = 'posts' | 'comments' | 'messages'
+// Maps Supabase table names → Firestore collection paths
+const TABLE_MAP: Record<string, string> = {
+  posts: 'posts',
+  comments: 'posts',   // subcollection — top-level listener on 'posts' is enough
+  messages: 'conversations',
+}
 
-export function useRealtime(table: Table, onUpdate: () => void) {
+export function useRealtime(table: string, callback: () => void) {
   useEffect(() => {
-    const channel = supabase
-      .channel(`realtime:${table}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table }, onUpdate)
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
-  }, [table, onUpdate])
+    const collectionPath = TABLE_MAP[table] ?? table
+    const unsubscribe = onSnapshot(collection(db, collectionPath), () => {
+      callback()
+    })
+    return () => unsubscribe()
+  }, [table, callback])
 }
