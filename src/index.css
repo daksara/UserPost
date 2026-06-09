@@ -85,9 +85,11 @@ body {
 button { font-family: var(--font); cursor: pointer; }
 input, textarea {
   font-family: var(--font);
+  color: var(--text-primary);
   -webkit-user-select: text;
   user-select: text;
 }
+input::placeholder, textarea::placeholder { color: var(--text-muted); }
 button {
   -webkit-tap-highlight-color: transparent;
 }
