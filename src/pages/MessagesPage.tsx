@@ -68,13 +68,14 @@ function ThreadView({ partner, myId, onBack }: { partner: Profile; myId: string;
   const replyId = replyTo?.id
   setText('')
   setReplyTo(null)
+  setSending(false)
+  setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
   try {
     await sendMessage(myId, partner.id, trimmed, replyId)
   } catch (e) {
     console.error(e)
-  } finally {
-    setSending(false)
   }
+}
   setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
 }
 
