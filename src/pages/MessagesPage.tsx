@@ -297,10 +297,19 @@ export default function MessagesPage({ initialDM }: { initialDM?: string }) {
   const [convos, setConvos] = useState<Message[]>([])
   const [activePartner, setActivePartner] = useState<Profile | null>(null)
   const [composingDM, setComposingDM] = useState(false)
-  const [hiddenConvos, setHiddenConvos] = useState<Set<string>>(new Set())
+  const [hiddenConvos, setHiddenConvos] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem('hiddenConvos')
+      return stored ? new Set(JSON.parse(stored)) : new Set()
+    } catch { return new Set() }
+  })
 
   const hideConvo = (partnerId: string) => {
-    setHiddenConvos(prev => new Set([...prev, partnerId]))
+    setHiddenConvos(prev => {
+      const next = new Set([...prev, partnerId])
+      localStorage.setItem('hiddenConvos', JSON.stringify([...next]))
+      return next
+    })
   }
 
   const fetchConvos = useCallback(async () => {
