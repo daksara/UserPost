@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { auth, getProfile, type Profile } from '../lib/firebase'
+import { auth, type Profile } from '../lib/firebase'
 import { onAuthStateChanged, type User } from 'firebase/auth'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { db } from '../lib/firebase'
