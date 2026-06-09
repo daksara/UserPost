@@ -18,7 +18,6 @@ function timeAgo(iso: string) {
   return `${Math.floor(s / 86400)}d`
 }
 
-// Avatar pakai DiceBear Micah (wrapper lokal untuk MessagesPage)
 function Avatar({ username, size = 36 }: { username: string; size?: number }) {
   return <UserAvatar username={username} size={size} />
 }
@@ -28,7 +27,6 @@ function ThreadView({ partner, myId, onBack }: { partner: Profile; myId: string;
   const [messages, setMessages] = useState<Message[]>([])
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
-  const [replyTo, setReplyTo] = useState<Message | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   const fetchMessages = useCallback(async () => {
@@ -40,7 +38,6 @@ function ThreadView({ partner, myId, onBack }: { partner: Profile; myId: string;
 
   useEffect(() => { fetchMessages() }, [fetchMessages])
 
-  // Listen langsung ke subcollection conversation spesifik
   useEffect(() => {
     const convPath = [myId, partner.id].sort().join('_')
     const unsubscribe = onSnapshot(
@@ -54,13 +51,11 @@ function ThreadView({ partner, myId, onBack }: { partner: Profile; myId: string;
     if (!text.trim() || sending) return
     setSending(true)
     const trimmed = text.trim()
-    const replyId = replyTo?.id
     setText('')
-    setReplyTo(null)
     setSending(false)
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
     try {
-      await sendMessage(myId, partner.id, trimmed, replyId)
+      await sendMessage(myId, partner.id, trimmed)
     } catch (e) {
       console.error(e)
     }
@@ -83,30 +78,15 @@ function ThreadView({ partner, myId, onBack }: { partner: Profile; myId: string;
           const isOwn = msg.from_id === myId
           return (
             <div key={msg.id} className={`bubble-wrap ${isOwn ? 'bubble-wrap--own' : ''}`}>
-              {msg.reply_to && (
-                <div className="bubble-reply">
-                  {msg.reply_to.body.slice(0, 60)}{msg.reply_to.body.length > 60 ? '…' : ''}
-                </div>
-              )}
-              <div
-                className={`bubble ${isOwn ? 'bubble--own' : 'bubble--them'}`}
-                onClick={() => setReplyTo(msg)}
-              >
+              <div className={`bubble ${isOwn ? 'bubble--own' : 'bubble--them'}`}>
                 {msg.body}
               </div>
-              <span className="bubble-time">{timeAgo(msg.created_at)}</span>
+              {/* Tidak ada timestamp, tidak ada reply/quote */}
             </div>
           )
         })}
         <div ref={bottomRef}/>
       </div>
-
-      {replyTo && (
-        <div className="reply-preview">
-          <span className="reply-preview__text">↩ {replyTo.body.slice(0, 50)}{replyTo.body.length > 50 ? '…' : ''}</span>
-          <button className="reply-preview__close" onClick={() => setReplyTo(null)}>✕</button>
-        </div>
-      )}
 
       <div className="thread-composer">
         <input
