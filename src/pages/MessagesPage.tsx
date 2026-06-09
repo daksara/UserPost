@@ -1,9 +1,7 @@
 // src/pages/MessagesPage.tsx
-// Perubahan dari versi Supabase:
-//   - Import dari '../lib/firebase'
-//   - softDeleteMessage butuh myId & otherId sebagai parameter tambahan
-
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { collection, onSnapshot } from 'firebase/firestore'
+import { db } from '../lib/firebase'
 import {
   getConversationList, getConversation, sendMessage, markMessagesRead,
   getUserByUsername, type Message, type Profile
@@ -52,7 +50,16 @@ function ThreadView({ partner, myId, onBack }: { partner: Profile; myId: string;
   }, [myId, partner.id])
 
   useEffect(() => { fetchMessages() }, [fetchMessages])
-  useRealtime('messages', fetchMessages)
+
+  // Listen langsung ke subcollection conversation spesifik
+  useEffect(() => {
+    const convPath = [myId, partner.id].sort().join('_')
+    const unsubscribe = onSnapshot(
+      collection(db, 'conversations', convPath, 'messages'),
+      () => { fetchMessages() }
+    )
+    return () => unsubscribe()
+  }, [myId, partner.id, fetchMessages])
 
   const handleSend = async () => {
     if (!text.trim() || sending) return
