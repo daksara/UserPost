@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { auth, getProfile, type Profile } from '../lib/firebase'
 import { onAuthStateChanged, type User } from 'firebase/auth'
+import { doc, onSnapshot } from 'firebase/firestore'
+import { db } from '../lib/firebase'
 
 interface AuthState {
   user: User | null
@@ -16,17 +18,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: User | null) => {
+    let unsubProfile: (() => void) | null = null
+
+    const unsubAuth = onAuthStateChanged(auth, async (firebaseUser: User | null) => {
       setUser(firebaseUser)
+
+      // Bersihkan listener profile sebelumnya
+      if (unsubProfile) { unsubProfile(); unsubProfile = null }
+
       if (firebaseUser) {
-        const p = await getProfile(firebaseUser.uid)
-        setProfile(p)
+        // Realtime listener ke dokumen profile — update otomatis kalau is_verified berubah
+        unsubProfile = onSnapshot(doc(db, 'profiles', firebaseUser.uid), (snap) => {
+          if (snap.exists()) {
+            const d = snap.data()
+            setProfile({
+              id: snap.id,
+              username: d.username,
+              created_at: d.created_at?.toDate().toISOString() ?? new Date().toISOString(),
+              is_verified: d.is_verified ?? false,
+            })
+          }
+          setLoading(false)
+        })
       } else {
         setProfile(null)
+        setLoading(false)
       }
-      setLoading(false)
     })
-    return () => unsubscribe()
+
+    return () => {
+      unsubAuth()
+      if (unsubProfile) unsubProfile()
+    }
   }, [])
 
   return (
