@@ -1,6 +1,6 @@
 // src/pages/ProfilePage.tsx
 import { useState, useRef } from 'react'
-import { signOut, updateProfile } from '../lib/firebase'
+import { signOut, updateProfile, changePassword } from '../lib/firebase'
 import { useAuth } from '../hooks/useAuth'
 import { getAvatarUrl } from '../components/Avatar'
 
@@ -62,6 +62,15 @@ export default function ProfilePage() {
   const [error, setError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Change password
+  const [changingPw, setChangingPw] = useState(false)
+  const [currentPw, setCurrentPw] = useState('')
+  const [newPw, setNewPw] = useState('')
+  const [confirmPw, setConfirmPw] = useState('')
+  const [pwError, setPwError] = useState('')
+  const [pwSuccess, setPwSuccess] = useState(false)
+  const [savingPw, setSavingPw] = useState(false)
+
   // Edit fields
   const [photoUrl, setPhotoUrl] = useState('')
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
@@ -72,7 +81,29 @@ export default function ProfilePage() {
 
   if (!profile) return null
 
-  const hue = hashStr(profile.username) % 360
+  const handleChangePassword = async () => {
+    setPwError('')
+    if (!currentPw || !newPw || !confirmPw) { setPwError('All fields required'); return }
+    if (newPw.length < 6) { setPwError('New password min 6 characters'); return }
+    if (newPw !== confirmPw) { setPwError('Passwords do not match'); return }
+    setSavingPw(true)
+    try {
+      await changePassword(currentPw, newPw)
+      setPwSuccess(true)
+      setCurrentPw(''); setNewPw(''); setConfirmPw('')
+      setTimeout(() => { setPwSuccess(false); setChangingPw(false) }, 2000)
+    } catch (e: any) {
+      if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
+        setPwError('Current password is incorrect')
+      } else {
+        setPwError('Failed to change password. Try again.')
+      }
+    } finally {
+      setSavingPw(false)
+    }
+  }
+
+
   const avatarSrc = (profile as any).photo_url || getAvatarUrl(profile.username)
 
   const openEdit = () => {
@@ -255,10 +286,43 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        <button
+          className="signout-btn"
+          onClick={() => { setChangingPw(true); setPwError(''); setPwSuccess(false) }}
+          style={{ color: 'var(--accent)', marginBottom: 0 }}
+        >
+          Change Password
+        </button>
         <button className="signout-btn" onClick={signOut}>Sign out</button>
       </div>
 
-      {/* ── Edit Sheet ── */}
+      {/* ── Change Password Sheet ── */}
+      {changingPw && (
+        <div className="sheet-overlay" onClick={e => { if (e.target === e.currentTarget) setChangingPw(false) }}>
+          <div className="sheet" style={{ gap: 12 }}>
+            <div className="sheet__handle"/>
+            <div className="sheet__title">Change Password</div>
+
+            <label style={labelStyle}>Current Password</label>
+            <input className="auth-input" type="password" placeholder="••••••••" value={currentPw} onChange={e => { setCurrentPw(e.target.value); setPwError('') }}/>
+
+            <label style={labelStyle}>New Password</label>
+            <input className="auth-input" type="password" placeholder="min 6 characters" value={newPw} onChange={e => { setNewPw(e.target.value); setPwError('') }}/>
+
+            <label style={labelStyle}>Confirm New Password</label>
+            <input className="auth-input" type="password" placeholder="••••••••" value={confirmPw} onChange={e => { setConfirmPw(e.target.value); setPwError('') }}/>
+
+            {pwError && <p style={{ color: 'var(--red)', fontSize: '0.8rem' }}>{pwError}</p>}
+            {pwSuccess && <p style={{ color: 'var(--green)', fontSize: '0.8rem', fontWeight: 700 }}>Password changed successfully!</p>}
+
+            <button className="auth-btn" onClick={handleChangePassword} disabled={savingPw}>
+              {savingPw ? <span className="spinner spinner--sm"/> : 'Save Password'}
+            </button>
+          </div>
+        </div>
+      )}
+
+
       {editing && (
         <div className="sheet-overlay" onClick={e => { if (e.target === e.currentTarget) setEditing(false) }}>
           <div className="sheet" style={{ gap: 12 }}>
