@@ -34,7 +34,42 @@ function CACard({ address }: { address: string }) {
   )
 }
 
-// ── Delete Confirm Dialog ──────────────────────────────────────────
+function LinkCard({ url }: { url: string }) {
+  let domain = ''
+  try { domain = new URL(url).hostname.replace('www.', '') } catch { domain = url }
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '9px 12px',
+        background: 'var(--bg)',
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--radius-xs)',
+        textDecoration: 'none',
+        transition: 'background 0.12s',
+      }}
+      onClick={e => e.stopPropagation()}
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+      </svg>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--accent)', marginBottom: 1 }}>{domain}</div>
+        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{url}</div>
+      </div>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+        <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+      </svg>
+    </a>
+  )
+}
 function DeleteConfirm({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
   return (
     <div className="sheet-overlay" onClick={e => { if (e.target === e.currentTarget) onCancel() }}>
@@ -119,6 +154,7 @@ function PostCard({ post, myId, onDelete, onComment, onDMClick }: {
       </div>
 
       <div className="post-card__body">{post.body}</div>
+      {post.link_url && <LinkCard url={post.link_url} />}
       {post.contract_address && <CACard address={post.contract_address} />}
 
       <button className="post-card__comments-btn" onClick={() => setShowComments(v => !v)}>
@@ -155,22 +191,41 @@ function PostCard({ post, myId, onDelete, onComment, onDMClick }: {
   )
 }
 
-function ComposeSheet({ onPost, onClose }: { onPost: (body: string, ca?: string) => Promise<void>; onClose: () => void }) {
+function ComposeSheet({ onPost, onClose }: { onPost: (body: string, ca?: string, link?: string) => Promise<void>; onClose: () => void }) {
   const [text, setText] = useState('')
   const [ca, setCa] = useState('')
   const [showCA, setShowCA] = useState(false)
   const [caError, setCaError] = useState('')
+  const [link, setLink] = useState('')
+  const [showLink, setShowLink] = useState(false)
+  const [linkError, setLinkError] = useState('')
   const [posting, setPosting] = useState(false)
-  const remaining = 280 - text.length
+  const remaining = 500 - text.length
 
   const isValidCA = (v: string) =>
     /^0x[a-fA-F0-9]{40}$/.test(v.trim()) || /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(v.trim())
 
+  const ALLOWED_DOMAINS = [
+    'x.com', 'twitter.com', 't.me', 'telegram.me', 'telegram.org',
+    'youtube.com', 'youtu.be', 'github.com', 'medium.com',
+    'coinmarketcap.com', 'coingecko.com', 'dexscreener.com',
+    'dextools.io', 'birdeye.so', 'solscan.io', 'etherscan.io',
+    'bscscan.com', 'pump.fun', 'raydium.io', 'uniswap.org',
+  ]
+
+  const isAllowedUrl = (v: string): boolean => {
+    try {
+      const host = new URL(v).hostname.replace('www.', '')
+      return ALLOWED_DOMAINS.some(d => host === d || host.endsWith('.' + d))
+    } catch { return false }
+  }
+
   const handlePost = async () => {
     if (!text.trim() || posting) return
     if (ca && !isValidCA(ca)) { setCaError('Invalid address'); return }
+    if (link && !isAllowedUrl(link)) { setLinkError('Only trusted domains allowed (x.com, t.me, github.com, etc)'); return }
     setPosting(true)
-    await onPost(text.trim(), ca.trim() || undefined)
+    await onPost(text.trim(), ca.trim() || undefined, link.trim() || undefined)
     setPosting(false)
   }
 
@@ -183,9 +238,34 @@ function ComposeSheet({ onPost, onClose }: { onPost: (body: string, ca?: string)
           className="compose-textarea"
           placeholder="What's on your mind?"
           value={text}
-          onChange={e => setText(e.target.value.slice(0, 280))}
+          onChange={e => setText(e.target.value.slice(0, 500))}
           autoFocus
         />
+        {!showLink && (
+          <button className="ca-attach-btn" onClick={() => setShowLink(true)}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+            </svg>
+            Add link
+          </button>
+        )}
+        {showLink && (
+          <div className="ca-input-wrap">
+            <div className="ca-input-row">
+              <input
+                className={`ca-input${linkError ? ' ca-input--error' : ''}`}
+                placeholder="https://x.com/..."
+                value={link}
+                onChange={e => { setLink(e.target.value); setLinkError('') }}
+                autoComplete="off" spellCheck={false}
+              />
+              <button className="ca-input-remove" onClick={() => { setShowLink(false); setLink(''); setLinkError('') }}>✕</button>
+            </div>
+            {linkError && <span className="ca-input-error">{linkError}</span>}
+            {link && !linkError && isAllowedUrl(link) && <span className="ca-preview__label">✓ Valid URL</span>}
+          </div>
+        )}
         {!showCA && (
           <button className="ca-attach-btn" onClick={() => setShowCA(true)}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -205,10 +285,10 @@ function ComposeSheet({ onPost, onClose }: { onPost: (body: string, ca?: string)
           </div>
         )}
         <div className="compose-footer">
-          <span className={`compose-char${remaining < 20 ? ' compose-char--warn' : ''}`}>{remaining} left</span>
+          <span className={`compose-char${remaining < 50 ? ' compose-char--warn' : ''}`}>{remaining} left</span>
           <div className="compose-footer__actions">
             <button className="btn-cancel" onClick={onClose}>Cancel</button>
-            <button className="btn-post" onClick={handlePost} disabled={!text.trim() || posting || !!caError}>
+            <button className="btn-post" onClick={handlePost} disabled={!text.trim() || posting || !!caError || !!linkError}>
               {posting ? <span className="spinner spinner--sm"/> : 'Post'}
             </button>
           </div>
@@ -234,9 +314,9 @@ export default function FeedPage({ onDMClick }: { onDMClick: (username: string) 
   useRealtime('posts', fetchPosts)
   useRealtime('comments', fetchPosts)
 
-  const handlePost = async (body: string, ca?: string) => {
+  const handlePost = async (body: string, ca?: string, link?: string) => {
     if (!profile) return
-    const newPost = await createPost(profile.id, body, ca)
+    const newPost = await createPost(profile.id, body, ca, link)
     setPosts(prev => [newPost, ...prev])
     setComposing(false)
   }
