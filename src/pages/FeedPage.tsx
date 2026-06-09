@@ -13,7 +13,6 @@ function timeAgo(iso: string) {
   return `${Math.floor(s / 86400)}d`
 }
 
-// ── Contract Address Card ──────────────────────────────────────────
 function CACard({ address }: { address: string }) {
   const [copied, setCopied] = useState(false)
   const copy = (e: React.MouseEvent) => {
@@ -35,7 +34,35 @@ function CACard({ address }: { address: string }) {
   )
 }
 
-// ── Post Card ──────────────────────────────────────────────────────
+// ── Delete Confirm Dialog ──────────────────────────────────────────
+function DeleteConfirm({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <div className="sheet-overlay" onClick={e => { if (e.target === e.currentTarget) onCancel() }}>
+      <div className="sheet" style={{ gap: 16 }}>
+        <div className="sheet__handle"/>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '2rem', marginBottom: 8 }}>🗑️</div>
+          <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: 4 }}>Delete this post?</div>
+          <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>This action cannot be undone.</div>
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn-cancel" style={{ flex: 1, textAlign: 'center' }} onClick={onCancel}>Cancel</button>
+          <button
+            onClick={onConfirm}
+            style={{
+              flex: 1, background: 'var(--red)', border: 'none', color: '#fff',
+              fontWeight: 700, fontSize: '0.88rem', padding: '10px',
+              borderRadius: 'var(--radius-full)', cursor: 'pointer'
+            }}
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function PostCard({ post, myId, onDelete, onComment, onDMClick }: {
   post: Post
   myId: string
@@ -46,6 +73,7 @@ function PostCard({ post, myId, onDelete, onComment, onDMClick }: {
   const [showComments, setShowComments] = useState(false)
   const [commentText, setCommentText] = useState('')
   const [sending, setSending] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const isOwn = post.user_id === myId
 
   const handleComment = async () => {
@@ -58,20 +86,22 @@ function PostCard({ post, myId, onDelete, onComment, onDMClick }: {
 
   return (
     <div className="post-card">
-      <div className="post-card__header">
-        {/* Avatar DiceBear Micah */}
-        <UserAvatar username={post.profiles.username} size={36} />
+      {confirmDelete && (
+        <DeleteConfirm
+          onConfirm={() => { setConfirmDelete(false); onDelete(post.id) }}
+          onCancel={() => setConfirmDelete(false)}
+        />
+      )}
 
+      <div className="post-card__header">
+        <UserAvatar username={post.profiles.username} size={36} />
         <div className="post-card__meta">
-          <button
-            className="post-card__username"
-            onClick={() => !isOwn && onDMClick(post.profiles.username)}
-          >
+          <button className="post-card__username" onClick={() => !isOwn && onDMClick(post.profiles.username)}>
             {post.profiles.username}
             {post.profiles.is_verified && (
               <span className="badge-official">
-                <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: 3 }}>
-                  <path d="M9 12l2 2 4-4M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 3 }}>
+                  <path d="M9 12l2 2 4-4M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/>
                 </svg>
                 Official
               </span>
@@ -80,7 +110,7 @@ function PostCard({ post, myId, onDelete, onComment, onDMClick }: {
           <span className="post-card__time">{timeAgo(post.created_at)}</span>
         </div>
         {isOwn && (
-          <button className="post-card__delete" onClick={() => onDelete(post.id)} title="Delete post">
+          <button className="post-card__delete" onClick={() => setConfirmDelete(true)} title="Delete post">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
             </svg>
@@ -125,7 +155,6 @@ function PostCard({ post, myId, onDelete, onComment, onDMClick }: {
   )
 }
 
-// ── Compose Sheet ──────────────────────────────────────────────────
 function ComposeSheet({ onPost, onClose }: { onPost: (body: string, ca?: string) => Promise<void>; onClose: () => void }) {
   const [text, setText] = useState('')
   const [ca, setCa] = useState('')
@@ -189,7 +218,6 @@ function ComposeSheet({ onPost, onClose }: { onPost: (body: string, ca?: string)
   )
 }
 
-// ── Feed Page ──────────────────────────────────────────────────────
 export default function FeedPage({ onDMClick }: { onDMClick: (username: string) => void }) {
   const { profile } = useAuth()
   const [posts, setPosts] = useState<Post[]>([])
