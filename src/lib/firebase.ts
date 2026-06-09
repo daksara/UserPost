@@ -25,6 +25,7 @@ import {
   updateDoc,
   deleteDoc,
   runTransaction,
+  increment,
   query,
   where,
   orderBy,
@@ -77,6 +78,8 @@ export interface Post {
   link_url: string | null
   expires_at: string
   created_at: string
+  like_count: number
+  comment_count: number
   profiles: Profile
   comments: Comment[]
 }
@@ -203,23 +206,6 @@ export async function getUserByUsername(username: string): Promise<Profile | nul
 
 async function hydratePost(postId: string, data: Record<string, any>): Promise<Post> {
   const profile = await getProfileById(data.user_id)
-  const commentsSnap = await getDocs(
-    query(collection(db, 'posts', postId, 'comments'), orderBy('created_at', 'asc'))
-  )
-  const comments: Comment[] = await Promise.all(
-    commentsSnap.docs.map(async (c) => {
-      const cd = c.data()
-      const cp = await getProfileById(cd.user_id)
-      return {
-        id: c.id,
-        post_id: postId,
-        user_id: cd.user_id,
-        body: cd.body,
-        created_at: tsToISO(cd.created_at),
-        profiles: cp!,
-      }
-    })
-  )
   return {
     id: postId,
     user_id: data.user_id,
@@ -228,8 +214,10 @@ async function hydratePost(postId: string, data: Record<string, any>): Promise<P
     link_url: data.link_url ?? null,
     expires_at: tsToISO(data.expires_at),
     created_at: tsToISO(data.created_at),
+    like_count: data.like_count ?? 0,
+    comment_count: data.comment_count ?? 0,
     profiles: profile!,
-    comments,
+    comments: [],
   }
 }
 
@@ -272,12 +260,33 @@ export async function deletePost(postId: string) {
   await deleteDoc(doc(db, 'posts', postId))
 }
 
+export async function getComments(postId: string): Promise<Comment[]> {
+  const snap = await getDocs(
+    query(collection(db, 'posts', postId, 'comments'), orderBy('created_at', 'asc'))
+  )
+  return Promise.all(
+    snap.docs.map(async (c) => {
+      const cd = c.data()
+      const cp = await getProfileById(cd.user_id)
+      return {
+        id: c.id,
+        post_id: postId,
+        user_id: cd.user_id,
+        body: cd.body,
+        created_at: tsToISO(cd.created_at),
+        profiles: cp!,
+      }
+    })
+  )
+}
+
 export async function addComment(postId: string, userId: string, body: string): Promise<Comment> {
   const ref = await addDoc(collection(db, 'posts', postId, 'comments'), {
     user_id: userId,
     body,
     created_at: serverTimestamp(),
   })
+  await updateDoc(doc(db, 'posts', postId), { comment_count: increment(1) })
   const profile = await getProfileById(userId)
   return {
     id: ref.id,
@@ -287,6 +296,44 @@ export async function addComment(postId: string, userId: string, body: string): 
     created_at: new Date().toISOString(),
     profiles: profile!,
   }
+}
+
+export async function deleteComment(postId: string, commentId: string): Promise<void> {
+  await deleteDoc(doc(db, 'posts', postId, 'comments', commentId))
+  await updateDoc(doc(db, 'posts', postId), { comment_count: increment(-1) })
+}
+
+export async function getUserLikes(userId: string): Promise<Set<string>> {
+  const snap = await getDocs(collection(db, 'users', userId, 'liked_posts'))
+  return new Set(snap.docs.map(d => d.id))
+}
+
+export async function toggleLike(
+  postId: string,
+  userId: string
+): Promise<{ liked: boolean; count: number }> {
+  const likeRef = doc(db, 'users', userId, 'liked_posts', postId)
+  const postRef = doc(db, 'posts', postId)
+  let liked = false
+  let count = 0
+
+  await runTransaction(db, async (t) => {
+    const [likeSnap, postSnap] = await Promise.all([t.get(likeRef), t.get(postRef)])
+    const current = postSnap.data()?.like_count ?? 0
+    if (likeSnap.exists()) {
+      t.delete(likeRef)
+      t.update(postRef, { like_count: Math.max(0, current - 1) })
+      liked = false
+      count = Math.max(0, current - 1)
+    } else {
+      t.set(likeRef, { created_at: serverTimestamp() })
+      t.update(postRef, { like_count: current + 1 })
+      liked = true
+      count = current + 1
+    }
+  })
+
+  return { liked, count }
 }
 
 // ── Realtime ───────────────────────────────────────────────────────
