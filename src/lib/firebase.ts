@@ -144,6 +144,9 @@ export async function signUp(username: string, email: string, password: string) 
   // Create auth user first so Firestore writes run while authenticated
   const { user } = await createUserWithEmailAndPassword(auth, email, password)
 
+  // Force token to be available before Firestore calls
+  await user.getIdToken(true)
+
   try {
     // Atomically claim username (now authenticated)
     await runTransaction(db, async (t) => {
@@ -159,6 +162,7 @@ export async function signUp(username: string, email: string, password: string) 
     await sendEmailVerification(user).catch(() => {})
     return user
   } catch (e) {
+    console.error('[signUp] Firestore write failed:', e)
     // Clean up: remove username claim and auth account on failure
     await deleteDoc(usernameRef).catch(() => {})
     await deleteUser(user).catch(() => {})
