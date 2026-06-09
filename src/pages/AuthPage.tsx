@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { signIn, signUp, checkUsernameAvailable } from '../lib/supabase'
+import { signIn, signUp, checkUsernameAvailable } from '../lib/firebase'
 
 export default function AuthPage() {
   const [mode, setMode] = useState<'login' | 'register'>('login')
