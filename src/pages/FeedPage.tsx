@@ -197,16 +197,8 @@ function PostCard({ post, myId, onDelete, onComment, onDeleteComment, onDMClick 
               </span>
             )}
           </button>
-          <span className="post-card__time">
-            {timeAgo(post.created_at)}
-            {expiry && (
-              <span style={{
-                marginLeft: 6, fontSize: '0.68rem', fontWeight: 600,
-                color: expiringSoon ? 'var(--red)' : 'var(--text-muted)',
-              }}>
-                · {expiry}
-              </span>
-            )}
+          <span className="post-card__time" style={{ color: expiringSoon ? 'var(--red)' : undefined }}>
+            {expiry ?? 'expired'}
           </span>
         </div>
         {isOwn && (
