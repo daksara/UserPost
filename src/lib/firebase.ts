@@ -471,19 +471,20 @@ export async function deleteAccount(password: string) {
   await reauthenticateWithCredential(user, credential)
 
   const uid = user.uid
-  const username = (await getProfileById(uid))?.username
 
-  // Delete Firestore profile doc
-  await deleteDoc(doc(db, 'profiles', uid))
-
-  // Delete username index
-  if (username) {
-    await deleteDoc(doc(db, 'usernames', username.toLowerCase()))
+  // Clean up Firestore data — wrapped so a permission error doesn't block auth deletion
+  try {
+    const username = (await getProfileById(uid))?.username
+    await deleteDoc(doc(db, 'profiles', uid))
+    if (username) {
+      await deleteDoc(doc(db, 'usernames', username.toLowerCase()))
+    }
+    // Best-effort: delete inbox entries
+    const inboxSnap = await getDocs(collection(db, 'users', uid, 'inbox'))
+    await Promise.all(inboxSnap.docs.map((d) => deleteDoc(d.ref)))
+  } catch (_) {
+    // Firestore cleanup failed — still proceed to delete Auth account
   }
-
-  // Delete inbox subcollection entries
-  const inboxSnap = await getDocs(collection(db, 'users', uid, 'inbox'))
-  await Promise.all(inboxSnap.docs.map((d) => deleteDoc(d.ref)))
 
   // Delete Firebase Auth account (must be last)
   await deleteUser(user)
