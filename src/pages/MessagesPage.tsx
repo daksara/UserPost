@@ -8,6 +8,7 @@ import {
 } from '../lib/firebase'
 import { useAuth } from '../hooks/useAuth'
 import { useRealtime } from '../hooks/useRealtime'
+import { UserAvatar } from '../components/Avatar'
 
 function timeAgo(iso: string) {
   const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
@@ -17,21 +18,9 @@ function timeAgo(iso: string) {
   return `${Math.floor(s / 86400)}d`
 }
 
-function hashStr(s: string) {
-  let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) & 0xfffff; return h
-}
-
+// Avatar pakai DiceBear Micah (wrapper lokal untuk MessagesPage)
 function Avatar({ username, size = 36 }: { username: string; size?: number }) {
-  return (
-    <div className="avatar" style={{
-      width: size, height: size, borderRadius: '50%', flexShrink: 0,
-      background: `hsl(${hashStr(username) % 360},60%,65%)`,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontWeight: 700, fontSize: size * 0.4, color: '#fff'
-    }}>
-      {username[0].toUpperCase()}
-    </div>
-  )
+  return <UserAvatar username={username} size={size} />
 }
 
 // ── Thread View ────────────────────────────────────────────────────
@@ -62,22 +51,20 @@ function ThreadView({ partner, myId, onBack }: { partner: Profile; myId: string;
   }, [myId, partner.id, fetchMessages])
 
   const handleSend = async () => {
-  if (!text.trim() || sending) return
-  setSending(true)
-  const trimmed = text.trim()
-  const replyId = replyTo?.id
-  setText('')
-  setReplyTo(null)
-  setSending(false)
-  setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
-  try {
-    await sendMessage(myId, partner.id, trimmed, replyId)
-  } catch (e) {
-    console.error(e)
+    if (!text.trim() || sending) return
+    setSending(true)
+    const trimmed = text.trim()
+    const replyId = replyTo?.id
+    setText('')
+    setReplyTo(null)
+    setSending(false)
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+    try {
+      await sendMessage(myId, partner.id, trimmed, replyId)
+    } catch (e) {
+      console.error(e)
+    }
   }
-}
-  setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
-}
 
   return (
     <div className="page page--thread">
