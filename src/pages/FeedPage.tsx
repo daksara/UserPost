@@ -1,8 +1,7 @@
 // src/pages/FeedPage.tsx
 import { useState, useCallback, useEffect } from 'react'
-import { getPosts, createPost, deletePost, addComment, type Post, type Comment } from '../lib/firebase'
+import { getPosts, createPost, deletePost, addComment, subscribeToActivePosts, subscribeToAllComments, type Post, type Comment } from '../lib/firebase'
 import { useAuth } from '../hooks/useAuth'
-import { useRealtime } from '../hooks/useRealtime'
 import { UserAvatar } from '../components/Avatar'
 
 function timeAgo(iso: string) {
@@ -304,15 +303,31 @@ export default function FeedPage({ onDMClick }: { onDMClick: (username: string) 
   const [loading, setLoading] = useState(true)
   const [composing, setComposing] = useState(false)
 
-  const fetchPosts = useCallback(async () => {
+  const refreshPosts = useCallback(async () => {
     const data = await getPosts()
     setPosts(data)
-    setLoading(false)
   }, [])
 
-  useEffect(() => { fetchPosts() }, [fetchPosts])
-  useRealtime('posts', fetchPosts)
-  useRealtime('comments', fetchPosts)
+  useEffect(() => {
+    // Active-posts subscription: handles initial load + post add/delete/update
+    const unsubPosts = subscribeToActivePosts((updated) => {
+      setPosts(updated)
+      setLoading(false)
+    })
+
+    // Comments subscription: subcollection changes not caught above
+    const unsubComments = subscribeToAllComments(refreshPosts)
+
+    return () => { unsubPosts(); unsubComments() }
+  }, [refreshPosts])
+
+  // Auto-remove expired posts from UI every minute
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPosts(prev => prev.filter(p => new Date(p.expires_at) > new Date()))
+    }, 60_000)
+    return () => clearInterval(timer)
+  }, [])
 
   const handlePost = async (body: string, ca?: string, link?: string) => {
     if (!profile) return

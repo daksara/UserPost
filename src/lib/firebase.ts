@@ -15,6 +15,7 @@ import {
 import {
   getFirestore,
   collection,
+  collectionGroup,
   doc,
   getDoc,
   getDocs,
@@ -31,6 +32,7 @@ import {
   Timestamp,
   type Unsubscribe,
 } from 'firebase/firestore'
+import { getStorage, ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage'
 
 // ── Firebase Config ────────────────────────────────────────────────
 // Ganti dengan config dari Firebase Console → Project Settings
@@ -46,6 +48,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)
 export const db = getFirestore(app)
+export const storage = getStorage(app)
+
+// ── Profile cache ──────────────────────────────────────────────────
+const profileCache = new Map<string, Profile>()
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -104,10 +110,11 @@ function tsToISO(ts: Timestamp | null | undefined): string {
 }
 
 async function getProfileById(userId: string): Promise<Profile | null> {
+  if (profileCache.has(userId)) return profileCache.get(userId)!
   const snap = await getDoc(doc(db, 'profiles', userId))
   if (!snap.exists()) return null
   const d = snap.data()
-  return {
+  const profile: Profile = {
     id: snap.id,
     username: d.username,
     created_at: tsToISO(d.created_at),
@@ -118,6 +125,8 @@ async function getProfileById(userId: string): Promise<Profile | null> {
     telegram: d.telegram ?? null,
     tip_ca: d.tip_ca ?? null,
   }
+  profileCache.set(userId, profile)
+  return profile
 }
 
 // ── Auth ───────────────────────────────────────────────────────────
@@ -259,13 +268,50 @@ export async function addComment(postId: string, userId: string, body: string): 
   }
 }
 
-// ── Realtime (replaces useRealtime hook) ───────────────────────────
+// ── Realtime ───────────────────────────────────────────────────────
 
 export function subscribeToCollection(
   collectionPath: string,
   callback: () => void
 ): Unsubscribe {
   return onSnapshot(collection(db, collectionPath), callback)
+}
+
+export function subscribeToActivePosts(
+  onPosts: (posts: Post[]) => void
+): Unsubscribe {
+  const now = Timestamp.now()
+  let version = 0
+  return onSnapshot(
+    query(
+      collection(db, 'posts'),
+      where('expires_at', '>', now),
+      orderBy('expires_at', 'desc'),
+      orderBy('created_at', 'desc'),
+      limit(50)
+    ),
+    async (snap) => {
+      const v = ++version
+      const posts = await Promise.all(snap.docs.map((d) => hydratePost(d.id, d.data())))
+      if (v === version) onPosts(posts)
+    }
+  )
+}
+
+export function subscribeToAllComments(onUpdate: () => void): Unsubscribe {
+  let ready = false
+  return onSnapshot(collectionGroup(db, 'comments'), (snap) => {
+    if (!ready) { ready = true; return }
+    if (snap.docChanges().length > 0) onUpdate()
+  })
+}
+
+// ── Storage ────────────────────────────────────────────────────────
+
+export async function uploadProfilePhoto(userId: string, base64DataUrl: string): Promise<string> {
+  const ref = storageRef(storage, `avatars/${userId}.jpg`)
+  await uploadString(ref, base64DataUrl, 'data_url')
+  return getDownloadURL(ref)
 }
 
 // ── Messages ───────────────────────────────────────────────────────
@@ -451,6 +497,7 @@ export async function updateProfile(
     ...(data.telegram !== undefined && { telegram: data.telegram }),
     ...(data.tip_ca !== undefined && { tip_ca: data.tip_ca }),
   })
+  profileCache.delete(userId)
 }
 
 

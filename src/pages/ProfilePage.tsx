@@ -1,6 +1,6 @@
 // src/pages/ProfilePage.tsx
 import { useState, useRef } from 'react'
-import { signOut, updateProfile, changePassword, deleteAccount } from '../lib/firebase'
+import { signOut, updateProfile, changePassword, deleteAccount, uploadProfilePhoto } from '../lib/firebase'
 import { useAuth } from '../hooks/useAuth'
 import { getAvatarUrl } from '../components/Avatar'
 
@@ -161,8 +161,12 @@ export default function ProfilePage() {
     setSaving(true)
     setError('')
     try {
+      let finalPhotoUrl = photoUrl.trim() || null
+      if (photoPreview) {
+        finalPhotoUrl = await uploadProfilePhoto(profile.id, photoPreview)
+      }
       await updateProfile(profile.id, {
-        photo_url: photoUrl.trim() || null,
+        photo_url: finalPhotoUrl,
         bio: bio.trim() || null,
         twitter: twitter.trim() || null,
         telegram: telegram.trim() || null,
@@ -225,7 +229,7 @@ export default function ProfilePage() {
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
           <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>{profile.username}</span>
-          {(profile as any).verified && (
+          {profile.is_verified && (
             <span style={{ fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 600 }}>
               ✓ Verified
             </span>
