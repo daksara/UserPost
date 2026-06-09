@@ -1,6 +1,6 @@
-// src/hooks/useAuth.tsx
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { auth, getProfile, onAuthStateChanged, type Profile, type User } from '../lib/firebase'
+import { auth, getProfile, type Profile } from '../lib/firebase'
+import { onAuthStateChanged, type User } from 'firebase/auth'
 
 interface AuthState {
   user: User | null
@@ -16,7 +16,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: User | null) => {
       setUser(firebaseUser)
       if (firebaseUser) {
         const p = await getProfile(firebaseUser.uid)
