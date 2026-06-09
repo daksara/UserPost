@@ -1,8 +1,7 @@
 // src/pages/ProfilePage.tsx
-// Perubahan: import signOut dari '../lib/firebase' (bukan supabase)
-
 import { signOut } from '../lib/firebase'
 import { useAuth } from '../hooks/useAuth'
+import { getAvatarUrl } from '../components/Avatar'
 
 function hashStr(s: string) {
   let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) & 0xfffff; return h
@@ -26,16 +25,40 @@ export default function ProfilePage() {
       </header>
 
       <div className="profile-body">
-        <div className="profile-avatar" style={{ background: `hsl(${hue},60%,65%)` }}>
+        {/* Avatar DiceBear Micah — ukuran besar untuk profile */}
+        <img
+          src={getAvatarUrl(profile.username)}
+          alt={profile.username}
+          className="profile-avatar-img"
+          onError={(e) => {
+            const img = e.currentTarget
+            img.style.display = 'none'
+            const fallback = img.nextElementSibling as HTMLElement | null
+            if (fallback) fallback.style.display = 'flex'
+          }}
+        />
+        {/* Fallback inisial */}
+        <div
+          className="profile-avatar"
+          style={{ background: `hsl(${hue},60%,65%)`, display: 'none' }}
+        >
           {profile.username[0].toUpperCase()}
         </div>
+
         <div className="profile-username">
           {profile.username}
           {profile.is_verified && (
-            <span className="badge-official">Official</span>
+            <span className="badge-official">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 3 }}>
+                <path d="M9 12l2 2 4-4M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/>
+              </svg>
+              Official
+            </span>
           )}
         </div>
-        <div className="profile-joined">Joined {new Date(profile.created_at).toLocaleDateString('en', { month: 'long', year: 'numeric' })}</div>
+        <div className="profile-joined">
+          Joined {new Date(profile.created_at).toLocaleDateString('en', { month: 'long', year: 'numeric' })}
+        </div>
 
         <div className="profile-info-card">
           <div className="profile-info-row">
