@@ -1,7 +1,13 @@
+// src/pages/MessagesPage.tsx
+// Perubahan dari versi Supabase:
+//   - Import dari '../lib/firebase'
+//   - softDeleteMessage butuh myId & otherId sebagai parameter tambahan
+
 import { useState, useEffect, useRef, useCallback } from 'react'
 import {
-  getConversationList, getConversation, sendMessage, markMessagesRead, getUserByUsername, type Message, type Profile
-} from '../lib/supabase'
+  getConversationList, getConversation, sendMessage, markMessagesRead,
+  getUserByUsername, type Message, type Profile
+} from '../lib/firebase'
 import { useAuth } from '../hooks/useAuth'
 import { useRealtime } from '../hooks/useRealtime'
 
@@ -173,11 +179,10 @@ export default function MessagesPage({ initialDM }: { initialDM?: string }) {
   useEffect(() => { fetchConvos() }, [fetchConvos])
   useRealtime('messages', fetchConvos)
 
-  // Open DM directly if navigated from feed
   useEffect(() => {
     if (!initialDM || !profile) return
     setActivePartner(null)
-    getUserByUsername(initialDM).then(p => { 
+    getUserByUsername(initialDM).then(p => {
       if (p && p.id && p.username) setActivePartner(p)
     })
   }, [initialDM, profile])
@@ -207,9 +212,7 @@ export default function MessagesPage({ initialDM }: { initialDM?: string }) {
           const partner = msg.from_id === profile.id ? msg.to_profile : msg.from_profile
           const unread = msg.to_id === profile.id && !msg.read_at
           return (
-            <button key={msg.id} className="convo-item" onClick={async () => {
-              setActivePartner(partner)
-            }}>
+            <button key={msg.id} className="convo-item" onClick={() => setActivePartner(partner)}>
               <Avatar username={partner.username}/>
               <div className="convo-item__info">
                 <div className="convo-item__top">
