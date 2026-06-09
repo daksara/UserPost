@@ -59,11 +59,14 @@ const profileCache = new Map<string, Profile>()
 
 // ── Types ──────────────────────────────────────────────────────────
 
+export type BadgeGrantType = 'partner' | 'contributor' | 'verified'
+
 export interface Profile {
   id: string
   username: string
   created_at: string
   is_verified?: boolean
+  badge_type?: BadgeGrantType | null
   photo_url?: string | null
   bio?: string | null
   twitter?: string | null
@@ -125,6 +128,7 @@ async function getProfileById(userId: string): Promise<Profile | null> {
     username: d.username,
     created_at: tsToISO(d.created_at),
     is_verified: d.is_verified ?? false,
+    badge_type: d.badge_type ?? null,
     photo_url: d.photo_url ?? null,
     bio: d.bio ?? null,
     twitter: d.twitter ?? null,
@@ -190,6 +194,18 @@ export async function forgotPassword(username: string): Promise<void> {
 
 export async function signOut() {
   await firebaseSignOut(auth)
+}
+
+export async function grantBadge(targetUserId: string, badgeType: BadgeGrantType): Promise<void> {
+  if (!auth.currentUser) throw new Error('Not authenticated')
+  await updateDoc(doc(db, 'profiles', targetUserId), { badge_type: badgeType })
+  profileCache.delete(targetUserId)
+}
+
+export async function revokeBadge(targetUserId: string): Promise<void> {
+  if (!auth.currentUser) throw new Error('Not authenticated')
+  await updateDoc(doc(db, 'profiles', targetUserId), { badge_type: null })
+  profileCache.delete(targetUserId)
 }
 
 export async function resendVerificationEmail(): Promise<void> {
