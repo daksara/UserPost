@@ -306,6 +306,41 @@ export function subscribeToAllComments(onUpdate: () => void): Unsubscribe {
   })
 }
 
+export function subscribeToConversation(
+  myId: string,
+  otherId: string,
+  onMessages: (msgs: Message[]) => void
+): Unsubscribe {
+  const convId = convoId(myId, otherId)
+  let version = 0
+  return onSnapshot(
+    query(
+      collection(db, 'conversations', convId, 'messages'),
+      where('deleted_at', '==', null),
+      orderBy('created_at', 'asc')
+    ),
+    async (snap) => {
+      const v = ++version
+      const myProfile = await getProfileById(myId)
+      const partnerProfile = await getProfileById(otherId)
+      if (!myProfile || !partnerProfile) return
+      const msgs = await Promise.all(
+        snap.docs.map((d) => {
+          const data = d.data()
+          const from = data.from_id === myId ? myProfile : partnerProfile
+          const to = data.from_id === myId ? partnerProfile : myProfile
+          return hydrateMessage(d.id, { ...data, conversation_id: convId }, from, to)
+        })
+      )
+      if (v === version) onMessages(msgs)
+    }
+  )
+}
+
+export function subscribeToInbox(myId: string, onUpdate: () => void): Unsubscribe {
+  return onSnapshot(collection(db, 'users', myId, 'inbox'), onUpdate)
+}
+
 // ── Storage ────────────────────────────────────────────────────────
 
 export async function uploadProfilePhoto(userId: string, base64DataUrl: string): Promise<string> {
