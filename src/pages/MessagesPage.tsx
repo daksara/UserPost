@@ -163,6 +163,7 @@ export default function MessagesPage({ initialDM }: { initialDM?: string }) {
   const [convos, setConvos] = useState<Message[]>([])
   const [activePartner, setActivePartner] = useState<Profile | null>(null)
   const [composingDM, setComposingDM] = useState(false)
+  const prevInitialDM = useRef<string | undefined>(undefined)
 
   const fetchConvos = useCallback(async () => {
     if (!profile) return
@@ -176,6 +177,7 @@ export default function MessagesPage({ initialDM }: { initialDM?: string }) {
   // Open DM directly if navigated from feed
   useEffect(() => {
     if (!initialDM || !profile) return
+    setActivePartner(null)
     getUserByUsername(initialDM).then(p => { if (p) setActivePartner(p) })
   }, [initialDM, profile])
 
