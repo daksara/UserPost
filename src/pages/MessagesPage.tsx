@@ -62,15 +62,21 @@ function ThreadView({ partner, myId, onBack }: { partner: Profile; myId: string;
   }, [myId, partner.id, fetchMessages])
 
   const handleSend = async () => {
-    if (!text.trim() || sending) return
-    setSending(true)
-    const msg = await sendMessage(myId, partner.id, text.trim(), replyTo?.id)
-    setMessages(prev => [...prev, msg])
-    setText('')
-    setReplyTo(null)
+  if (!text.trim() || sending) return
+  setSending(true)
+  const trimmed = text.trim()
+  const replyId = replyTo?.id
+  setText('')
+  setReplyTo(null)
+  try {
+    await sendMessage(myId, partner.id, trimmed, replyId)
+  } catch (e) {
+    console.error(e)
+  } finally {
     setSending(false)
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
   }
+  setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+}
 
   return (
     <div className="page page--thread">
