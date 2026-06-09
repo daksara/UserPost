@@ -1,3 +1,7 @@
+// src/App.tsx
+// Perubahan: useAuth sekarang return { user, profile, loading }
+// Ganti 'session' → 'user'
+
 import { useState } from 'react'
 import { AuthProvider, useAuth } from './hooks/useAuth'
 import AuthPage from './pages/AuthPage'
@@ -8,7 +12,7 @@ import ProfilePage from './pages/ProfilePage'
 type Tab = 'feed' | 'messages' | 'profile'
 
 function App() {
-  const { session, loading } = useAuth()
+  const { user, loading } = useAuth()  // 'user' bukan 'session'
   const [tab, setTab] = useState<Tab>('feed')
   const [dmTarget, setDmTarget] = useState<string | undefined>()
 
@@ -20,7 +24,7 @@ function App() {
     )
   }
 
-  if (!session) return <AuthPage/>
+  if (!user) return <AuthPage/>
 
   const handleDMClick = (username: string) => {
     setDmTarget(username)
