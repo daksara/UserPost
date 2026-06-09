@@ -1,4 +1,7 @@
-import { signOut } from '../lib/supabase'
+// src/pages/ProfilePage.tsx
+// Perubahan: import signOut dari '../lib/firebase' (bukan supabase)
+
+import { signOut } from '../lib/firebase'
 import { useAuth } from '../hooks/useAuth'
 
 function hashStr(s: string) {
