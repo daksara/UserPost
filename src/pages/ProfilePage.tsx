@@ -324,8 +324,6 @@ export default function ProfilePage() {
         >
           Change Password
         </button>
-        <button className="signout-btn" onClick={signOut} style={{ WebkitTapHighlightColor: 'transparent' }}>Sign out</button>
-
         {/* Delete Account button */}
         <button
           className="signout-btn"
