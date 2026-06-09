@@ -8,29 +8,42 @@ import ProfilePage from './pages/ProfilePage'
 
 type Tab = 'feed' | 'messages' | 'profile'
 
+// Animasi fade+slide ringan — hanya opacity & translateY, tidak ubah layout
 function AnimatedTab({ children, active }: { children: React.ReactNode; active: boolean }) {
   const ref = useRef<HTMLDivElement>(null)
+  const mounted = useRef(false)
 
   useEffect(() => {
     const el = ref.current
     if (!el) return
+
+    if (!mounted.current) {
+      // Mount pertama: langsung tampil tanpa animasi
+      mounted.current = true
+      el.style.opacity = active ? '1' : '0'
+      el.style.pointerEvents = active ? 'auto' : 'none'
+      el.style.visibility = active ? 'visible' : 'hidden'
+      return
+    }
+
     if (active) {
-      el.style.display = 'block'
-      // Force reflow then animate in
+      el.style.visibility = 'visible'
+      el.style.pointerEvents = 'auto'
+      el.style.transform = 'translateY(6px)'
+      el.style.opacity = '0'
       requestAnimationFrame(() => {
-        el.style.opacity = '0'
-        el.style.transform = 'translateY(8px)'
-        requestAnimationFrame(() => {
-          el.style.transition = 'opacity 0.22s ease, transform 0.22s ease'
-          el.style.opacity = '1'
-          el.style.transform = 'translateY(0)'
-        })
+        el.style.transition = 'opacity 0.2s ease, transform 0.2s ease'
+        el.style.opacity = '1'
+        el.style.transform = 'translateY(0)'
       })
     } else {
       el.style.transition = 'none'
       el.style.opacity = '0'
-      el.style.transform = 'translateY(8px)'
-      el.style.display = 'none'
+      el.style.pointerEvents = 'none'
+      // Delay hide agar tidak terpotong saat animasi masuk tab baru
+      setTimeout(() => {
+        if (ref.current) ref.current.style.visibility = 'hidden'
+      }, 50)
     }
   }, [active])
 
@@ -38,9 +51,13 @@ function AnimatedTab({ children, active }: { children: React.ReactNode; active: 
     <div
       ref={ref}
       style={{
-        height: '100%',
-        display: active ? 'block' : 'none',
+        // Semua tab stack di posisi yang sama — tidak ubah document flow
+        position: 'absolute',
+        inset: 0,
+        overflow: 'hidden',
+        visibility: active ? 'visible' : 'hidden',
         opacity: 0,
+        pointerEvents: active ? 'auto' : 'none',
       }}
     >
       {children}
@@ -70,7 +87,8 @@ function App() {
 
   return (
     <div className="app">
-      <div className="app__content">
+      {/* position:relative agar absolute children bisa stack dengan benar */}
+      <div className="app__content" style={{ position: 'relative' }}>
         <AnimatedTab active={tab === 'feed'}>
           <FeedPage onDMClick={handleDMClick}/>
         </AnimatedTab>
