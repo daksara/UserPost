@@ -177,12 +177,14 @@ export default function MessagesPage({ initialDM }: { initialDM?: string }) {
   useEffect(() => {
     if (!initialDM || !profile) return
     setActivePartner(null)
-    getUserByUsername(initialDM).then(p => { if (p) setActivePartner(p) })
+    getUserByUsername(initialDM).then(p => { 
+      if (p && p.id && p.username) setActivePartner(p)
+    })
   }, [initialDM, profile])
 
   if (!profile) return null
 
-  if (activePartner) {
+  if (activePartner && activePartner.username) {
     return <ThreadView partner={activePartner} myId={profile.id} onBack={() => setActivePartner(null)}/>
   }
 
