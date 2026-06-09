@@ -55,9 +55,18 @@ function ThreadView({ partner, myProfile, onBack }: {
     initializedRef.current = false
     const unsub = subscribeToConversation(myProfile.id, partner.id, (msgs) => {
       setMessages(prev => {
-        // Keep pending optimistic messages not yet confirmed by Firestore
-        const realIds = new Set(msgs.map(m => m.id))
-        const pendingOptimistic = prev.filter(m => m.id.startsWith('opt-') && !realIds.has(m.id))
+        // Keep optimistic messages only until a matching real message arrives.
+        // Match by sender + body + close timestamp (ids never match), so the
+        // optimistic twin is dropped the moment Firestore confirms it.
+        const pendingOptimistic = prev.filter(m => {
+          if (!m.id.startsWith('opt-')) return false
+          const confirmed = msgs.some(r =>
+            r.from_id === m.from_id &&
+            r.body === m.body &&
+            Math.abs(new Date(r.created_at).getTime() - new Date(m.created_at).getTime()) < 60_000
+          )
+          return !confirmed
+        })
         return [...msgs, ...pendingOptimistic].sort(
           (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
         )
@@ -219,7 +228,14 @@ function ThreadView({ partner, myProfile, onBack }: {
           placeholder="Type a message…"
           value={text}
           onChange={e => setText(e.target.value.slice(0, 1000))}
-          onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
+          onKeyDown={e => {
+            // Guard against IME composition (mobile keyboards): committing the
+            // composed word fires Enter but shouldn't send / re-fill the input
+            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+              e.preventDefault()
+              handleSend()
+            }
+          }}
         />
         <button className="thread-composer__send" onClick={handleSend} disabled={!text.trim()}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
