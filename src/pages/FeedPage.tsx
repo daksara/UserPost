@@ -1,12 +1,9 @@
 // src/pages/FeedPage.tsx
-// Perubahan dari versi Supabase:
-//   - Import dari '../lib/firebase' (bukan '../lib/supabase')
-//   - Tidak ada perubahan lain — semua fungsi memiliki signature yang sama
-
 import { useState, useCallback, useEffect } from 'react'
 import { getPosts, createPost, deletePost, addComment, type Post, type Comment } from '../lib/firebase'
 import { useAuth } from '../hooks/useAuth'
 import { useRealtime } from '../hooks/useRealtime'
+import { UserAvatar } from '../components/Avatar'
 
 function timeAgo(iso: string) {
   const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
@@ -62,14 +59,22 @@ function PostCard({ post, myId, onDelete, onComment, onDMClick }: {
   return (
     <div className="post-card">
       <div className="post-card__header">
-        <div className="post-card__avatar" style={{ background: `hsl(${hashStr(post.profiles.username) % 360},60%,65%)` }}>
-          {post.profiles.username[0].toUpperCase()}
-        </div>
+        {/* Avatar DiceBear Micah */}
+        <UserAvatar username={post.profiles.username} size={36} />
+
         <div className="post-card__meta">
-          <button className="post-card__username" onClick={() => !isOwn && onDMClick(post.profiles.username)}>
+          <button
+            className="post-card__username"
+            onClick={() => !isOwn && onDMClick(post.profiles.username)}
+          >
             {post.profiles.username}
             {post.profiles.is_verified && (
-              <span className="badge-official">Official</span>
+              <span className="badge-official">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: 3 }}>
+                  <path d="M9 12l2 2 4-4M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Official
+              </span>
             )}
           </button>
           <span className="post-card__time">{timeAgo(post.created_at)}</span>
@@ -118,10 +123,6 @@ function PostCard({ post, myId, onDelete, onComment, onDMClick }: {
       )}
     </div>
   )
-}
-
-function hashStr(s: string) {
-  let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) & 0xfffff; return h
 }
 
 // ── Compose Sheet ──────────────────────────────────────────────────
