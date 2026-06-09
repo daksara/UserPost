@@ -94,7 +94,7 @@ function PostCard({ post, myId, onDelete, onComment, onDMClick }: {
       )}
 
       <div className="post-card__header">
-        <UserAvatar username={post.profiles.username} size={36} />
+        <UserAvatar username={post.profiles.username} size={36} photoUrl={post.profiles.photo_url} />
         <div className="post-card__meta">
           <button className="post-card__username" onClick={() => !isOwn && onDMClick(post.profiles.username)}>
             {post.profiles.username}
