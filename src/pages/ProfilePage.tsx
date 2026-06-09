@@ -313,17 +313,17 @@ export default function ProfilePage() {
         <button
           className="signout-btn"
           onClick={() => { setChangingPw(true); setPwError(''); setPwSuccess(false) }}
-          style={{ color: 'var(--accent)', marginBottom: 0 }}
+          style={{ color: 'var(--accent)', marginBottom: 0, WebkitTapHighlightColor: 'transparent' }}
         >
           Change Password
         </button>
-        <button className="signout-btn" onClick={signOut}>Sign out</button>
+        <button className="signout-btn" onClick={signOut} style={{ WebkitTapHighlightColor: 'transparent' }}>Sign out</button>
 
         {/* Delete Account button */}
         <button
           className="signout-btn"
           onClick={() => { setDeletingAccount(true); setDeletePassword(''); setDeleteError('') }}
-          style={{ color: 'var(--red)', marginTop: 8 }}
+          style={{ color: 'var(--red)', marginTop: 8, WebkitTapHighlightColor: 'transparent' }}
         >
           Delete Account
         </button>
