@@ -141,27 +141,27 @@ export async function signUp(username: string, email: string, password: string) 
   const usernameKey = username.toLowerCase()
   const usernameRef = doc(db, 'usernames', usernameKey)
 
-  // Atomically claim username before creating the Auth user
-  await runTransaction(db, async (t) => {
-    const snap = await t.get(usernameRef)
-    if (snap.exists()) throw new Error('Username already taken')
-    t.set(usernameRef, { uid: '_pending_', email })
-  })
+  // Create auth user first so Firestore writes run while authenticated
+  const { user } = await createUserWithEmailAndPassword(auth, email, password)
 
   try {
-    const { user } = await createUserWithEmailAndPassword(auth, email, password)
+    // Atomically claim username (now authenticated)
+    await runTransaction(db, async (t) => {
+      const snap = await t.get(usernameRef)
+      if (snap.exists()) throw new Error('Username already taken')
+      t.set(usernameRef, { uid: user.uid, email })
+    })
     await setDoc(doc(db, 'profiles', user.uid), {
       username,
       created_at: serverTimestamp(),
       is_verified: false,
     })
-    await setDoc(usernameRef, { uid: user.uid, email })
     await sendEmailVerification(user).catch(() => {})
     return user
   } catch (e) {
-    // Release the username claim so it can be retried
+    // Clean up: remove username claim and auth account on failure
     await deleteDoc(usernameRef).catch(() => {})
-    if (auth.currentUser) await deleteUser(auth.currentUser).catch(() => {})
+    await deleteUser(user).catch(() => {})
     throw e
   }
 }
