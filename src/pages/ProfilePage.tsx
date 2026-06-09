@@ -23,10 +23,6 @@ async function compressToBase64(file: File, maxSize = 200): Promise<string> {
   })
 }
 
-function hashStr(s: string) {
-  let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) & 0xfffff; return h
-}
-
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false)
   const handleCopy = () => {
@@ -80,6 +76,8 @@ export default function ProfilePage() {
   const [tipCA, setTipCA] = useState('')
 
   if (!profile) return null
+
+  const hue = (profile.username.split('').reduce((h, c) => (h * 31 + c.charCodeAt(0)) & 0xfffff, 0)) % 360
 
   const handleChangePassword = async () => {
     setPwError('')
