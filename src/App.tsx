@@ -8,8 +8,6 @@ import ProfilePage from './pages/ProfilePage'
 
 type Tab = 'feed' | 'messages' | 'profile'
 
-const TAB_ORDER: Tab[] = ['feed', 'messages', 'profile']
-
 function AnimatedTab({ children, active }: { children: React.ReactNode; active: boolean }) {
   const ref = useRef<HTMLDivElement>(null)
 
