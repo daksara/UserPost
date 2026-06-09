@@ -5,6 +5,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
+  sendPasswordResetEmail,
   onAuthStateChanged,
   reauthenticateWithCredential,
   updatePassword,
@@ -23,6 +24,7 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  runTransaction,
   query,
   where,
   orderBy,
@@ -131,31 +133,50 @@ async function getProfileById(userId: string): Promise<Profile | null> {
 
 // ── Auth ───────────────────────────────────────────────────────────
 
-export async function signUp(username: string, password: string) {
-  // Check username uniqueness first
-  const available = await checkUsernameAvailable(username)
-  if (!available) throw new Error('Username already taken')
+export async function signUp(username: string, email: string, password: string) {
+  const usernameKey = username.toLowerCase()
+  const usernameRef = doc(db, 'usernames', usernameKey)
 
-  const email = `up.${username.toLowerCase()}@userpost.app`
-  const { user } = await createUserWithEmailAndPassword(auth, email, password)
-
-  // Create profile document
-  await setDoc(doc(db, 'profiles', user.uid), {
-    username,
-    created_at: serverTimestamp(),
-    is_verified: false,
+  // Atomically claim username before creating the Auth user
+  await runTransaction(db, async (t) => {
+    const snap = await t.get(usernameRef)
+    if (snap.exists()) throw new Error('Username already taken')
+    t.set(usernameRef, { uid: '_pending_', email })
   })
 
-  // Create username index for lookup
-  await setDoc(doc(db, 'usernames', username.toLowerCase()), { uid: user.uid })
-
-  return user
+  try {
+    const { user } = await createUserWithEmailAndPassword(auth, email, password)
+    await setDoc(doc(db, 'profiles', user.uid), {
+      username,
+      created_at: serverTimestamp(),
+      is_verified: false,
+    })
+    await setDoc(usernameRef, { uid: user.uid, email })
+    return user
+  } catch (e) {
+    // Release the username claim so it can be retried
+    await deleteDoc(usernameRef).catch(() => {})
+    if (auth.currentUser) await deleteUser(auth.currentUser).catch(() => {})
+    throw e
+  }
 }
 
 export async function signIn(username: string, password: string) {
-  const email = `up.${username.toLowerCase()}@userpost.app`
+  const indexSnap = await getDoc(doc(db, 'usernames', username.toLowerCase()))
+  // Fall back to legacy email pattern for accounts created before email was required
+  const email = (indexSnap.exists() && indexSnap.data().email)
+    ? indexSnap.data().email
+    : `up.${username.toLowerCase()}@userpost.app`
   const { user } = await signInWithEmailAndPassword(auth, email, password)
   return user
+}
+
+export async function forgotPassword(username: string): Promise<void> {
+  const indexSnap = await getDoc(doc(db, 'usernames', username.toLowerCase()))
+  if (!indexSnap.exists()) throw new Error('Username not found')
+  const { email } = indexSnap.data()
+  if (!email) throw new Error('No recovery email on file for this account')
+  await sendPasswordResetEmail(auth, email)
 }
 
 export async function signOut() {
