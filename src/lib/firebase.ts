@@ -8,6 +8,7 @@ import {
   onAuthStateChanged,
   reauthenticateWithCredential,
   updatePassword,
+  deleteUser,
   EmailAuthProvider,
   type User,
 } from 'firebase/auth'
@@ -459,6 +460,33 @@ export async function changePassword(currentPassword: string, newPassword: strin
   const credential = EmailAuthProvider.credential(user.email, currentPassword)
   await reauthenticateWithCredential(user, credential)
   await updatePassword(user, newPassword)
+}
+
+export async function deleteAccount(password: string) {
+  const user = auth.currentUser
+  if (!user || !user.email) throw new Error('Not authenticated')
+
+  // Re-authenticate first (Firebase requires this for account deletion)
+  const credential = EmailAuthProvider.credential(user.email, password)
+  await reauthenticateWithCredential(user, credential)
+
+  const uid = user.uid
+  const username = (await getProfileById(uid))?.username
+
+  // Delete Firestore profile doc
+  await deleteDoc(doc(db, 'profiles', uid))
+
+  // Delete username index
+  if (username) {
+    await deleteDoc(doc(db, 'usernames', username.toLowerCase()))
+  }
+
+  // Delete inbox subcollection entries
+  const inboxSnap = await getDocs(collection(db, 'users', uid, 'inbox'))
+  await Promise.all(inboxSnap.docs.map((d) => deleteDoc(d.ref)))
+
+  // Delete Firebase Auth account (must be last)
+  await deleteUser(user)
 }
 
 export { onAuthStateChanged, type User }
