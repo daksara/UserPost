@@ -50,6 +50,11 @@ export interface Profile {
   username: string
   created_at: string
   is_verified?: boolean
+  photo_url?: string | null
+  bio?: string | null
+  twitter?: string | null
+  telegram?: string | null
+  tip_ca?: string | null
 }
 
 export interface Post {
@@ -102,6 +107,11 @@ async function getProfileById(userId: string): Promise<Profile | null> {
     username: d.username,
     created_at: tsToISO(d.created_at),
     is_verified: d.is_verified ?? false,
+    photo_url: d.photo_url ?? null,
+    bio: d.bio ?? null,
+    twitter: d.twitter ?? null,
+    telegram: d.telegram ?? null,
+    tip_ca: d.tip_ca ?? null,
   }
 }
 
@@ -416,5 +426,24 @@ export async function getUnreadCount(myId: string): Promise<number> {
   return snap.size
 }
 
-// Re-export onAuthStateChanged for useAuth hook
+export async function updateProfile(
+  userId: string,
+  data: {
+    photo_url?: string | null
+    bio?: string | null
+    twitter?: string | null
+    telegram?: string | null
+    tip_ca?: string | null
+  }
+) {
+  await updateDoc(doc(db, 'profiles', userId), {
+    ...(data.photo_url !== undefined && { photo_url: data.photo_url }),
+    ...(data.bio !== undefined && { bio: data.bio }),
+    ...(data.twitter !== undefined && { twitter: data.twitter }),
+    ...(data.telegram !== undefined && { telegram: data.telegram }),
+    ...(data.tip_ca !== undefined && { tip_ca: data.tip_ca }),
+  })
+}
+
+
 export { onAuthStateChanged, type User }
