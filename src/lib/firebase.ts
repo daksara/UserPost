@@ -6,6 +6,7 @@ import {
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   sendPasswordResetEmail,
+  sendEmailVerification,
   onAuthStateChanged,
   reauthenticateWithCredential,
   updatePassword,
@@ -155,6 +156,7 @@ export async function signUp(username: string, email: string, password: string) 
       is_verified: false,
     })
     await setDoc(usernameRef, { uid: user.uid, email })
+    await sendEmailVerification(user).catch(() => {})
     return user
   } catch (e) {
     // Release the username claim so it can be retried
@@ -184,6 +186,12 @@ export async function forgotPassword(username: string): Promise<void> {
 
 export async function signOut() {
   await firebaseSignOut(auth)
+}
+
+export async function resendVerificationEmail(): Promise<void> {
+  const user = auth.currentUser
+  if (!user) throw new Error('Not signed in')
+  await sendEmailVerification(user)
 }
 
 export async function getProfile(userId: string): Promise<Profile | null> {
