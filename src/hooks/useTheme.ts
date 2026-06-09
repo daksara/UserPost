@@ -3,16 +3,15 @@
 // Pilihan disimpan di localStorage dan diterapkan via atribut data-theme di <html>.
 import { useEffect, useState } from 'react'
 
-export type Theme = 'light' | 'dark' | 'oled'
+export type Theme = 'light' | 'dark'
 
-export const THEMES: Theme[] = ['light', 'dark', 'oled']
+export const THEMES: Theme[] = ['light', 'dark']
 const STORAGE_KEY = 'userpost-theme'
 
 // Warna address bar mobile per tema (sinkron dengan --bg di index.css)
 const THEME_COLORS: Record<Theme, string> = {
   light: '#f4f4f8',
   dark: '#16161c',
-  oled: '#000000',
 }
 
 export function getStoredTheme(): Theme {

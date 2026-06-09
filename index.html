@@ -13,11 +13,10 @@
       (function () {
         try {
           var t = localStorage.getItem('userpost-theme');
-          if (t === 'dark' || t === 'oled') {
+          if (t === 'dark') {
             document.documentElement.setAttribute('data-theme', t);
-            var c = t === 'oled' ? '#000000' : '#16161c';
             var m = document.querySelector('meta[name="theme-color"]');
-            if (m) m.setAttribute('content', c);
+            if (m) m.setAttribute('content', '#16161c');
           }
         } catch (e) {}
       })();
