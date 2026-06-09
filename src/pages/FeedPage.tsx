@@ -102,6 +102,35 @@ function DeleteConfirm({ onConfirm, onCancel }: { onConfirm: () => void; onCance
   )
 }
 
+function HotIndicator({ commentCount, createdAt }: { commentCount: number; createdAt: string }) {
+  const hoursAlive = Math.max(0.25, (Date.now() - new Date(createdAt).getTime()) / 3600000)
+  const rate = commentCount / hoursAlive
+  if (commentCount < 3 || rate < 1) return null
+  const hot = rate >= 5
+  const color = hot ? 'var(--red)' : '#f97316'
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.72rem', fontWeight: 700, color }}>
+      <svg width="9" height="11" viewBox="0 0 10 12" fill={color} stroke="none">
+        <path d="M5 0C5 0 1 4 1 7.5a4 4 0 1 0 8 0C9 4 5 0 5 0z"/>
+      </svg>
+      {rate.toFixed(1)}/h
+    </span>
+  )
+}
+
+function ExpiryBar({ expiresAt, createdAt }: { expiresAt: string; createdAt: string }) {
+  const total = new Date(expiresAt).getTime() - new Date(createdAt).getTime()
+  const remaining = Math.max(0, new Date(expiresAt).getTime() - Date.now())
+  const pct = remaining / total
+  const hoursLeft = remaining / 3600000
+  const color = hoursLeft > 12 ? 'var(--accent)' : hoursLeft > 4 ? '#f97316' : 'var(--red)'
+  return (
+    <div style={{ height: 2, background: 'var(--border)', borderRadius: 1, marginTop: 10, overflow: 'hidden' }}>
+      <div style={{ height: '100%', width: `${pct * 100}%`, background: color, borderRadius: 1, transition: 'width 1s ease' }}/>
+    </div>
+  )
+}
+
 function PostCard({ post, myId, onDelete, onComment, onDeleteComment, onDMClick }: {
   post: Post
   myId: string
@@ -120,6 +149,13 @@ function PostCard({ post, myId, onDelete, onComment, onDeleteComment, onDMClick 
   const [commentCount, setCommentCount] = useState(post.comment_count)
   const prevCommentCountRef = useRef(post.comment_count)
   const isOwn = post.user_id === myId
+  const [, setTick] = useState(0)
+
+  // Force re-render every 30s so expiry bar and hot counter stay live
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 30_000)
+    return () => clearInterval(id)
+  }, [])
 
   // Re-fetch comments if the section is open and comment_count changed externally
   useEffect(() => {
@@ -221,6 +257,7 @@ function PostCard({ post, myId, onDelete, onComment, onDeleteComment, onDMClick 
           </svg>
           {commentCount > 0 ? commentCount : ''} Comments
         </button>
+        <HotIndicator commentCount={commentCount} createdAt={post.created_at}/>
       </div>
 
       {showComments && (
@@ -260,6 +297,8 @@ function PostCard({ post, myId, onDelete, onComment, onDeleteComment, onDMClick 
           </div>
         </div>
       )}
+
+      <ExpiryBar expiresAt={post.expires_at} createdAt={post.created_at}/>
     </div>
   )
 }
