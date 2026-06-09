@@ -7,6 +7,17 @@ import {
 } from '../lib/firebase'
 import { useAuth } from '../hooks/useAuth'
 import { UserAvatar } from '../components/Avatar'
+import { BadgeChip } from '../components/Badge'
+
+function ProfileBadges({ profile }: { profile: Profile }) {
+  if (!profile.is_verified && !profile.badge_type) return null
+  return (
+    <>
+      {profile.is_verified && <BadgeChip type="official"/>}
+      {profile.badge_type && <BadgeChip type={profile.badge_type}/>}
+    </>
+  )
+}
 
 function timeAgo(iso: string) {
   const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
@@ -115,7 +126,10 @@ function ThreadView({ partner, myProfile, onBack }: {
           </svg>
         </button>
         <Avatar username={partner.username} size={32} photoUrl={partner.photo_url}/>
-        <span className="page-header__title">{partner.username}</span>
+        <span className="page-header__title" style={{ display: 'inline-flex', alignItems: 'center', flexWrap: 'wrap' }}>
+          {partner.username}
+          <ProfileBadges profile={partner}/>
+        </span>
       </header>
 
       <div className="thread-messages" ref={containerRef}>
@@ -244,8 +258,11 @@ function NewMessageSheet({ myId, onStart, onClose }: { myId: string; onStart: (p
         )}
         {!searching && result && result !== 'not-found' && (
           <button className="user-result" onClick={() => onStart(result)}>
-            <Avatar username={result.username} size={36}/>
-            <span>{result.username}</span>
+            <Avatar username={result.username} size={36} photoUrl={result.photo_url}/>
+            <span style={{ display: 'inline-flex', alignItems: 'center', flexWrap: 'wrap' }}>
+              {result.username}
+              <ProfileBadges profile={result}/>
+            </span>
           </button>
         )}
       </div>
@@ -351,7 +368,10 @@ function SwipeableConvoItem({
         <Avatar username={partner.username} photoUrl={partner.photo_url}/>
         <div className="convo-item__info">
           <div className="convo-item__top">
-            <span className="convo-item__name">{partner.username}</span>
+            <span className="convo-item__name" style={{ display: 'inline-flex', alignItems: 'center', minWidth: 0 }}>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{partner.username}</span>
+              <ProfileBadges profile={partner}/>
+            </span>
             <span className="convo-item__time">{timeAgo(msg.created_at)}</span>
           </div>
           <div className="convo-item__preview">
