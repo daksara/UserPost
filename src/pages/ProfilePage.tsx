@@ -1,8 +1,27 @@
 // src/pages/ProfilePage.tsx
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { signOut, updateProfile } from '../lib/firebase'
 import { useAuth } from '../hooks/useAuth'
 import { getAvatarUrl } from '../components/Avatar'
+
+async function compressToBase64(file: File, maxSize = 200): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      const scale = Math.min(maxSize / img.width, maxSize / img.height, 1)
+      canvas.width = img.width * scale
+      canvas.height = img.height * scale
+      const ctx = canvas.getContext('2d')!
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      URL.revokeObjectURL(url)
+      resolve(canvas.toDataURL('image/jpeg', 0.8))
+    }
+    img.onerror = reject
+    img.src = url
+  })
+}
 
 function hashStr(s: string) {
   let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) & 0xfffff; return h
@@ -41,9 +60,11 @@ export default function ProfilePage() {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Edit fields
   const [photoUrl, setPhotoUrl] = useState('')
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [bio, setBio] = useState('')
   const [twitter, setTwitter] = useState('')
   const [telegram, setTelegram] = useState('')
@@ -56,12 +77,25 @@ export default function ProfilePage() {
 
   const openEdit = () => {
     setPhotoUrl((profile as any).photo_url || '')
+    setPhotoPreview(null)
     setBio((profile as any).bio || '')
     setTwitter((profile as any).twitter || '')
     setTelegram((profile as any).telegram || '')
     setTipCA((profile as any).tip_ca || '')
     setError('')
     setEditing(true)
+  }
+
+  const handlePickPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const base64 = await compressToBase64(file)
+      setPhotoPreview(base64)
+      setPhotoUrl(base64)
+    } catch {
+      setError('Failed to process image.')
+    }
   }
 
   const handleSave = async () => {
@@ -231,8 +265,32 @@ export default function ProfilePage() {
             <div className="sheet__handle"/>
             <div className="sheet__title">Edit Profile</div>
 
-            <label style={labelStyle}>Photo URL</label>
-            <input className="auth-input" placeholder="https://..." value={photoUrl} onChange={e => setPhotoUrl(e.target.value)} autoCapitalize="none"/>
+            {/* Photo picker */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handlePickPhoto}
+            />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+              <img
+                src={photoPreview || photoUrl || getAvatarUrl(profile.username)}
+                alt="preview"
+                style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', background: '#eeeeff', border: '2px solid var(--border)' }}
+                onError={(e) => { (e.currentTarget as HTMLImageElement).src = getAvatarUrl(profile.username) }}
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  background: 'var(--accent-soft)', color: 'var(--accent)',
+                  border: '1.5px solid var(--accent)', borderRadius: 'var(--radius-full)',
+                  padding: '6px 16px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer',
+                }}
+              >
+                Choose from Gallery
+              </button>
+            </div>
 
             <label style={labelStyle}>Bio</label>
             <textarea
