@@ -66,6 +66,7 @@ export default function ProfilePage() {
   const [pwError, setPwError] = useState('')
   const [pwSuccess, setPwSuccess] = useState(false)
   const [savingPw, setSavingPw] = useState(false)
+  const [confirmDeleteAccount, setConfirmDeleteAccount] = useState(false)
 
   // Edit fields
   const [photoUrl, setPhotoUrl] = useState('')
@@ -269,21 +270,6 @@ export default function ProfilePage() {
           </div>
         )}
 
-        <div className="profile-info-card">
-          <div className="profile-info-row">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-            </svg>
-            Posts disappear after 24 hours
-          </div>
-          <div className="profile-info-row">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            </svg>
-            Messages are private and persistent
-          </div>
-        </div>
-
         <button
           className="signout-btn"
           onClick={() => { setChangingPw(true); setPwError(''); setPwSuccess(false) }}
@@ -292,7 +278,50 @@ export default function ProfilePage() {
           Change Password
         </button>
         <button className="signout-btn" onClick={signOut}>Sign out</button>
+        <button
+          className="signout-btn"
+          onClick={() => setConfirmDeleteAccount(true)}
+          style={{ color: 'var(--red)', marginTop: 0 }}
+        >
+          Delete Account
+        </button>
       </div>
+
+      {/* ── Delete Account Confirm ── */}
+      {confirmDeleteAccount && (
+        <div className="sheet-overlay" onClick={e => { if (e.target === e.currentTarget) setConfirmDeleteAccount(false) }}>
+          <div className="sheet" style={{ gap: 16 }}>
+            <div className="sheet__handle"/>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '2rem', marginBottom: 8 }}>⚠️</div>
+              <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: 4 }}>Delete Account?</div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>All your posts and data will be permanently deleted. This cannot be undone.</div>
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button className="btn-cancel" style={{ flex: 1, textAlign: 'center' }} onClick={() => setConfirmDeleteAccount(false)}>Cancel</button>
+              <button
+                onClick={async () => {
+                  try {
+                    const { deleteDoc, doc } = await import('firebase/firestore')
+                    const { db, auth } = await import('../lib/firebase')
+                    await deleteDoc(doc(db, 'profiles', profile.id))
+                    await auth.currentUser?.delete()
+                  } catch (e) {
+                    console.error(e)
+                  }
+                }}
+                style={{
+                  flex: 1, background: 'var(--red)', border: 'none', color: '#fff',
+                  fontWeight: 700, fontSize: '0.88rem', padding: '10px',
+                  borderRadius: 'var(--radius-full)', cursor: 'pointer'
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Change Password Sheet ── */}
       {changingPw && (
