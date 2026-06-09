@@ -58,6 +58,9 @@ input, textarea {
   -webkit-user-select: text;
   user-select: text;
 }
+button {
+  -webkit-tap-highlight-color: transparent;
+}
 
 /* ── App Shell ──────────────────────────────────────────────────── */
 .app {
