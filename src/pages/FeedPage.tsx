@@ -1,5 +1,10 @@
+// src/pages/FeedPage.tsx
+// Perubahan dari versi Supabase:
+//   - Import dari '../lib/firebase' (bukan '../lib/supabase')
+//   - Tidak ada perubahan lain — semua fungsi memiliki signature yang sama
+
 import { useState, useCallback, useEffect } from 'react'
-import { getPosts, createPost, deletePost, addComment, type Post, type Comment } from '../lib/supabase'
+import { getPosts, createPost, deletePost, addComment, type Post, type Comment } from '../lib/firebase'
 import { useAuth } from '../hooks/useAuth'
 import { useRealtime } from '../hooks/useRealtime'
 
