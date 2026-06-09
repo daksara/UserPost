@@ -31,7 +31,7 @@ function App() {
     <div className="app">
       <div className="app__content">
         {tab === 'feed'     && <FeedPage onDMClick={handleDMClick}/>}
-        {tab === 'messages' && <MessagesPage initialDM={dmTarget}/>}
+        {tab === 'messages' && <MessagesPage key={dmTarget ?? 'messages'} initialDM={dmTarget}/>}
         {tab === 'profile'  && <ProfilePage/>}
       </div>
 
