@@ -1,6 +1,6 @@
 // src/pages/ProfilePage.tsx
 import { useState, useRef } from 'react'
-import { signOut, updateProfile, changePassword, deleteAccount } from '../lib/firebase'
+import { signOut, updateProfile, changePassword, deleteAccount, uploadProfilePhoto } from '../lib/firebase'
 import { useAuth } from '../hooks/useAuth'
 import { getAvatarUrl } from '../components/Avatar'
 
@@ -161,8 +161,12 @@ export default function ProfilePage() {
     setSaving(true)
     setError('')
     try {
+      let finalPhotoUrl = photoUrl.trim() || null
+      if (photoPreview) {
+        finalPhotoUrl = await uploadProfilePhoto(profile.id, photoPreview)
+      }
       await updateProfile(profile.id, {
-        photo_url: photoUrl.trim() || null,
+        photo_url: finalPhotoUrl,
         bio: bio.trim() || null,
         twitter: twitter.trim() || null,
         telegram: telegram.trim() || null,
@@ -225,9 +229,12 @@ export default function ProfilePage() {
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
           <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>{profile.username}</span>
-          {(profile as any).verified && (
-            <span style={{ fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 600 }}>
-              ✓ Verified
+          {profile.is_verified && (
+            <span className="badge-official">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 3 }}>
+                <path d="M9 12l2 2 4-4M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/>
+              </svg>
+              Official
             </span>
           )}
         </div>
@@ -317,8 +324,6 @@ export default function ProfilePage() {
         >
           Change Password
         </button>
-        <button className="signout-btn" onClick={signOut} style={{ WebkitTapHighlightColor: 'transparent' }}>Sign out</button>
-
         {/* Delete Account button */}
         <button
           className="signout-btn"

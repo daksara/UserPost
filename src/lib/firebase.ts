@@ -5,6 +5,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
+  sendPasswordResetEmail,
   onAuthStateChanged,
   reauthenticateWithCredential,
   updatePassword,
@@ -15,6 +16,7 @@ import {
 import {
   getFirestore,
   collection,
+  collectionGroup,
   doc,
   getDoc,
   getDocs,
@@ -22,6 +24,8 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  runTransaction,
+  increment,
   query,
   where,
   orderBy,
@@ -31,6 +35,7 @@ import {
   Timestamp,
   type Unsubscribe,
 } from 'firebase/firestore'
+import { getStorage, ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage'
 
 // ── Firebase Config ────────────────────────────────────────────────
 // Ganti dengan config dari Firebase Console → Project Settings
@@ -46,6 +51,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)
 export const db = getFirestore(app)
+export const storage = getStorage(app)
+
+// ── Profile cache ──────────────────────────────────────────────────
+const profileCache = new Map<string, Profile>()
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -69,6 +78,8 @@ export interface Post {
   link_url: string | null
   expires_at: string
   created_at: string
+  like_count: number
+  comment_count: number
   profiles: Profile
   comments: Comment[]
 }
@@ -104,10 +115,11 @@ function tsToISO(ts: Timestamp | null | undefined): string {
 }
 
 async function getProfileById(userId: string): Promise<Profile | null> {
+  if (profileCache.has(userId)) return profileCache.get(userId)!
   const snap = await getDoc(doc(db, 'profiles', userId))
   if (!snap.exists()) return null
   const d = snap.data()
-  return {
+  const profile: Profile = {
     id: snap.id,
     username: d.username,
     created_at: tsToISO(d.created_at),
@@ -118,35 +130,56 @@ async function getProfileById(userId: string): Promise<Profile | null> {
     telegram: d.telegram ?? null,
     tip_ca: d.tip_ca ?? null,
   }
+  profileCache.set(userId, profile)
+  return profile
 }
 
 // ── Auth ───────────────────────────────────────────────────────────
 
-export async function signUp(username: string, password: string) {
-  // Check username uniqueness first
-  const available = await checkUsernameAvailable(username)
-  if (!available) throw new Error('Username already taken')
+export async function signUp(username: string, email: string, password: string) {
+  const usernameKey = username.toLowerCase()
+  const usernameRef = doc(db, 'usernames', usernameKey)
 
-  const email = `up.${username.toLowerCase()}@userpost.app`
-  const { user } = await createUserWithEmailAndPassword(auth, email, password)
-
-  // Create profile document
-  await setDoc(doc(db, 'profiles', user.uid), {
-    username,
-    created_at: serverTimestamp(),
-    is_verified: false,
+  // Atomically claim username before creating the Auth user
+  await runTransaction(db, async (t) => {
+    const snap = await t.get(usernameRef)
+    if (snap.exists()) throw new Error('Username already taken')
+    t.set(usernameRef, { uid: '_pending_', email })
   })
 
-  // Create username index for lookup
-  await setDoc(doc(db, 'usernames', username.toLowerCase()), { uid: user.uid })
-
-  return user
+  try {
+    const { user } = await createUserWithEmailAndPassword(auth, email, password)
+    await setDoc(doc(db, 'profiles', user.uid), {
+      username,
+      created_at: serverTimestamp(),
+      is_verified: false,
+    })
+    await setDoc(usernameRef, { uid: user.uid, email })
+    return user
+  } catch (e) {
+    // Release the username claim so it can be retried
+    await deleteDoc(usernameRef).catch(() => {})
+    if (auth.currentUser) await deleteUser(auth.currentUser).catch(() => {})
+    throw e
+  }
 }
 
 export async function signIn(username: string, password: string) {
-  const email = `up.${username.toLowerCase()}@userpost.app`
+  const indexSnap = await getDoc(doc(db, 'usernames', username.toLowerCase()))
+  // Fall back to legacy email pattern for accounts created before email was required
+  const email = (indexSnap.exists() && indexSnap.data().email)
+    ? indexSnap.data().email
+    : `up.${username.toLowerCase()}@userpost.app`
   const { user } = await signInWithEmailAndPassword(auth, email, password)
   return user
+}
+
+export async function forgotPassword(username: string): Promise<void> {
+  const indexSnap = await getDoc(doc(db, 'usernames', username.toLowerCase()))
+  if (!indexSnap.exists()) throw new Error('Username not found')
+  const { email } = indexSnap.data()
+  if (!email) throw new Error('No recovery email on file for this account')
+  await sendPasswordResetEmail(auth, email)
 }
 
 export async function signOut() {
@@ -173,23 +206,6 @@ export async function getUserByUsername(username: string): Promise<Profile | nul
 
 async function hydratePost(postId: string, data: Record<string, any>): Promise<Post> {
   const profile = await getProfileById(data.user_id)
-  const commentsSnap = await getDocs(
-    query(collection(db, 'posts', postId, 'comments'), orderBy('created_at', 'asc'))
-  )
-  const comments: Comment[] = await Promise.all(
-    commentsSnap.docs.map(async (c) => {
-      const cd = c.data()
-      const cp = await getProfileById(cd.user_id)
-      return {
-        id: c.id,
-        post_id: postId,
-        user_id: cd.user_id,
-        body: cd.body,
-        created_at: tsToISO(cd.created_at),
-        profiles: cp!,
-      }
-    })
-  )
   return {
     id: postId,
     user_id: data.user_id,
@@ -198,8 +214,10 @@ async function hydratePost(postId: string, data: Record<string, any>): Promise<P
     link_url: data.link_url ?? null,
     expires_at: tsToISO(data.expires_at),
     created_at: tsToISO(data.created_at),
+    like_count: data.like_count ?? 0,
+    comment_count: data.comment_count ?? 0,
     profiles: profile!,
-    comments,
+    comments: [],
   }
 }
 
@@ -242,12 +260,33 @@ export async function deletePost(postId: string) {
   await deleteDoc(doc(db, 'posts', postId))
 }
 
+export async function getComments(postId: string): Promise<Comment[]> {
+  const snap = await getDocs(
+    query(collection(db, 'posts', postId, 'comments'), orderBy('created_at', 'asc'))
+  )
+  return Promise.all(
+    snap.docs.map(async (c) => {
+      const cd = c.data()
+      const cp = await getProfileById(cd.user_id)
+      return {
+        id: c.id,
+        post_id: postId,
+        user_id: cd.user_id,
+        body: cd.body,
+        created_at: tsToISO(cd.created_at),
+        profiles: cp!,
+      }
+    })
+  )
+}
+
 export async function addComment(postId: string, userId: string, body: string): Promise<Comment> {
   const ref = await addDoc(collection(db, 'posts', postId, 'comments'), {
     user_id: userId,
     body,
     created_at: serverTimestamp(),
   })
+  await updateDoc(doc(db, 'posts', postId), { comment_count: increment(1) })
   const profile = await getProfileById(userId)
   return {
     id: ref.id,
@@ -259,13 +298,123 @@ export async function addComment(postId: string, userId: string, body: string): 
   }
 }
 
-// ── Realtime (replaces useRealtime hook) ───────────────────────────
+export async function deleteComment(postId: string, commentId: string): Promise<void> {
+  await deleteDoc(doc(db, 'posts', postId, 'comments', commentId))
+  await updateDoc(doc(db, 'posts', postId), { comment_count: increment(-1) })
+}
+
+export async function getUserLikes(userId: string): Promise<Set<string>> {
+  const snap = await getDocs(collection(db, 'users', userId, 'liked_posts'))
+  return new Set(snap.docs.map(d => d.id))
+}
+
+export async function toggleLike(
+  postId: string,
+  userId: string
+): Promise<{ liked: boolean; count: number }> {
+  const likeRef = doc(db, 'users', userId, 'liked_posts', postId)
+  const postRef = doc(db, 'posts', postId)
+  let liked = false
+  let count = 0
+
+  await runTransaction(db, async (t) => {
+    const [likeSnap, postSnap] = await Promise.all([t.get(likeRef), t.get(postRef)])
+    const current = postSnap.data()?.like_count ?? 0
+    if (likeSnap.exists()) {
+      t.delete(likeRef)
+      t.update(postRef, { like_count: Math.max(0, current - 1) })
+      liked = false
+      count = Math.max(0, current - 1)
+    } else {
+      t.set(likeRef, { created_at: serverTimestamp() })
+      t.update(postRef, { like_count: current + 1 })
+      liked = true
+      count = current + 1
+    }
+  })
+
+  return { liked, count }
+}
+
+// ── Realtime ───────────────────────────────────────────────────────
 
 export function subscribeToCollection(
   collectionPath: string,
   callback: () => void
 ): Unsubscribe {
   return onSnapshot(collection(db, collectionPath), callback)
+}
+
+export function subscribeToActivePosts(
+  onPosts: (posts: Post[]) => void
+): Unsubscribe {
+  const now = Timestamp.now()
+  let version = 0
+  return onSnapshot(
+    query(
+      collection(db, 'posts'),
+      where('expires_at', '>', now),
+      orderBy('expires_at', 'desc'),
+      orderBy('created_at', 'desc'),
+      limit(50)
+    ),
+    async (snap) => {
+      const v = ++version
+      const posts = await Promise.all(snap.docs.map((d) => hydratePost(d.id, d.data())))
+      if (v === version) onPosts(posts)
+    }
+  )
+}
+
+export function subscribeToAllComments(onUpdate: () => void): Unsubscribe {
+  let ready = false
+  return onSnapshot(collectionGroup(db, 'comments'), (snap) => {
+    if (!ready) { ready = true; return }
+    if (snap.docChanges().length > 0) onUpdate()
+  })
+}
+
+export function subscribeToConversation(
+  myId: string,
+  otherId: string,
+  onMessages: (msgs: Message[]) => void
+): Unsubscribe {
+  const convId = convoId(myId, otherId)
+  let version = 0
+  return onSnapshot(
+    query(
+      collection(db, 'conversations', convId, 'messages'),
+      where('deleted_at', '==', null),
+      orderBy('created_at', 'asc')
+    ),
+    async (snap) => {
+      const v = ++version
+      const myProfile = await getProfileById(myId)
+      const partnerProfile = await getProfileById(otherId)
+      if (!myProfile || !partnerProfile) return
+      const msgs = await Promise.all(
+        snap.docs.map((d) => {
+          const data = d.data()
+          const from = data.from_id === myId ? myProfile : partnerProfile
+          const to = data.from_id === myId ? partnerProfile : myProfile
+          return hydrateMessage(d.id, { ...data, conversation_id: convId }, from, to)
+        })
+      )
+      if (v === version) onMessages(msgs)
+    }
+  )
+}
+
+export function subscribeToInbox(myId: string, onUpdate: () => void): Unsubscribe {
+  return onSnapshot(collection(db, 'users', myId, 'inbox'), onUpdate)
+}
+
+// ── Storage ────────────────────────────────────────────────────────
+
+export async function uploadProfilePhoto(userId: string, base64DataUrl: string): Promise<string> {
+  const ref = storageRef(storage, `avatars/${userId}.jpg`)
+  await uploadString(ref, base64DataUrl, 'data_url')
+  return getDownloadURL(ref)
 }
 
 // ── Messages ───────────────────────────────────────────────────────
@@ -451,6 +600,7 @@ export async function updateProfile(
     ...(data.telegram !== undefined && { telegram: data.telegram }),
     ...(data.tip_ca !== undefined && { tip_ca: data.tip_ca }),
   })
+  profileCache.delete(userId)
 }
 
 

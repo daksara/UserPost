@@ -1,13 +1,11 @@
 // src/pages/MessagesPage.tsx
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { collection, onSnapshot } from 'firebase/firestore'
-import { db } from '../lib/firebase'
 import {
-  getConversationList, getConversation, sendMessage, markMessagesRead,
-  softDeleteMessage, getUserByUsername, type Message, type Profile
+  getConversationList, sendMessage, markMessagesRead,
+  softDeleteMessage, getUserByUsername, subscribeToConversation, subscribeToInbox,
+  type Message, type Profile
 } from '../lib/firebase'
 import { useAuth } from '../hooks/useAuth'
-import { useRealtime } from '../hooks/useRealtime'
 import { UserAvatar } from '../components/Avatar'
 
 function timeAgo(iso: string) {
@@ -23,51 +21,88 @@ function Avatar({ username, size = 36, photoUrl }: { username: string; size?: nu
 }
 
 // ── Thread View ────────────────────────────────────────────────────
-function ThreadView({ partner, myId, onBack }: { partner: Profile; myId: string; onBack: () => void }) {
+function ThreadView({ partner, myProfile, onBack }: {
+  partner: Profile
+  myProfile: Profile
+  onBack: () => void
+}) {
   const [messages, setMessages] = useState<Message[]>([])
   const [text, setText] = useState('')
-  const [sending, setSending] = useState(false)
   const [selectedMsgId, setSelectedMsgId] = useState<string | null>(null)
+  const [replyTo, setReplyTo] = useState<Message | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const initializedRef = useRef(false)
 
-  const fetchMessages = useCallback(async () => {
-    const data = await getConversation(myId, partner.id)
-    setMessages(data)
-    markMessagesRead(myId, partner.id)
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
-  }, [myId, partner.id])
-
-  useEffect(() => { fetchMessages() }, [fetchMessages])
+  const isNearBottom = () => {
+    const el = containerRef.current
+    if (!el) return true
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 120
+  }
 
   useEffect(() => {
-    const convPath = [myId, partner.id].sort().join('_')
-    const unsubscribe = onSnapshot(
-      collection(db, 'conversations', convPath, 'messages'),
-      () => { fetchMessages() }
-    )
-    return () => unsubscribe()
-  }, [myId, partner.id, fetchMessages])
+    initializedRef.current = false
+    const unsub = subscribeToConversation(myProfile.id, partner.id, (msgs) => {
+      setMessages(prev => {
+        // Keep pending optimistic messages not yet confirmed by Firestore
+        const realIds = new Set(msgs.map(m => m.id))
+        const pendingOptimistic = prev.filter(m => m.id.startsWith('opt-') && !realIds.has(m.id))
+        return [...msgs, ...pendingOptimistic].sort(
+          (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        )
+      })
+      markMessagesRead(myProfile.id, partner.id)
+      if (!initializedRef.current) {
+        initializedRef.current = true
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'instant' as ScrollBehavior }), 100)
+      } else if (isNearBottom()) {
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+      }
+    })
+    return () => unsub()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myProfile.id, partner.id])
 
   const handleSend = async () => {
-    if (!text.trim() || sending) return
-    setSending(true)
+    if (!text.trim()) return
     const trimmed = text.trim()
+    const replyToMsg = replyTo
     setText('')
-    setSending(false)
+    setReplyTo(null)
+
+    const optimistic: Message = {
+      id: `opt-${Date.now()}`,
+      from_id: myProfile.id,
+      to_id: partner.id,
+      body: trimmed,
+      reply_to_id: replyToMsg?.id ?? null,
+      read_at: null,
+      deleted_at: null,
+      created_at: new Date().toISOString(),
+      from_profile: myProfile,
+      to_profile: partner,
+      reply_to: replyToMsg ?? null,
+    }
+    setMessages(prev => [...prev, optimistic])
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+
     try {
-      await sendMessage(myId, partner.id, trimmed)
-    } catch (e) {
-      console.error(e)
+      await sendMessage(myProfile.id, partner.id, trimmed, replyToMsg?.id)
+    } catch {
+      // Rollback on failure
+      setMessages(prev => prev.filter(m => m.id !== optimistic.id))
+      setText(trimmed)
+      setReplyTo(replyToMsg)
     }
   }
 
   const handleDelete = async (msgId: string) => {
     setSelectedMsgId(null)
+    setMessages(prev => prev.filter(m => m.id !== msgId))
     try {
-      await softDeleteMessage(msgId, myId, partner.id)
-    } catch (e) {
-      console.error(e)
+      await softDeleteMessage(msgId, myProfile.id, partner.id)
+    } catch {
+      // Subscription will re-sync on failure
     }
   }
 
@@ -83,43 +118,86 @@ function ThreadView({ partner, myId, onBack }: { partner: Profile; myId: string;
         <span className="page-header__title">{partner.username}</span>
       </header>
 
-      <div className="thread-messages">
+      <div className="thread-messages" ref={containerRef}>
         {messages.map(msg => {
-          const isOwn = msg.from_id === myId
+          const isOwn = msg.from_id === myProfile.id
           const isSelected = selectedMsgId === msg.id
+          const isOptimistic = msg.id.startsWith('opt-')
           return (
             <div key={msg.id} className={`bubble-wrap ${isOwn ? 'bubble-wrap--own' : ''}`}>
               <div
                 className={`bubble ${isOwn ? 'bubble--own' : 'bubble--them'} ${isSelected ? 'bubble--selected' : ''}`}
                 onClick={() => setSelectedMsgId(isSelected ? null : msg.id)}
-                style={{ cursor: 'pointer', userSelect: 'none' }}
+                style={{ cursor: 'pointer', userSelect: 'none', opacity: isOptimistic ? 0.65 : 1 }}
               >
+                {msg.reply_to && (
+                  <div style={{
+                    fontSize: '0.72rem',
+                    color: isOwn ? 'rgba(255,255,255,0.65)' : 'var(--text-muted)',
+                    borderLeft: `2px solid ${isOwn ? 'rgba(255,255,255,0.45)' : 'var(--accent)'}`,
+                    paddingLeft: '7px',
+                    marginBottom: '5px',
+                    overflow: 'hidden',
+                    maxHeight: '36px',
+                  }}>
+                    <span style={{ fontWeight: 700 }}>{msg.reply_to.from_profile.username}</span>
+                    {': '}{msg.reply_to.body.slice(0, 70)}{msg.reply_to.body.length > 70 ? '…' : ''}
+                  </div>
+                )}
                 {msg.body}
               </div>
-              {isSelected && isOwn && (
-                <button
-                  className="bubble-delete-btn"
-                  onClick={() => handleDelete(msg.id)}
-                  style={{
-                    marginTop: '4px',
-                    alignSelf: 'flex-end',
-                    background: '#ef4444',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '6px',
-                    padding: '4px 10px',
-                    fontSize: '0.75rem',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Hapus
-                </button>
+              {isSelected && (
+                <div style={{ display: 'flex', gap: 6, marginTop: 4, alignItems: 'center', justifyContent: isOwn ? 'flex-end' : 'flex-start' }}>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                    {new Date(msg.created_at).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                  {!isOptimistic && (
+                    <button
+                      onClick={() => { setReplyTo(msg); setSelectedMsgId(null) }}
+                      style={{
+                        background: 'var(--accent-soft)', color: 'var(--accent)',
+                        border: '1px solid var(--accent)', borderRadius: 'var(--radius-xs)',
+                        padding: '3px 10px', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600,
+                      }}
+                    >Reply</button>
+                  )}
+                  {isOwn && !isOptimistic && (
+                    <button
+                      onClick={() => handleDelete(msg.id)}
+                      style={{
+                        background: '#ef4444', color: '#fff',
+                        border: 'none', borderRadius: 'var(--radius-xs)',
+                        padding: '3px 10px', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 700,
+                      }}
+                    >Delete</button>
+                  )}
+                </div>
               )}
             </div>
           )
         })}
         <div ref={bottomRef}/>
       </div>
+
+      {replyTo && (
+        <div style={{
+          padding: '8px 14px',
+          background: 'var(--bg-card)',
+          borderTop: '1px solid var(--border)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+        }}>
+          <div style={{ flex: 1, fontSize: '0.75rem', color: 'var(--text-muted)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+            <span style={{ fontWeight: 700, color: 'var(--accent)' }}>Replying to {replyTo.from_profile.username}:</span>{' '}
+            {replyTo.body.slice(0, 80)}{replyTo.body.length > 80 ? '…' : ''}
+          </div>
+          <button
+            onClick={() => setReplyTo(null)}
+            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1rem', padding: '0 4px', flexShrink: 0 }}
+          >✕</button>
+        </div>
+      )}
 
       <div className="thread-composer">
         <input
@@ -129,10 +207,8 @@ function ThreadView({ partner, myId, onBack }: { partner: Profile; myId: string;
           onChange={e => setText(e.target.value.slice(0, 1000))}
           onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
         />
-        <button className="thread-composer__send" onClick={handleSend} disabled={!text.trim() || sending}>
-          {sending
-            ? <span className="spinner spinner--sm"/>
-            : <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>}
+        <button className="thread-composer__send" onClick={handleSend} disabled={!text.trim()}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
         </button>
       </div>
     </div>
@@ -244,7 +320,6 @@ function SwipeableConvoItem({
 
   return (
     <div style={{ position: 'relative', overflow: 'hidden', borderBottom: '1px solid var(--border)' }}>
-      {/* Delete button behind */}
       <div
         style={{
           position: 'absolute', right: 0, top: 0, bottom: 0,
@@ -257,7 +332,6 @@ function SwipeableConvoItem({
           <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
         </svg>
       </div>
-      {/* Swipeable row */}
       <div
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -318,8 +392,12 @@ export default function MessagesPage({ initialDM }: { initialDM?: string }) {
     setConvos(data)
   }, [profile])
 
-  useEffect(() => { fetchConvos() }, [fetchConvos])
-  useRealtime('messages', fetchConvos)
+  // Subscribe to inbox — fires when any message is sent/received
+  useEffect(() => {
+    if (!profile) return
+    const unsub = subscribeToInbox(profile.id, fetchConvos)
+    return () => unsub()
+  }, [profile, fetchConvos])
 
   useEffect(() => {
     if (!initialDM || !profile) return
@@ -332,7 +410,7 @@ export default function MessagesPage({ initialDM }: { initialDM?: string }) {
   if (!profile) return null
 
   if (activePartner && activePartner.username) {
-    return <ThreadView partner={activePartner} myId={profile.id} onBack={() => setActivePartner(null)}/>
+    return <ThreadView partner={activePartner} myProfile={profile} onBack={() => setActivePartner(null)}/>
   }
 
   return (

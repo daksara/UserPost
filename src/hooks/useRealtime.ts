@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { db } from '../lib/firebase'
 import { collection, onSnapshot } from 'firebase/firestore'
 
@@ -9,13 +9,15 @@ const TABLE_MAP: Record<string, string> = {
 }
 
 export function useRealtime(table: string, callback: () => void) {
+  const callbackRef = useRef(callback)
+  useEffect(() => { callbackRef.current = callback })
+
   useEffect(() => {
     const collectionPath = TABLE_MAP[table] ?? table
     const unsubscribe = onSnapshot(
       collection(db, collectionPath),
-      () => { callback() }
+      () => { callbackRef.current() }
     )
     return () => unsubscribe()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [table])
 }
