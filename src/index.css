@@ -441,6 +441,7 @@ button {
 .comment-input {
   flex: 1;
   padding: 7px 10px;
+  color: var(--text-primary);
   border: 1.5px solid var(--border);
   border-radius: var(--radius-full);
   font-size: 0.83rem;
@@ -777,6 +778,7 @@ button {
 .thread-composer__input {
   flex: 1;
   padding: 9px 14px;
+  color: var(--text-primary);
   border: 1.5px solid var(--border);
   border-radius: var(--radius-full);
   font-size: 0.9rem;
