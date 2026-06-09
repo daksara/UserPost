@@ -62,6 +62,7 @@ export interface Post {
   user_id: string
   body: string
   contract_address: string | null
+  link_url: string | null
   expires_at: string
   created_at: string
   profiles: Profile
@@ -190,6 +191,7 @@ async function hydratePost(postId: string, data: Record<string, any>): Promise<P
     user_id: data.user_id,
     body: data.body,
     contract_address: data.contract_address ?? null,
+    link_url: data.link_url ?? null,
     expires_at: tsToISO(data.expires_at),
     created_at: tsToISO(data.created_at),
     profiles: profile!,
@@ -212,12 +214,13 @@ export async function getPosts(): Promise<Post[]> {
   return posts
 }
 
-export async function createPost(userId: string, body: string, contractAddress?: string): Promise<Post> {
+export async function createPost(userId: string, body: string, contractAddress?: string, linkUrl?: string): Promise<Post> {
   const expiresAt = Timestamp.fromDate(new Date(Date.now() + 24 * 60 * 60 * 1000))
   const ref = await addDoc(collection(db, 'posts'), {
     user_id: userId,
     body,
     contract_address: contractAddress ?? null,
+    link_url: linkUrl ?? null,
     expires_at: expiresAt,
     created_at: serverTimestamp(),
   })
@@ -225,6 +228,7 @@ export async function createPost(userId: string, body: string, contractAddress?:
     user_id: userId,
     body,
     contract_address: contractAddress ?? null,
+    link_url: linkUrl ?? null,
     expires_at: expiresAt,
     created_at: Timestamp.now(),
   })
