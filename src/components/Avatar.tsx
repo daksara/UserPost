@@ -9,11 +9,12 @@ function hashStr(s: string) {
   let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) & 0xfffff; return h
 }
 
-export function UserAvatar({ username, size = 36 }: { username: string; size?: number }) {
+export function UserAvatar({ username, size = 36, photoUrl }: { username: string; size?: number; photoUrl?: string | null }) {
   const [error, setError] = useState(false)
   const hue = hashStr(username) % 360
+  const src = (!error && photoUrl) ? photoUrl : (!error ? getAvatarUrl(username) : null)
 
-  if (error) {
+  if (error && !photoUrl) {
     return (
       <div style={{
         width: size, height: size, borderRadius: '50%', flexShrink: 0,
@@ -28,7 +29,7 @@ export function UserAvatar({ username, size = 36 }: { username: string; size?: n
 
   return (
     <img
-      src={getAvatarUrl(username)}
+      src={src ?? getAvatarUrl(username)}
       alt={username}
       width={size}
       height={size}
