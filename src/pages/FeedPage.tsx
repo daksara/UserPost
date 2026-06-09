@@ -2,8 +2,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import {
   getPosts, createPost, deletePost, addComment, deleteComment,
-  getComments, getUserLikes, toggleLike,
-  subscribeToActivePosts, subscribeToAllComments,
+  getComments, subscribeToActivePosts, subscribeToAllComments,
   type Post, type Comment,
 } from '../lib/firebase'
 import { useAuth } from '../hooks/useAuth'
@@ -103,14 +102,12 @@ function DeleteConfirm({ onConfirm, onCancel }: { onConfirm: () => void; onCance
   )
 }
 
-function PostCard({ post, myId, liked: initialLiked, onDelete, onComment, onDeleteComment, onLike, onDMClick }: {
+function PostCard({ post, myId, onDelete, onComment, onDeleteComment, onDMClick }: {
   post: Post
   myId: string
-  liked: boolean
   onDelete: (id: string) => void
   onComment: (postId: string, body: string) => Promise<Comment>
   onDeleteComment: (postId: string, commentId: string) => Promise<void>
-  onLike: (postId: string) => Promise<{ liked: boolean; count: number }>
   onDMClick: (username: string) => void
 }) {
   const [showComments, setShowComments] = useState(false)
@@ -120,14 +117,9 @@ function PostCard({ post, myId, liked: initialLiked, onDelete, onComment, onDele
   const [commentText, setCommentText] = useState('')
   const [sending, setSending] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [isLiked, setIsLiked] = useState(initialLiked)
-  const [likeCount, setLikeCount] = useState(post.like_count)
   const [commentCount, setCommentCount] = useState(post.comment_count)
   const prevCommentCountRef = useRef(post.comment_count)
   const isOwn = post.user_id === myId
-
-  useEffect(() => { setIsLiked(initialLiked) }, [initialLiked])
-  useEffect(() => { setLikeCount(post.like_count) }, [post.like_count])
 
   // Re-fetch comments if the section is open and comment_count changed externally
   useEffect(() => {
@@ -156,20 +148,6 @@ function PostCard({ post, myId, liked: initialLiked, onDelete, onComment, onDele
     }
   }
 
-  const handleLike = async () => {
-    const snap = { liked: isLiked, count: likeCount }
-    setIsLiked(!isLiked)
-    setLikeCount(isLiked ? likeCount - 1 : likeCount + 1)
-    try {
-      const result = await onLike(post.id)
-      setIsLiked(result.liked)
-      setLikeCount(result.count)
-    } catch {
-      setIsLiked(snap.liked)
-      setLikeCount(snap.count)
-    }
-  }
-
   const handleComment = async () => {
     if (!commentText.trim() || sending) return
     setSending(true)
@@ -194,7 +172,7 @@ function PostCard({ post, myId, liked: initialLiked, onDelete, onComment, onDele
   }
 
   const expiry = expiresIn(post.expires_at)
-  const expiringSoon = expiry && !expiry.startsWith('2') && !expiry.startsWith('3') && !expiry.startsWith('4') && !expiry.startsWith('5') && !expiry.startsWith('6') && !expiry.startsWith('7') && !expiry.startsWith('8') && !expiry.startsWith('9') && expiry.includes('h') && parseInt(expiry) <= 2
+  const expiringSoon = expiry ? (expiry.includes('m') || (expiry.includes('h') && parseInt(expiry) <= 2)) : false
 
   return (
     <div className="post-card">
@@ -245,28 +223,6 @@ function PostCard({ post, myId, liked: initialLiked, onDelete, onComment, onDele
       {post.contract_address && <CACard address={post.contract_address} />}
 
       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-        {/* Like button */}
-        <button
-          onClick={handleLike}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: isLiked ? 'var(--red)' : 'var(--text-muted)',
-            fontSize: '0.8rem', fontWeight: isLiked ? 700 : 400,
-            padding: '6px 8px', borderRadius: 'var(--radius-xs)',
-            transition: 'color 0.15s',
-          }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24"
-            fill={isLiked ? 'currentColor' : 'none'}
-            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-          >
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-          </svg>
-          {likeCount > 0 && likeCount}
-        </button>
-
-        {/* Comments button */}
         <button className="post-card__comments-btn" onClick={handleToggleComments}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -422,14 +378,7 @@ export default function FeedPage({ onDMClick }: { onDMClick: (username: string) 
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [composing, setComposing] = useState(false)
-  const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set())
   const [sort, setSort] = useState<'new' | 'top'>('new')
-
-  // Fetch liked posts once on mount
-  useEffect(() => {
-    if (!profile) return
-    getUserLikes(profile.id).then(setLikedPosts)
-  }, [profile?.id])
 
   const refreshPosts = useCallback(async () => {
     const data = await getPosts()
@@ -473,21 +422,10 @@ export default function FeedPage({ onDMClick }: { onDMClick: (username: string) 
     await deleteComment(postId, commentId)
   }, [])
 
-  const handleLike = useCallback(async (postId: string) => {
-    if (!profile) throw new Error('Not authenticated')
-    const result = await toggleLike(postId, profile.id)
-    setLikedPosts(prev => {
-      const next = new Set(prev)
-      if (result.liked) next.add(postId); else next.delete(postId)
-      return next
-    })
-    return result
-  }, [profile])
-
   const sortedPosts = useMemo(() => {
     if (sort === 'top') {
       return [...posts].sort((a, b) =>
-        (b.like_count - a.like_count) ||
+        (b.comment_count - a.comment_count) ||
         (new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       )
     }
@@ -532,11 +470,9 @@ export default function FeedPage({ onDMClick }: { onDMClick: (username: string) 
             key={post.id}
             post={post}
             myId={profile?.id ?? ''}
-            liked={likedPosts.has(post.id)}
             onDelete={handleDelete}
             onComment={handleComment}
             onDeleteComment={handleDeleteComment}
-            onLike={handleLike}
             onDMClick={onDMClick}
           />
         ))}
