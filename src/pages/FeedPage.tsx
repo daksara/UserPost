@@ -543,7 +543,7 @@ export default function FeedPage({ onDMClick }: { onDMClick: (username: string) 
   // Persist latest posts to localStorage for instant display on next load
   useEffect(() => {
     if (posts.length > 0) {
-      try { localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(posts.slice(0, 30))) } catch {}
+      try { localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(posts.slice(0, 30))) } catch { /* ignore storage errors */ }
     }
   }, [posts])
 

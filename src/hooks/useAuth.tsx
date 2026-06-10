@@ -39,11 +39,11 @@ function readCachedProfile(): Profile | null {
 }
 
 function cacheProfile(p: Profile) {
-  try { localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(p)) } catch {}
+  try { localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(p)) } catch { /* ignore storage errors */ }
 }
 
 function clearProfileCache() {
-  try { localStorage.removeItem(PROFILE_CACHE_KEY) } catch {}
+  try { localStorage.removeItem(PROFILE_CACHE_KEY) } catch { /* ignore storage errors */ }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -101,4 +101,5 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext)
