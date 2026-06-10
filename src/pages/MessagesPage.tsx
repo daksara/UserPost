@@ -24,6 +24,83 @@ function Avatar({ username, size = 36, photoUrl }: { username: string; size?: nu
   return <UserAvatar username={username} size={size} photoUrl={photoUrl} />
 }
 
+// ── Swipeable Message Bubble ───────────────────────────────────────
+// Swipe right to reply, swipe left to delete (own messages) — no buttons
+function SwipeableMessage({ isOwn, canReply, canDelete, onReply, onDelete, children }: {
+  isOwn: boolean
+  canReply: boolean
+  canDelete: boolean
+  onReply: () => void
+  onDelete: () => void
+  children: React.ReactNode
+}) {
+  const [dx, setDx] = useState(0)
+  const [dragging, setDragging] = useState(false)
+  const start = useRef({ x: 0, y: 0 })
+  const horizontal = useRef(false)
+  const ACTION = 56
+  const MAX = 88
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    start.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+    horizontal.current = false
+    setDragging(true)
+  }
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const moveX = e.touches[0].clientX - start.current.x
+    const moveY = e.touches[0].clientY - start.current.y
+    if (!horizontal.current) {
+      // Don't hijack vertical scrolling
+      if (Math.abs(moveX) < 10 || Math.abs(moveX) < Math.abs(moveY)) return
+      horizontal.current = true
+    }
+    let next = moveX
+    if (next > 0 && !canReply) next = 0
+    if (next < 0 && !canDelete) next = 0
+    setDx(Math.max(-MAX, Math.min(MAX, next)))
+  }
+  const handleTouchEnd = () => {
+    if (dx >= ACTION && canReply) onReply()
+    else if (dx <= -ACTION && canDelete) onDelete()
+    setDx(0)
+    setDragging(false)
+  }
+
+  const hintStyle = (opacity: number, color: string): React.CSSProperties => ({
+    position: 'absolute', top: '50%', transform: 'translateY(-50%)',
+    opacity: Math.min(1, Math.max(0, opacity)),
+    color, display: 'flex', pointerEvents: 'none',
+  })
+
+  return (
+    <div
+      className={`bubble-wrap ${isOwn ? 'bubble-wrap--own' : ''}`}
+      style={{ position: 'relative' }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {canReply && (
+        <span style={{ ...hintStyle(dx / ACTION, 'var(--accent)'), left: 4 }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/>
+          </svg>
+        </span>
+      )}
+      {canDelete && (
+        <span style={{ ...hintStyle(-dx / ACTION, 'var(--red)'), right: 4 }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+          </svg>
+        </span>
+      )}
+      <div style={{ transform: `translateX(${dx}px)`, transition: dragging ? 'none' : 'transform 0.18s ease' }}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
 // ── Thread View ────────────────────────────────────────────────────
 function ThreadView({ partner, myProfile, onBack }: {
   partner: Profile
@@ -32,7 +109,6 @@ function ThreadView({ partner, myProfile, onBack }: {
 }) {
   const [messages, setMessages] = useState<Message[]>([])
   const [text, setText] = useState('')
-  const [selectedMsgId, setSelectedMsgId] = useState<string | null>(null)
   const [replyTo, setReplyTo] = useState<Message | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -110,7 +186,6 @@ function ThreadView({ partner, myProfile, onBack }: {
   }
 
   const handleDelete = async (msgId: string) => {
-    setSelectedMsgId(null)
     setMessages(prev => prev.filter(m => m.id !== msgId))
     try {
       await softDeleteMessage(msgId, myProfile.id, partner.id)
@@ -134,17 +209,22 @@ function ThreadView({ partner, myProfile, onBack }: {
         </span>
       </header>
 
-      <div className="thread-messages" ref={containerRef}>
+      <div className="thread-messages" ref={containerRef} style={{ overflowX: 'hidden' }}>
         {messages.map(msg => {
           const isOwn = msg.from_id === myProfile.id
-          const isSelected = selectedMsgId === msg.id
           const isOptimistic = msg.id.startsWith('opt-')
           return (
-            <div key={msg.id} className={`bubble-wrap ${isOwn ? 'bubble-wrap--own' : ''}`}>
+            <SwipeableMessage
+              key={msg.id}
+              isOwn={isOwn}
+              canReply={!isOptimistic}
+              canDelete={isOwn && !isOptimistic}
+              onReply={() => setReplyTo(msg)}
+              onDelete={() => handleDelete(msg.id)}
+            >
               <div
-                className={`bubble ${isOwn ? 'bubble--own' : 'bubble--them'} ${isSelected ? 'bubble--selected' : ''}`}
-                onClick={() => setSelectedMsgId(isSelected ? null : msg.id)}
-                style={{ cursor: 'pointer', userSelect: 'none', opacity: isOptimistic ? 0.65 : 1 }}
+                className={`bubble ${isOwn ? 'bubble--own' : 'bubble--them'}`}
+                style={{ userSelect: 'none', opacity: isOptimistic ? 0.65 : 1 }}
               >
                 {msg.reply_to && (
                   <div style={{
@@ -162,34 +242,7 @@ function ThreadView({ partner, myProfile, onBack }: {
                 )}
                 {msg.body}
               </div>
-              {isSelected && (
-                <div style={{ display: 'flex', gap: 6, marginTop: 4, alignItems: 'center', justifyContent: isOwn ? 'flex-end' : 'flex-start' }}>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                    {new Date(msg.created_at).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                  {!isOptimistic && (
-                    <button
-                      onClick={() => { setReplyTo(msg); setSelectedMsgId(null) }}
-                      style={{
-                        background: 'var(--accent-soft)', color: 'var(--accent)',
-                        border: '1px solid var(--accent)', borderRadius: 'var(--radius-xs)',
-                        padding: '3px 10px', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600,
-                      }}
-                    >Reply</button>
-                  )}
-                  {isOwn && !isOptimistic && (
-                    <button
-                      onClick={() => handleDelete(msg.id)}
-                      style={{
-                        background: '#ef4444', color: '#fff',
-                        border: 'none', borderRadius: 'var(--radius-xs)',
-                        padding: '3px 10px', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 700,
-                      }}
-                    >Delete</button>
-                  )}
-                </div>
-              )}
-            </div>
+            </SwipeableMessage>
           )
         })}
         <div ref={bottomRef}/>
