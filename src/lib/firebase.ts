@@ -17,7 +17,6 @@ import {
 import {
   getFirestore,
   collection,
-  collectionGroup,
   doc,
   getDoc,
   getDocs,
@@ -26,17 +25,20 @@ import {
   updateDoc,
   deleteDoc,
   runTransaction,
+  writeBatch,
   increment,
   query,
   where,
   orderBy,
   limit,
+  documentId,
   onSnapshot,
   serverTimestamp,
   Timestamp,
   type Unsubscribe,
 } from 'firebase/firestore'
 import { getStorage, ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage'
+import { convoId, chunk, isEmail } from './utils'
 
 // ── Firebase Config ────────────────────────────────────────────────
 // Ganti dengan config dari Firebase Console → Project Settings
@@ -54,8 +56,23 @@ export const auth = getAuth(app)
 export const db = getFirestore(app)
 export const storage = getStorage(app)
 
-// ── Profile cache ──────────────────────────────────────────────────
-const profileCache = new Map<string, Profile>()
+// ── Profile cache (TTL so other users' edits eventually show up) ───
+const PROFILE_CACHE_TTL_MS = 5 * 60 * 1000
+const profileCache = new Map<string, { profile: Profile; cachedAt: number }>()
+
+function cacheGet(userId: string): Profile | null {
+  const entry = profileCache.get(userId)
+  if (!entry) return null
+  if (Date.now() - entry.cachedAt > PROFILE_CACHE_TTL_MS) {
+    profileCache.delete(userId)
+    return null
+  }
+  return entry.profile
+}
+
+function cacheSet(profile: Profile) {
+  profileCache.set(profile.id, { profile, cachedAt: Date.now() })
+}
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -118,13 +135,9 @@ function tsToISO(ts: Timestamp | null | undefined): string {
   return ts.toDate().toISOString()
 }
 
-async function getProfileById(userId: string): Promise<Profile | null> {
-  if (profileCache.has(userId)) return profileCache.get(userId)!
-  const snap = await getDoc(doc(db, 'profiles', userId))
-  if (!snap.exists()) return null
-  const d = snap.data()
-  const profile: Profile = {
-    id: snap.id,
+function docToProfile(id: string, d: Record<string, any>): Profile {
+  return {
+    id,
     username: d.username,
     created_at: tsToISO(d.created_at),
     is_verified: d.is_verified ?? false,
@@ -135,8 +148,50 @@ async function getProfileById(userId: string): Promise<Profile | null> {
     telegram: d.telegram ?? null,
     tip_ca: d.tip_ca ?? null,
   }
-  profileCache.set(userId, profile)
+}
+
+// Placeholder shown for content whose author deleted their account
+function deletedProfile(userId: string): Profile {
+  return { id: userId, username: 'deleted', created_at: new Date(0).toISOString() }
+}
+
+async function getProfileById(userId: string): Promise<Profile | null> {
+  const cached = cacheGet(userId)
+  if (cached) return cached
+  const snap = await getDoc(doc(db, 'profiles', userId))
+  if (!snap.exists()) return null
+  const profile = docToProfile(snap.id, snap.data())
+  cacheSet(profile)
   return profile
+}
+
+// Batch-fetch profiles ('in' queries on documentId, max 30 ids per query)
+// instead of one read per author. Missing profiles (deleted accounts) get a
+// placeholder so callers never crash on null.
+async function getProfilesByIds(userIds: string[]): Promise<Map<string, Profile>> {
+  const result = new Map<string, Profile>()
+  const missing: string[] = []
+  for (const id of new Set(userIds)) {
+    const cached = cacheGet(id)
+    if (cached) result.set(id, cached)
+    else missing.push(id)
+  }
+  await Promise.all(
+    chunk(missing, 30).map(async (ids) => {
+      const snap = await getDocs(
+        query(collection(db, 'profiles'), where(documentId(), 'in', ids))
+      )
+      for (const d of snap.docs) {
+        const profile = docToProfile(d.id, d.data())
+        cacheSet(profile)
+        result.set(d.id, profile)
+      }
+    })
+  )
+  for (const id of missing) {
+    if (!result.has(id)) result.set(id, deletedProfile(id))
+  }
+  return result
 }
 
 // ── Auth ───────────────────────────────────────────────────────────
@@ -152,11 +207,13 @@ export async function signUp(username: string, email: string, password: string) 
   await user.getIdToken(true)
 
   try {
-    // Atomically claim username (now authenticated)
+    // Atomically claim username (now authenticated).
+    // NOTE: never store the email here — username docs are publicly
+    // readable for availability checks, so an email would leak.
     await runTransaction(db, async (t) => {
       const snap = await t.get(usernameRef)
       if (snap.exists()) throw new Error('Username already taken')
-      t.set(usernameRef, { uid: user.uid, email })
+      t.set(usernameRef, { uid: user.uid })
     })
     await setDoc(doc(db, 'profiles', user.uid), {
       username,
@@ -174,22 +231,38 @@ export async function signUp(username: string, email: string, password: string) 
   }
 }
 
-export async function signIn(username: string, password: string) {
-  const indexSnap = await getDoc(doc(db, 'usernames', username.toLowerCase()))
-  // Fall back to legacy email pattern for accounts created before email was required
-  const email = (indexSnap.exists() && indexSnap.data().email)
-    ? indexSnap.data().email
-    : `up.${username.toLowerCase()}@userpost.app`
+export async function signIn(identifier: string, password: string) {
+  let email: string
+  if (isEmail(identifier)) {
+    email = identifier.toLowerCase()
+  } else {
+    // Legacy username login: older username docs stored the email; accounts
+    // older than that used a synthetic email pattern. New accounts sign in
+    // with their email (the index no longer stores it for privacy).
+    const indexSnap = await getDoc(doc(db, 'usernames', identifier.toLowerCase()))
+    const legacyEmail = indexSnap.exists() ? indexSnap.data().email : null
+    if (legacyEmail) {
+      email = legacyEmail
+    } else if (!indexSnap.exists()) {
+      email = `up.${identifier.toLowerCase()}@userpost.app`
+    } else {
+      throw new Error('Please sign in with your email address')
+    }
+  }
   const { user } = await signInWithEmailAndPassword(auth, email, password)
   return user
 }
 
-export async function forgotPassword(username: string): Promise<void> {
-  const indexSnap = await getDoc(doc(db, 'usernames', username.toLowerCase()))
-  if (!indexSnap.exists()) throw new Error('Username not found')
-  const { email } = indexSnap.data()
-  if (!email) throw new Error('No recovery email on file for this account')
-  await sendPasswordResetEmail(auth, email)
+export async function forgotPassword(identifier: string): Promise<void> {
+  if (isEmail(identifier)) {
+    await sendPasswordResetEmail(auth, identifier.toLowerCase())
+    return
+  }
+  // Legacy accounts may still have an email on the username index
+  const indexSnap = await getDoc(doc(db, 'usernames', identifier.toLowerCase()))
+  const legacyEmail = indexSnap.exists() ? indexSnap.data().email : null
+  if (!legacyEmail) throw new Error('Enter the email address you registered with')
+  await sendPasswordResetEmail(auth, legacyEmail)
 }
 
 export async function signOut() {
@@ -232,8 +305,7 @@ export async function getUserByUsername(username: string): Promise<Profile | nul
 
 // ── Posts ──────────────────────────────────────────────────────────
 
-async function hydratePost(postId: string, data: Record<string, any>): Promise<Post> {
-  const profile = await getProfileById(data.user_id)
+function buildPost(postId: string, data: Record<string, any>, profile: Profile): Post {
   return {
     id: postId,
     user_id: data.user_id,
@@ -244,9 +316,27 @@ async function hydratePost(postId: string, data: Record<string, any>): Promise<P
     created_at: tsToISO(data.created_at),
     like_count: data.like_count ?? 0,
     comment_count: data.comment_count ?? 0,
-    profiles: profile!,
+    profiles: profile,
     comments: [],
   }
+}
+
+async function hydratePost(postId: string, data: Record<string, any>): Promise<Post> {
+  const profile = (await getProfileById(data.user_id)) ?? deletedProfile(data.user_id)
+  return buildPost(postId, data, profile)
+}
+
+// Hydrate a snapshot's posts with batched profile reads, dropping posts that
+// expired after the query's cutoff was captured.
+async function hydratePosts(docs: { id: string; data: () => Record<string, any> }[]): Promise<Post[]> {
+  const rows = docs
+    .map((d) => ({ id: d.id, data: d.data() }))
+    .filter((r) => {
+      const exp = r.data.expires_at as Timestamp | null | undefined
+      return !exp || exp.toMillis() > Date.now()
+    })
+  const profiles = await getProfilesByIds(rows.map((r) => r.data.user_id))
+  return rows.map((r) => buildPost(r.id, r.data, profiles.get(r.data.user_id)!))
 }
 
 export async function getPosts(): Promise<Post[]> {
@@ -260,8 +350,7 @@ export async function getPosts(): Promise<Post[]> {
       limit(50)
     )
   )
-  const posts = await Promise.all(snap.docs.map((d) => hydratePost(d.id, d.data())))
-  return posts
+  return hydratePosts(snap.docs)
 }
 
 export async function createPost(userId: string, body: string, contractAddress?: string, linkUrl?: string): Promise<Post> {
@@ -292,43 +381,41 @@ export async function getComments(postId: string): Promise<Comment[]> {
   const snap = await getDocs(
     query(collection(db, 'posts', postId, 'comments'), orderBy('created_at', 'asc'))
   )
-  return Promise.all(
-    snap.docs.map(async (c) => {
-      const cd = c.data()
-      const cp = await getProfileById(cd.user_id)
-      return {
-        id: c.id,
-        post_id: postId,
-        user_id: cd.user_id,
-        body: cd.body,
-        created_at: tsToISO(cd.created_at),
-        profiles: cp!,
-      }
-    })
-  )
+  const rows = snap.docs.map((c) => ({ id: c.id, data: c.data() }))
+  const profiles = await getProfilesByIds(rows.map((r) => r.data.user_id))
+  return rows.map((r) => ({
+    id: r.id,
+    post_id: postId,
+    user_id: r.data.user_id,
+    body: r.data.body,
+    created_at: tsToISO(r.data.created_at),
+    profiles: profiles.get(r.data.user_id)!,
+  }))
 }
 
 export async function addComment(postId: string, userId: string, body: string): Promise<Comment> {
-  const ref = await addDoc(collection(db, 'posts', postId, 'comments'), {
-    user_id: userId,
-    body,
-    created_at: serverTimestamp(),
-  })
-  await updateDoc(doc(db, 'posts', postId), { comment_count: increment(1) })
-  const profile = await getProfileById(userId)
+  // Write the comment and bump the counter atomically so they can't drift
+  const ref = doc(collection(db, 'posts', postId, 'comments'))
+  const batch = writeBatch(db)
+  batch.set(ref, { user_id: userId, body, created_at: serverTimestamp() })
+  batch.update(doc(db, 'posts', postId), { comment_count: increment(1) })
+  await batch.commit()
+  const profile = (await getProfileById(userId)) ?? deletedProfile(userId)
   return {
     id: ref.id,
     post_id: postId,
     user_id: userId,
     body,
     created_at: new Date().toISOString(),
-    profiles: profile!,
+    profiles: profile,
   }
 }
 
 export async function deleteComment(postId: string, commentId: string): Promise<void> {
-  await deleteDoc(doc(db, 'posts', postId, 'comments', commentId))
-  await updateDoc(doc(db, 'posts', postId), { comment_count: increment(-1) })
+  const batch = writeBatch(db)
+  batch.delete(doc(db, 'posts', postId, 'comments', commentId))
+  batch.update(doc(db, 'posts', postId), { comment_count: increment(-1) })
+  await batch.commit()
 }
 
 export async function getUserLikes(userId: string): Promise<Set<string>> {
@@ -366,40 +453,39 @@ export async function toggleLike(
 
 // ── Realtime ───────────────────────────────────────────────────────
 
-export function subscribeToCollection(
-  collectionPath: string,
-  callback: () => void
-): Unsubscribe {
-  return onSnapshot(collection(db, collectionPath), callback)
-}
-
+// Live feed of active posts. The Firestore query cutoff is fixed at subscribe
+// time, so the snapshot handler re-filters by the current clock and the
+// subscription is recreated periodically to refresh the cutoff.
 export function subscribeToActivePosts(
   onPosts: (posts: Post[]) => void
 ): Unsubscribe {
-  const now = Timestamp.now()
   let version = 0
-  return onSnapshot(
-    query(
-      collection(db, 'posts'),
-      where('expires_at', '>', now),
-      orderBy('expires_at', 'desc'),
-      orderBy('created_at', 'desc'),
-      limit(50)
-    ),
-    async (snap) => {
-      const v = ++version
-      const posts = await Promise.all(snap.docs.map((d) => hydratePost(d.id, d.data())))
-      if (v === version) onPosts(posts)
-    }
-  )
-}
+  let unsubSnapshot: Unsubscribe = () => {}
 
-export function subscribeToAllComments(onUpdate: () => void): Unsubscribe {
-  let ready = false
-  return onSnapshot(collectionGroup(db, 'comments'), (snap) => {
-    if (!ready) { ready = true; return }
-    if (snap.docChanges().length > 0) onUpdate()
-  })
+  const attach = () => {
+    unsubSnapshot()
+    unsubSnapshot = onSnapshot(
+      query(
+        collection(db, 'posts'),
+        where('expires_at', '>', Timestamp.now()),
+        orderBy('expires_at', 'desc'),
+        orderBy('created_at', 'desc'),
+        limit(50)
+      ),
+      async (snap) => {
+        const v = ++version
+        const posts = await hydratePosts(snap.docs)
+        if (v === version) onPosts(posts)
+      }
+    )
+  }
+
+  attach()
+  const refresh = setInterval(attach, 30 * 60 * 1000)
+  return () => {
+    clearInterval(refresh)
+    unsubSnapshot()
+  }
 }
 
 export function subscribeToConversation(
@@ -446,11 +532,6 @@ export async function uploadProfilePhoto(userId: string, base64DataUrl: string):
 }
 
 // ── Messages ───────────────────────────────────────────────────────
-
-// Conversation ID: sorted pair of user IDs joined by '_'
-function convoId(a: string, b: string) {
-  return [a, b].sort().join('_')
-}
 
 async function hydrateMessage(
   msgId: string,
@@ -518,26 +599,26 @@ export async function getConversationList(myId: string): Promise<Message[]> {
       limit(30)
     )
   )
-  const messages: Message[] = []
-  for (const d of snap.docs) {
-    const data = d.data()
-    const partnerId = data.partner_id
-    const fromProfile = await getProfileById(myId)
-    const toProfile = await getProfileById(partnerId)
-    if (!fromProfile || !toProfile) continue
-    const msgSnap = await getDoc(
-      doc(db, 'conversations', convoId(myId, partnerId), 'messages', data.last_message_id)
-    )
-    if (!msgSnap.exists()) continue
-    const msg = await hydrateMessage(
-      msgSnap.id,
-      { ...msgSnap.data(), conversation_id: convoId(myId, partnerId) },
-      data.last_from_id === myId ? fromProfile : toProfile,
-      data.last_from_id === myId ? toProfile : fromProfile
-    )
-    messages.push(msg)
-  }
-  return messages
+  const rows = snap.docs.map((d) => d.data())
+  const profiles = await getProfilesByIds([myId, ...rows.map((r) => r.partner_id)])
+  const myProfile = profiles.get(myId)!
+  const messages = await Promise.all(
+    rows.map(async (data) => {
+      const partnerProfile = profiles.get(data.partner_id)!
+      const convId = convoId(myId, data.partner_id)
+      const msgSnap = await getDoc(
+        doc(db, 'conversations', convId, 'messages', data.last_message_id)
+      )
+      if (!msgSnap.exists()) return null
+      return hydrateMessage(
+        msgSnap.id,
+        { ...msgSnap.data(), conversation_id: convId },
+        data.last_from_id === myId ? myProfile : partnerProfile,
+        data.last_from_id === myId ? partnerProfile : myProfile
+      )
+    })
+  )
+  return messages.filter((m): m is Message => m !== null)
 }
 
 export async function sendMessage(
@@ -567,16 +648,22 @@ export async function sendMessage(
     updated_at: serverTimestamp(),
     unread: false,
   }
-  await setDoc(doc(db, 'users', fromId, 'inbox', toId), inboxData)
-  await setDoc(doc(db, 'users', toId, 'inbox', fromId), {
-    ...inboxData,
-    partner_id: fromId,
-    unread: true,
-  })
+  await Promise.all([
+    setDoc(doc(db, 'users', fromId, 'inbox', toId), inboxData),
+    setDoc(doc(db, 'users', toId, 'inbox', fromId), {
+      ...inboxData,
+      partner_id: fromId,
+      unread: true,
+    }),
+  ])
 
-  const fromProfile = await getProfileById(fromId)
-  const toProfile = await getProfileById(toId)
-  return hydrateMessage(ref.id, { ...msgData, created_at: Timestamp.now() }, fromProfile!, toProfile!)
+  const profiles = await getProfilesByIds([fromId, toId])
+  return hydrateMessage(
+    ref.id,
+    { ...msgData, created_at: Timestamp.now() },
+    profiles.get(fromId)!,
+    profiles.get(toId)!
+  )
 }
 
 export async function markMessagesRead(myId: string, fromId: string) {
@@ -592,9 +679,10 @@ export async function markMessagesRead(myId: string, fromId: string) {
       where('read_at', '==', null)
     )
   )
-  await Promise.all(
-    snap.docs.map((d) => updateDoc(d.ref, { read_at: serverTimestamp() }))
-  )
+  if (snap.empty) return
+  const batch = writeBatch(db)
+  snap.docs.forEach((d) => batch.update(d.ref, { read_at: serverTimestamp() }))
+  await batch.commit()
 }
 
 export async function softDeleteMessage(messageId: string, myId: string, otherId: string) {
