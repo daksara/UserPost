@@ -1,0 +1,45 @@
+# One-time migration, run manually from the Actions tab. Removes the legacy
+# `email` field from the publicly readable usernames index.
+#
+# WARNING: after running this, legacy users must sign in with their EMAIL
+# (username login no longer works for them). Announce it to users first.
+#
+# Requires the FIREBASE_SERVICE_ACCOUNT secret (see deploy-firebase.yml).
+# Type "remove-emails" in the confirmation box to run.
+name: Migrate usernames index (remove emails)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "remove-emails" to confirm'
+        required: true
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check confirmation
+        if: ${{ github.event.inputs.confirm != 'remove-emails' }}
+        run: |
+          echo "::error::Confirmation text mismatch — nothing was changed."
+          exit 1
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Write service account key
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "::error::Missing FIREBASE_SERVICE_ACCOUNT secret. Add it in repo Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
+      - name: Run migration
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+        run: |
+          npm install --no-save firebase-admin
+          node scripts/remove-username-emails.mjs

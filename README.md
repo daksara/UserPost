@@ -27,6 +27,17 @@ cp .env.example .env
 Security rules live in `firestore.rules` and `storage.rules` and **must** be
 deployed — without them nothing enforces ownership or badge permissions.
 
+**Option A — from the browser (no CLI):** Firebase Console → Firestore
+Database → Rules → paste the contents of `firestore.rules` → Publish. Repeat
+for Storage → Rules with `storage.rules`. Enable the TTL policy under
+Firestore → TTL (collection `posts`, field `expires_at`).
+
+**Option B — GitHub Actions:** add the `FIREBASE_SERVICE_ACCOUNT` repository
+secret (JSON key from Project settings → Service accounts → Generate new
+private key); the "Deploy Firebase rules" workflow then deploys automatically
+whenever rule files change on `main`, or on demand from the Actions tab.
+
+**Option C — local CLI:**
 ```bash
 npm install -g firebase-tools
 firebase login
