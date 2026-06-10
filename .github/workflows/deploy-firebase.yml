@@ -1,0 +1,48 @@
+# Deploys Firestore/Storage rules and indexes from the browser — no local CLI
+# needed. Runs automatically when rule files change on main, or manually from
+# the Actions tab ("Run workflow").
+#
+# One-time setup: add the repository secret FIREBASE_SERVICE_ACCOUNT
+# (GitHub → Settings → Secrets and variables → Actions) containing the full
+# JSON key from Firebase Console → Project settings → Service accounts →
+# "Generate new private key".
+name: Deploy Firebase rules
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - firestore.rules
+      - storage.rules
+      - firestore.indexes.json
+      - firebase.json
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Write service account key
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "::error::Missing FIREBASE_SERVICE_ACCOUNT secret. Add it in repo Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
+      - name: Deploy rules and indexes
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+        run: |
+          PROJECT_ID=$(jq -r .project_id "$RUNNER_TEMP/sa.json")
+          npx firebase-tools deploy --only firestore \
+            --project "$PROJECT_ID" --non-interactive --force
+          # Storage is optional — projects without a bucket (Spark plan) skip it
+          npx firebase-tools deploy --only storage \
+            --project "$PROJECT_ID" --non-interactive --force \
+            || echo "::warning::Storage rules not deployed (no Storage bucket on this project — fine on the free plan)."

@@ -236,18 +236,13 @@ export async function signIn(identifier: string, password: string) {
   if (isEmail(identifier)) {
     email = identifier.toLowerCase()
   } else {
-    // Legacy username login: older username docs stored the email; accounts
-    // older than that used a synthetic email pattern. New accounts sign in
-    // with their email (the index no longer stores it for privacy).
+    // Username login is for legacy accounts: use the email stored on older
+    // username docs, otherwise the synthetic pre-email pattern. New accounts
+    // (no stored email, no synthetic auth user) simply fail credential
+    // checks and must sign in with their email.
     const indexSnap = await getDoc(doc(db, 'usernames', identifier.toLowerCase()))
     const legacyEmail = indexSnap.exists() ? indexSnap.data().email : null
-    if (legacyEmail) {
-      email = legacyEmail
-    } else if (!indexSnap.exists()) {
-      email = `up.${identifier.toLowerCase()}@userpost.app`
-    } else {
-      throw new Error('Please sign in with your email address')
-    }
+    email = legacyEmail ?? `up.${identifier.toLowerCase()}@userpost.app`
   }
   const { user } = await signInWithEmailAndPassword(auth, email, password)
   return user
