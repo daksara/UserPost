@@ -65,7 +65,7 @@ function AnimatedTab({ children, active }: { children: React.ReactNode; active: 
         inset: 0,
         overflow: 'hidden',
         visibility: active ? 'visible' : 'hidden',
-        opacity: 0,
+        opacity: active ? 1 : 0,
         pointerEvents: active ? 'auto' : 'none',
       }}
     >
