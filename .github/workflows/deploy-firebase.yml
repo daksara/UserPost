@@ -40,5 +40,9 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
         run: |
           PROJECT_ID=$(jq -r .project_id "$RUNNER_TEMP/sa.json")
-          npx firebase-tools deploy --only firestore,storage \
+          npx firebase-tools deploy --only firestore \
             --project "$PROJECT_ID" --non-interactive --force
+          # Storage is optional — projects without a bucket (Spark plan) skip it
+          npx firebase-tools deploy --only storage \
+            --project "$PROJECT_ID" --non-interactive --force \
+            || echo "::warning::Storage rules not deployed (no Storage bucket on this project — fine on the free plan)."
