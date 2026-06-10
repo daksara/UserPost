@@ -49,8 +49,9 @@ function clearProfileCache() {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(readCachedProfile)
-  // Skip the loading spinner if we already have a cached profile
-  const [loading, setLoading] = useState<boolean>(() => readCachedProfile() === null)
+  // Always wait for Firebase Auth to resolve before hiding the loading gate.
+  // Cached profile pre-populates data only — it must not bypass auth check.
+  const [loading, setLoading] = useState(true)
 
   const refreshProfile = useCallback(() => {
     if (!user) return
