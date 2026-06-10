@@ -152,7 +152,15 @@ export default function AuthPage() {
         await signIn(username.trim(), password)
       }
     } catch (e) {
-      setError(mapFirebaseError(e))
+      const code = (e as any)?.code ?? ''
+      // Accounts registered with an email can't sign in by username — nudge
+      // them toward email login instead of a plain "wrong password"
+      if (mode === 'login' && !isEmail(username.trim())
+          && (code === 'auth/invalid-credential' || code === 'auth/user-not-found')) {
+        setError('Incorrect username or password. If you registered with an email, sign in with your email.')
+      } else {
+        setError(mapFirebaseError(e))
+      }
     } finally { setLoading(false) }
   }
 
