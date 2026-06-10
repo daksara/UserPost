@@ -730,6 +730,7 @@ button {
   line-height: 1.45;
   word-break: break-word;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 .bubble--them {
   background: var(--bg-card);
