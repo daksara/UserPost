@@ -35,6 +35,7 @@ import {
   onSnapshot,
   serverTimestamp,
   Timestamp,
+  getCountFromServer,
   type Unsubscribe,
 } from 'firebase/firestore'
 import { getStorage, ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage'
@@ -530,6 +531,27 @@ export function subscribeToConversation(
 
 export function subscribeToInbox(myId: string, onUpdate: () => void): Unsubscribe {
   return onSnapshot(collection(db, 'users', myId, 'inbox'), onUpdate)
+}
+
+// Total pesan terkirim & diterima (untuk stats profil). Agregasi count per
+// percakapan dari inbox — sengaja tidak pakai collectionGroup supaya tidak
+// butuh rules/index Firestore baru. Count query murah: 1 read per 1000 docs.
+export async function getMessageStats(myId: string): Promise<{ sent: number; received: number }> {
+  // Doc id di inbox == uid partner percakapan
+  const inboxSnap = await getDocs(query(collection(db, 'users', myId, 'inbox'), limit(50)))
+  const partnerIds = inboxSnap.docs.map((d) => d.id)
+  const counts = await Promise.all(partnerIds.map(async (pid) => {
+    const msgs = collection(db, 'conversations', convoId(myId, pid), 'messages')
+    const [sentSnap, recvSnap] = await Promise.all([
+      getCountFromServer(query(msgs, where('from_id', '==', myId), where('deleted_at', '==', null))),
+      getCountFromServer(query(msgs, where('to_id', '==', myId), where('deleted_at', '==', null))),
+    ])
+    return { sent: sentSnap.data().count, received: recvSnap.data().count }
+  }))
+  return counts.reduce(
+    (acc, c) => ({ sent: acc.sent + c.sent, received: acc.received + c.received }),
+    { sent: 0, received: 0 }
+  )
 }
 
 // ── Storage ────────────────────────────────────────────────────────

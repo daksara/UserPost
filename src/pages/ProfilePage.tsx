@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from 'react'
 import {
   signOut, updateProfile, changePassword, deleteAccount, uploadProfilePhoto,
-  getMyActivePosts, deletePost, type Post,
+  getMyActivePosts, deletePost, getMessageStats, type Post,
 } from '../lib/firebase'
 import { expiresIn } from '../lib/utils'
 import { useAuth } from '../hooks/useAuth'
@@ -90,16 +90,18 @@ export default function ProfilePage({ active = true }: { active?: boolean }) {
   const [telegram, setTelegram] = useState('')
   const [tipCA, setTipCA] = useState('')
 
-  // My posts — null = masih loading
+  // My posts & stats pesan — null = masih loading
   const [myPosts, setMyPosts] = useState<Post[] | null>(null)
+  const [msgStats, setMsgStats] = useState<{ sent: number; received: number } | null>(null)
   const [confirmPostId, setConfirmPostId] = useState<string | null>(null)
   const profileId = profile?.id
 
   // Refetch tiap tab profil dibuka — semua tab selalu mounted (AnimatedTab),
-  // jadi tanpa ini stats/list jadi basi setelah posting di feed
+  // jadi tanpa ini stats/list jadi basi setelah aktivitas di tab lain
   useEffect(() => {
     if (!profileId || !active) return
     getMyActivePosts(profileId).then(setMyPosts).catch(() => setMyPosts([]))
+    getMessageStats(profileId).then(setMsgStats).catch(() => setMsgStats({ sent: 0, received: 0 }))
   }, [profileId, active])
 
   if (!profile) return null
@@ -159,9 +161,6 @@ export default function ProfilePage({ active = true }: { active?: boolean }) {
       getMyActivePosts(profile.id).then(setMyPosts).catch(() => {})
     }
   }
-
-  const activeCount = myPosts?.length
-  const commentTotal = myPosts?.reduce((sum, p) => sum + p.comment_count, 0)
 
   const avatarSrc = (profile as any).photo_url || getAvatarUrl(profile.username)
 
@@ -274,13 +273,13 @@ export default function ProfilePage({ active = true }: { active?: boolean }) {
         {/* Stats */}
         <div style={{ display: 'flex', gap: 28, justifyContent: 'center', margin: '6px 0 12px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-            <span style={{ fontWeight: 800, fontSize: '1.05rem' }}>{activeCount ?? '–'}</span>
-            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Active Posts</span>
+            <span style={{ fontWeight: 800, fontSize: '1.05rem' }}>{msgStats?.sent ?? '–'}</span>
+            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Messages Sent</span>
           </div>
           <div style={{ width: 1, background: 'var(--border)', alignSelf: 'stretch' }}/>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-            <span style={{ fontWeight: 800, fontSize: '1.05rem' }}>{commentTotal ?? '–'}</span>
-            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Comments</span>
+            <span style={{ fontWeight: 800, fontSize: '1.05rem' }}>{msgStats?.received ?? '–'}</span>
+            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Messages Received</span>
           </div>
         </div>
 
