@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { signIn, signUp, forgotPassword, checkUsernameAvailable } from '../lib/firebase'
+import { isEmail } from '../lib/utils'
 
 function EyeIcon({ open }: { open: boolean }) {
   return open
@@ -119,7 +120,7 @@ export default function AuthPage() {
     setError(''); setSuccess('')
 
     if (mode === 'forgot') {
-      if (!username.trim()) return setError('Enter your username.')
+      if (!username.trim()) return setError('Enter your email or username.')
       setLoading(true)
       try {
         await forgotPassword(username.trim())
@@ -131,7 +132,8 @@ export default function AuthPage() {
     }
 
     if (!username.trim() || !password.trim()) return setError('Fill in all fields.')
-    if (!/^[a-zA-Z0-9_]{3,20}$/.test(username))
+    // Login accepts an email address; usernames must match the strict pattern
+    if (!(mode === 'login' && isEmail(username.trim())) && !/^[a-zA-Z0-9_]{3,20}$/.test(username))
       return setError('Username: 3–20 chars, letters/numbers/underscore only.')
     if (password.length < 6) return setError('Password min 6 characters.')
 
@@ -172,7 +174,7 @@ export default function AuthPage() {
 
         {mode === 'forgot' && (
           <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: 8 }}>
-            Enter your username to receive a password reset link.
+            Enter your email (or legacy username) to receive a password reset link.
           </p>
         )}
 
@@ -181,7 +183,7 @@ export default function AuthPage() {
           <div style={{ position: 'relative' }}>
             <input
               className="auth-input"
-              placeholder="Username"
+              placeholder={mode === 'register' ? 'Username' : 'Email or username'}
               value={username}
               onChange={e => { setUsername(e.target.value); setError('') }}
               autoComplete="username"

@@ -1,30 +1,43 @@
 # UserPost
 
-Social feed where posts disappear in 24 hours. Built with React + Vite + Supabase.
+Social feed where posts disappear in 24 hours. Built with React + Vite + Firebase.
 
 ## Stack
 - **Frontend**: React 18 + TypeScript + Vite
-- **Backend**: Supabase (Postgres + Auth + Realtime)
-- **Hosting**: Vercel (recommended)
+- **Backend**: Firebase (Firestore + Auth + Storage)
+- **Hosting**: Vercel or Firebase Hosting
 
 ---
 
 ## Setup
 
-### 1. Create Supabase project
-1. Go to [supabase.com](https://supabase.com) → New project
-2. Save your **Project URL** and **anon key** (Settings > API)
+### 1. Create a Firebase project
+1. Go to [console.firebase.google.com](https://console.firebase.google.com) → Add project
+2. Enable **Authentication → Email/Password**
+3. Enable **Firestore Database** and **Storage**
+4. Add a **Web app** (Project Settings → Your apps) and copy its config
 
-### 2. Run the schema
-1. Supabase Dashboard → **SQL Editor**
-2. Paste and run the contents of `supabase/schema.sql`
-3. Go to **Database → Replication** → enable realtime for: `posts`, `comments`, `messages`
-
-### 3. Configure env
+### 2. Configure env
 ```bash
 cp .env.example .env
-# Edit .env and fill in your Supabase URL and anon key
+# Fill in the VITE_FIREBASE_* values from your web app config
 ```
+
+### 3. Deploy security rules and indexes
+Security rules live in `firestore.rules` and `storage.rules` and **must** be
+deployed — without them nothing enforces ownership or badge permissions.
+
+```bash
+npm install -g firebase-tools
+firebase login
+firebase use <your-project-id>
+firebase deploy --only firestore,storage
+```
+
+`firestore.indexes.json` includes the composite indexes the feed and message
+queries need, plus a **TTL policy** on `posts.expires_at` so expired posts are
+deleted automatically by Firestore (the client also filters them out while
+they wait for garbage collection).
 
 ### 4. Install and run
 ```bash
@@ -32,38 +45,69 @@ npm install
 npm run dev
 ```
 
-### 5. Deploy to Vercel
+### 5. Quality checks
+```bash
+npm run lint   # ESLint
+npm test       # Vitest unit tests
+npm run build  # typecheck + production build
+```
+CI (GitHub Actions) runs all three on every push and pull request.
+
+### 6. Deploy to Vercel
 ```bash
 npm install -g vercel
 vercel
-# Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY as environment variables
+# Add the VITE_FIREBASE_* variables as environment variables
 ```
 
 ---
 
 ## Features
-- ✅ Auth (username + password, no email needed)
+- ✅ Auth (email + password, username as public identity, email verification)
 - ✅ Feed with 24-hour auto-expiring posts
-- ✅ Contract address attachment + copy button
-- ✅ Comments
-- ✅ Direct messages with reply support
+- ✅ Contract address / link attachment with allowlisted domains
+- ✅ Comments + likes with rule-enforced counters
+- ✅ Direct messages with replies, read receipts, soft delete
 - ✅ Realtime updates (feed, messages)
-- ✅ Mobile-first UI
+- ✅ Badge system (verified accounts can grant badges)
+- ✅ Mobile-first UI, light/dark theme
 
-## Project Structure
+## Data model
+
+| Collection | Purpose |
+|---|---|
+| `profiles/{uid}` | Public profile (username, bio, badge, avatar URL) |
+| `usernames/{username}` | Username → uid index for uniqueness checks (`{ uid }` only — no email, it is publicly readable) |
+| `posts/{postId}` | Posts with `expires_at` (24h TTL) and denormalized `like_count` / `comment_count` |
+| `posts/{postId}/comments/{commentId}` | Comments |
+| `users/{uid}/liked_posts/{postId}` | Per-user like marks |
+| `users/{uid}/inbox/{partnerUid}` | Latest-message pointer per conversation (unread badge) |
+| `conversations/{uidA_uidB}/messages/{msgId}` | Direct messages (conversation id = sorted uid pair) |
+
+## Project structure
 ```
 src/
-  lib/supabase.ts      # Supabase client + all DB helpers
-  hooks/
-    useAuth.tsx        # Auth context
-    useRealtime.ts     # Realtime subscription hook
+  lib/
+    firebase.ts        # Firebase client + all DB helpers
+    utils.ts           # Pure helpers (tested in utils.test.ts)
+  hooks/useAuth.tsx    # Auth context
+  components/          # Avatar, Badge, ErrorBoundary
   pages/
-    AuthPage.tsx       # Sign in / Sign up
+    AuthPage.tsx       # Sign in / sign up / reset password
     FeedPage.tsx       # Main feed + compose
     MessagesPage.tsx   # DMs + thread view
-    ProfilePage.tsx    # Profile + sign out
-  App.tsx              # Root + tab navigation
-  index.css            # Full design system
-supabase/
-  schema.sql           # Run this in Supabase SQL Editor
+    ProfilePage.tsx    # Profile, settings, account deletion
+  App.tsx              # Root + tab navigation (hash-routed)
+firestore.rules        # Firestore security rules
+firestore.indexes.json # Composite indexes + TTL policy
+storage.rules          # Storage security rules
 ```
+
+## Notes
+- **Sign-in** accepts email or username. New accounts reset passwords with
+  their email; the username index no longer stores emails (accounts that
+  still have one keep working until migrated).
+- **Badges**: only accounts with `is_verified: true` can grant/revoke badges —
+  enforced by Firestore rules, not just the UI.
+- Accounts created before email was required use a legacy synthetic email
+  (`up.<username>@userpost.app`) and skip email verification.

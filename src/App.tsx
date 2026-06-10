@@ -5,9 +5,17 @@ import AuthPage from './pages/AuthPage'
 import FeedPage from './pages/FeedPage'
 import MessagesPage from './pages/MessagesPage'
 import ProfilePage from './pages/ProfilePage'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { subscribeToInbox, getUnreadCount, resendVerificationEmail, signOut as fbSignOut, auth } from './lib/firebase'
 
 type Tab = 'feed' | 'messages' | 'profile'
+
+const TABS: Tab[] = ['feed', 'messages', 'profile']
+
+function tabFromHash(): Tab {
+  const h = location.hash.replace('#', '')
+  return (TABS as string[]).includes(h) ? (h as Tab) : 'feed'
+}
 
 // Animasi fade+slide ringan — hanya opacity & translateY, tidak ubah layout
 function AnimatedTab({ children, active }: { children: React.ReactNode; active: boolean }) {
@@ -149,7 +157,7 @@ function VerifyEmailGate({ onVerified }: { onVerified: () => void }) {
 
 function App() {
   const { user, loading } = useAuth()
-  const [tab, setTab] = useState<Tab>('feed')
+  const [tab, setTab] = useState<Tab>(tabFromHash)
   const [dmTarget, setDmTarget] = useState<string | undefined>()
   const [unreadCount, setUnreadCount] = useState(0)
   const [emailVerified, setEmailVerified] = useState<boolean>(() => user?.emailVerified ?? true)
@@ -176,6 +184,17 @@ function App() {
   useEffect(() => {
     if (tab === 'messages') setUnreadCount(0)
   }, [tab])
+
+  // Keep the active tab in the URL hash (deep-linking + back button)
+  useEffect(() => {
+    if (location.hash !== `#${tab}`) history.replaceState(null, '', `#${tab}`)
+  }, [tab])
+
+  useEffect(() => {
+    const onHashChange = () => setTab(tabFromHash())
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
 
   if (loading) {
     return (
@@ -273,5 +292,9 @@ function App() {
 }
 
 export default function Root() {
-  return <AuthProvider><App/></AuthProvider>
+  return (
+    <ErrorBoundary>
+      <AuthProvider><App/></AuthProvider>
+    </ErrorBoundary>
+  )
 }

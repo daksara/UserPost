@@ -2,29 +2,14 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import {
   getPosts, createPost, deletePost, addComment, deleteComment,
-  getComments, subscribeToActivePosts, subscribeToAllComments,
+  getComments, subscribeToActivePosts,
   grantBadge, revokeBadge,
   type Post, type Comment, type Profile, type BadgeGrantType,
 } from '../lib/firebase'
+import { timeAgo, expiresIn } from '../lib/utils'
 import { useAuth } from '../hooks/useAuth'
 import { UserAvatar } from '../components/Avatar'
 import { BadgeChip, BADGE_GRANT_TYPES } from '../components/Badge'
-
-function timeAgo(iso: string) {
-  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
-  if (s < 60) return `${s}s`
-  if (s < 3600) return `${Math.floor(s / 60)}m`
-  if (s < 86400) return `${Math.floor(s / 3600)}h`
-  return `${Math.floor(s / 86400)}d`
-}
-
-function expiresIn(iso: string) {
-  const ms = new Date(iso).getTime() - Date.now()
-  if (ms <= 0) return null
-  const h = Math.floor(ms / 3600000)
-  const m = Math.floor((ms % 3600000) / 60000)
-  return h > 0 ? `${h}h left` : `${m}m left`
-}
 
 function CACard({ address }: { address: string }) {
   const [copied, setCopied] = useState(false)
@@ -48,7 +33,7 @@ function CACard({ address }: { address: string }) {
 }
 
 function LinkCard({ url }: { url: string }) {
-  let domain = ''
+  let domain: string
   try { domain = new URL(url).hostname.replace('www.', '') } catch { domain = url }
   return (
     <a
@@ -524,14 +509,15 @@ export default function FeedPage({ onDMClick }: { onDMClick: (username: string) 
     setPosts(data)
   }, [])
 
+  // Comment counts live on the post docs, so this subscription also fires
+  // when someone comments — no separate comments listener needed.
   useEffect(() => {
     const unsubPosts = subscribeToActivePosts((updated) => {
       setPosts(updated)
       setLoading(false)
     })
-    const unsubComments = subscribeToAllComments(refreshPosts)
-    return () => { unsubPosts(); unsubComments() }
-  }, [refreshPosts])
+    return () => unsubPosts()
+  }, [])
 
   // Auto-remove expired posts every minute
   useEffect(() => {

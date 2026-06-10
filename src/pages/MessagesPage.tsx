@@ -5,6 +5,7 @@ import {
   softDeleteMessage, getUserByUsername, subscribeToConversation, subscribeToInbox,
   type Message, type Profile
 } from '../lib/firebase'
+import { timeAgo } from '../lib/utils'
 import { useAuth } from '../hooks/useAuth'
 import { UserAvatar } from '../components/Avatar'
 import { BadgeChip } from '../components/Badge'
@@ -17,14 +18,6 @@ function ProfileBadges({ profile }: { profile: Profile }) {
       {profile.badge_type && <BadgeChip type={profile.badge_type}/>}
     </>
   )
-}
-
-function timeAgo(iso: string) {
-  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
-  if (s < 60) return `${s}s`
-  if (s < 3600) return `${Math.floor(s / 60)}m`
-  if (s < 86400) return `${Math.floor(s / 3600)}h`
-  return `${Math.floor(s / 86400)}d`
 }
 
 function Avatar({ username, size = 36, photoUrl }: { username: string; size?: number; photoUrl?: string | null }) {
@@ -71,7 +64,8 @@ function ThreadView({ partner, myProfile, onBack }: {
           (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
         )
       })
-      markMessagesRead(myProfile.id, partner.id)
+      // May fail when the inbox entry doesn't exist yet (brand-new thread)
+      markMessagesRead(myProfile.id, partner.id).catch(() => {})
       if (!initializedRef.current) {
         initializedRef.current = true
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'instant' as ScrollBehavior }), 100)
@@ -80,7 +74,6 @@ function ThreadView({ partner, myProfile, onBack }: {
       }
     })
     return () => unsub()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [myProfile.id, partner.id])
 
   const handleSend = async () => {
