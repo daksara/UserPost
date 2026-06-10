@@ -246,7 +246,7 @@ function App() {
           <MessagesPage key={dmTarget ?? 'messages'} initialDM={dmTarget}/>
         </AnimatedTab>
         <AnimatedTab active={tab === 'profile'}>
-          <ProfilePage/>
+          <ProfilePage active={tab === 'profile'}/>
         </AnimatedTab>
       </div>
 
