@@ -967,8 +967,9 @@ button.badge-og { cursor: pointer; }
 span.badge-official,
 span.badge-partner,
 span.badge-contributor,
-span.badge-verified,
-span.badge-og { padding: 4px; }
+span.badge-verified { padding: 4px; }
+/* OG berisi teks, bukan ikon — pill dengan tinggi setara chip ikon */
+span.badge-og { padding: 3px 7px; }
 
 .badge-official {
   background: linear-gradient(135deg, #6366f1, #8b5cf6, #6366f1);
