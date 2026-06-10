@@ -4,6 +4,8 @@ import { onAuthStateChanged, type User } from 'firebase/auth'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 
+const PROFILE_CACHE_KEY = 'profile-cache'
+
 interface AuthState {
   user: User | null
   profile: Profile | null
@@ -20,6 +22,7 @@ function snapToProfile(snap: any): Profile {
     username: d.username,
     created_at: d.created_at?.toDate().toISOString() ?? new Date().toISOString(),
     is_verified: d.is_verified ?? false,
+    badge_type: d.badge_type ?? null,
     photo_url: d.photo_url ?? null,
     bio: d.bio ?? null,
     twitter: d.twitter ?? null,
@@ -28,16 +31,35 @@ function snapToProfile(snap: any): Profile {
   }
 }
 
+function readCachedProfile(): Profile | null {
+  try {
+    const raw = localStorage.getItem(PROFILE_CACHE_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch { return null }
+}
+
+function cacheProfile(p: Profile) {
+  try { localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(p)) } catch {}
+}
+
+function clearProfileCache() {
+  try { localStorage.removeItem(PROFILE_CACHE_KEY) } catch {}
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [profile, setProfile] = useState<Profile | null>(readCachedProfile)
+  // Skip the loading spinner if we already have a cached profile
+  const [loading, setLoading] = useState<boolean>(() => readCachedProfile() === null)
 
-  // refreshProfile: force re-read dari Firestore (dipanggil setelah updateProfile)
   const refreshProfile = useCallback(() => {
     if (!user) return
     const unsub = onSnapshot(doc(db, 'profiles', user.uid), (snap) => {
-      if (snap.exists()) setProfile(snapToProfile(snap))
+      if (snap.exists()) {
+        const p = snapToProfile(snap)
+        setProfile(p)
+        cacheProfile(p)
+      }
       unsub()
     })
   }, [user])
@@ -52,11 +74,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (firebaseUser) {
         unsubProfile = onSnapshot(doc(db, 'profiles', firebaseUser.uid), (snap) => {
-          if (snap.exists()) setProfile(snapToProfile(snap))
+          if (snap.exists()) {
+            const p = snapToProfile(snap)
+            setProfile(p)
+            cacheProfile(p)
+          }
           setLoading(false)
         })
       } else {
         setProfile(null)
+        clearProfileCache()
         setLoading(false)
       }
     })

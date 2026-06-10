@@ -961,6 +961,37 @@ button.badge-verified { cursor: pointer; }
   box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
 }
 
+/* ── Skeleton loader ────────────────────────────────────────────── */
+@keyframes skeleton-shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+
+.post-skeleton__line,
+.post-skeleton__avatar {
+  background: linear-gradient(90deg, var(--bg-hover) 25%, var(--border) 50%, var(--bg-hover) 75%);
+  background-size: 800px 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+  border-radius: 6px;
+}
+
+.post-skeleton__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.post-skeleton__line {
+  height: 13px;
+}
+
+.post-skeleton__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 /* ── Avatar DiceBear (profile page) ────────────────────────────── */
 .profile-avatar-img {
   width: 88px;
