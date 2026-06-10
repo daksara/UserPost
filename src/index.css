@@ -1021,3 +1021,128 @@ button.badge-verified { cursor: pointer; }
   background: #eeeeff;
   box-shadow: 0 0 0 3px var(--bg-card), 0 0 0 5px var(--border);
 }
+
+/* ── Premium polish: micro-interactions & motion ────────────────── */
+/* Hanya menganimasikan opacity/transform agar tetap 60fps di mobile */
+
+/* Feedback tekan universal — snap saat ditekan, spring saat dilepas */
+.icon-btn, .back-btn, .auth-btn, .auth-tab, .btn-post, .btn-cancel,
+.comment-send, .thread-composer__send, .signout-btn, .ca-attach-btn,
+.post-card__delete, .post-card__comments-btn, .user-result, .ca-card {
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease,
+              box-shadow 0.2s ease, transform 0.2s cubic-bezier(.34,1.56,.64,1);
+}
+.icon-btn:active, .back-btn:active, .auth-tab:active, .btn-cancel:active,
+.signout-btn:active, .ca-attach-btn:active, .post-card__delete:active,
+.post-card__comments-btn:active, .user-result:active, .ca-card:active {
+  transform: scale(0.95);
+}
+.auth-btn:active:not(:disabled),
+.btn-post:active:not(:disabled) { transform: scale(0.97); }
+.comment-send:active:not(:disabled),
+.thread-composer__send:active:not(:disabled) { transform: scale(0.88); }
+
+/* Tombol utama: glow lembut saat hover */
+.auth-btn:hover:not(:disabled),
+.btn-post:hover:not(:disabled) {
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+/* Focus ring lembut pada input */
+.auth-input:focus, .comment-input:focus, .thread-composer__input:focus,
+.ca-input:not(.ca-input--error):focus, .compose-textarea:focus {
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* FAB dengan spring easing */
+.fab {
+  transition: background 0.15s ease, box-shadow 0.2s ease,
+              transform 0.25s cubic-bezier(.34,1.56,.64,1);
+}
+.fab:hover { box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 45%, transparent); }
+
+/* Bottom nav: indikator slide-in + icon pop saat tab aktif */
+.bottom-nav__item { position: relative; }
+.bottom-nav__item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 22px;
+  height: 3px;
+  margin-left: -11px;
+  border-radius: 0 0 3px 3px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transition: transform 0.25s cubic-bezier(.34,1.56,.64,1);
+}
+.bottom-nav__item--active::before { transform: scaleX(1); }
+
+@keyframes nav-icon-pop {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+.bottom-nav__item--active svg { animation: nav-icon-pop 0.3s ease; }
+
+/* Konten masuk: stagger fade-up untuk feed & daftar percakapan */
+@keyframes item-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.feed > .post-card { animation: item-in 0.3s ease both; }
+.feed > .post-card:nth-child(2) { animation-delay: 40ms; }
+.feed > .post-card:nth-child(3) { animation-delay: 80ms; }
+.feed > .post-card:nth-child(4) { animation-delay: 120ms; }
+.feed > .post-card:nth-child(5) { animation-delay: 160ms; }
+.feed > .post-card:nth-child(n+6) { animation-delay: 200ms; }
+
+.convo-list > div { animation: item-in 0.25s ease both; }
+.convo-list > div:nth-child(2) { animation-delay: 35ms; }
+.convo-list > div:nth-child(3) { animation-delay: 70ms; }
+.convo-list > div:nth-child(4) { animation-delay: 105ms; }
+.convo-list > div:nth-child(n+5) { animation-delay: 140ms; }
+
+/* Bubble chat muncul dengan pop kecil */
+@keyframes bubble-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.bubble-wrap { animation: bubble-in 0.2s ease both; }
+
+/* Section komentar expand halus, tidak muncul mendadak */
+@keyframes section-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.post-card__comments { animation: section-in 0.18s ease; }
+.comment { animation: fadeIn 0.2s ease; }
+
+/* Badge & dot unread muncul dengan pop */
+@keyframes pop-in {
+  0%   { transform: scale(0); }
+  70%  { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+.badge-pop, .convo-item__badge { animation: pop-in 0.3s cubic-bezier(.34,1.56,.64,1) both; }
+
+/* Empty state fade-in, tidak flash */
+.feed__empty { animation: fadeIn 0.35s ease both; }
+
+/* Modal premium: backdrop blur + spring saat masuk */
+.sheet-overlay {
+  background: rgba(0,0,0,.4);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: fadeIn 0.2s ease;
+}
+.sheet { animation: slideUp 0.32s cubic-bezier(.34,1.3,.5,1); }
+
+/* Hormati preferensi reduced motion (spinner tetap berputar) */
+@media (prefers-reduced-motion: reduce) {
+  *:not(.spinner), *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
