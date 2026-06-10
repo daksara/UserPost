@@ -498,10 +498,40 @@ function ComposeSheet({ onPost, onClose }: { onPost: (body: string, ca?: string,
   )
 }
 
+const FEED_CACHE_KEY = 'feed-cache'
+
+function readCachedPosts(): Post[] {
+  try {
+    const raw = localStorage.getItem(FEED_CACHE_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch { return [] }
+}
+
+function PostSkeleton() {
+  return (
+    <div className="post-card post-skeleton" aria-hidden>
+      <div className="post-skeleton__header">
+        <div className="post-skeleton__avatar"/>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div className="post-skeleton__line" style={{ width: '35%' }}/>
+          <div className="post-skeleton__line" style={{ width: '20%', height: 10 }}/>
+        </div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+        <div className="post-skeleton__line" style={{ width: '100%' }}/>
+        <div className="post-skeleton__line" style={{ width: '85%' }}/>
+        <div className="post-skeleton__line" style={{ width: '60%' }}/>
+      </div>
+      <div className="post-skeleton__line" style={{ width: '25%', marginTop: 14, height: 10 }}/>
+    </div>
+  )
+}
+
 export default function FeedPage({ onDMClick }: { onDMClick: (username: string) => void }) {
   const { profile } = useAuth()
-  const [posts, setPosts] = useState<Post[]>([])
-  const [loading, setLoading] = useState(true)
+  const [posts, setPosts] = useState<Post[]>(readCachedPosts)
+  // Only show loading state when there's no cached data to display
+  const [loading, setLoading] = useState(() => readCachedPosts().length === 0)
   const [composing, setComposing] = useState(false)
   const [sort, setSort] = useState<'new' | 'top'>('new')
 
@@ -509,6 +539,13 @@ export default function FeedPage({ onDMClick }: { onDMClick: (username: string) 
     const data = await getPosts()
     setPosts(data)
   }, [])
+
+  // Persist latest posts to localStorage for instant display on next load
+  useEffect(() => {
+    if (posts.length > 0) {
+      try { localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(posts.slice(0, 30))) } catch {}
+    }
+  }, [posts])
 
   // Comment counts live on the post docs, so this subscription also fires
   // when someone comments — no separate comments listener needed.
@@ -587,7 +624,7 @@ export default function FeedPage({ onDMClick }: { onDMClick: (username: string) 
       </header>
 
       <div className="feed">
-        {loading && <div className="feed__loading"><span className="spinner"/></div>}
+        {loading && [0, 1, 2].map(i => <PostSkeleton key={i}/>)}
         {!loading && posts.length === 0 && (
           <div className="feed__empty">No posts yet. Be the first!</div>
         )}
