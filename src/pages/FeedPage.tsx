@@ -6,7 +6,7 @@ import {
   grantBadge, revokeBadge,
   type Post, type Comment, type Profile, type BadgeGrantType,
 } from '../lib/firebase'
-import { timeAgo, expiresIn } from '../lib/utils'
+import { expiresIn } from '../lib/utils'
 import { useAuth } from '../hooks/useAuth'
 import { UserAvatar } from '../components/Avatar'
 import { BadgeChip, BADGE_GRANT_TYPES } from '../components/Badge'
@@ -279,7 +279,9 @@ function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment,
     setSending(true)
     try {
       const comment = await onComment(post.id, commentText.trim())
-      setLocalComments(prev => [...prev, comment])
+      // The realtime post subscription may have already refetched the list
+      // (comment_count changed) — only append if it isn't there yet
+      setLocalComments(prev => prev.some(c => c.id === comment.id) ? prev : [...prev, comment])
       setCommentCount(prev => prev + 1)
       setCommentText('')
     } finally {
@@ -360,7 +362,6 @@ function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment,
             <div key={c.id} className="comment" style={{ position: 'relative' }}>
               <span className="comment__username">{c.profiles.username}</span>
               <span className="comment__body">{c.body}</span>
-              <span className="comment__time">{timeAgo(c.created_at)}</span>
               {c.user_id === myId && (
                 <button
                   onClick={() => handleDeleteComment(c.id)}
