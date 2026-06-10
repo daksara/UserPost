@@ -43,7 +43,14 @@ function cacheProfile(p: Profile) {
 }
 
 function clearProfileCache() {
-  try { localStorage.removeItem(PROFILE_CACHE_KEY) } catch { /* ignore storage errors */ }
+  try {
+    localStorage.removeItem(PROFILE_CACHE_KEY)
+    // Cache pesan (inbox + thread) milik user lama tidak boleh terbawa ke
+    // sesi akun lain di perangkat yang sama
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('msg-cache:'))
+      .forEach(k => localStorage.removeItem(k))
+  } catch { /* ignore storage errors */ }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {

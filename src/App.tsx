@@ -17,6 +17,20 @@ function tabFromHash(): Tab {
   return (TABS as string[]).includes(h) ? (h as Tab) : 'feed'
 }
 
+// Splash branded yang fade-out halus saat auth selesai — pengganti spinner
+// polos yang bikin konten "loncat" tiba-tiba saat refresh
+function SplashScreen({ fadeOut }: { fadeOut: boolean }) {
+  return (
+    <div className={`splash${fadeOut ? ' splash--out' : ''}`}>
+      <div className="auth-logo">
+        <span className="auth-logo__dot"/>
+        <span className="auth-logo__name">UserPost</span>
+      </div>
+      <span className="spinner"/>
+    </div>
+  )
+}
+
 // Animasi fade+slide ringan — hanya opacity & translateY, tidak ubah layout
 function AnimatedTab({ children, active }: { children: React.ReactNode; active: boolean }) {
   const ref = useRef<HTMLDivElement>(null)
@@ -161,6 +175,14 @@ function App() {
   const [dmTarget, setDmTarget] = useState<string | undefined>()
   const [unreadCount, setUnreadCount] = useState(0)
   const [emailVerified, setEmailVerified] = useState<boolean>(() => user?.emailVerified ?? true)
+  const [splashDone, setSplashDone] = useState(false)
+
+  // Saat auth selesai, konten render di belakang splash lalu splash fade-out
+  useEffect(() => {
+    if (loading || splashDone) return
+    const t = setTimeout(() => setSplashDone(true), 400)
+    return () => clearTimeout(t)
+  }, [loading, splashDone])
 
   // Sync emailVerified when user object changes
   useEffect(() => {
@@ -196,20 +218,17 @@ function App() {
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
 
-  if (loading) {
-    return (
-      <div style={{ height: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span className="spinner"/>
-      </div>
-    )
-  }
+  // Overlay splash tetap terpasang sampai fade-out selesai
+  const splash = !splashDone ? <SplashScreen fadeOut={!loading}/> : null
 
-  if (!user) return <AuthPage/>
+  if (loading) return splash
+
+  if (!user) return <><AuthPage/>{splash}</>
 
   // Show email verification gate for non-legacy users
   const isLegacy = user.email?.endsWith('@userpost.app') ?? false
   if (!emailVerified && !isLegacy) {
-    return <VerifyEmailGate onVerified={() => setEmailVerified(true)}/>
+    return <><VerifyEmailGate onVerified={() => setEmailVerified(true)}/>{splash}</>
   }
 
   const handleDMClick = (username: string) => {
@@ -287,6 +306,7 @@ function App() {
           <span>Profile</span>
         </button>
       </nav>
+      {splash}
     </div>
   )
 }

@@ -905,6 +905,25 @@ button {
 }
 .spinner--sm { width: 14px; height: 14px; border-width: 2px; }
 
+/* ── Splash screen ──────────────────────────────────────────────── */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: var(--bg);
+  opacity: 1;
+  transition: opacity 0.35s ease;
+}
+.splash--out {
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* ── Animations ─────────────────────────────────────────────────── */
 @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
 @keyframes slideUp { from { transform: translateY(100%) } to { transform: translateY(0) } }

@@ -5,7 +5,7 @@ import {
   softDeleteMessage, getUserByUsername, subscribeToConversation, subscribeToInbox,
   type Message, type Profile
 } from '../lib/firebase'
-import { timeAgo } from '../lib/utils'
+import { timeAgo, convoId } from '../lib/utils'
 import { useAuth } from '../hooks/useAuth'
 import { UserAvatar } from '../components/Avatar'
 import { BadgeChip } from '../components/Badge'
@@ -22,6 +22,34 @@ function ProfileBadges({ profile }: { profile: Profile }) {
 
 function Avatar({ username, size = 36, photoUrl }: { username: string; size?: number; photoUrl?: string | null }) {
   return <UserAvatar username={username} size={size} photoUrl={photoUrl} />
+}
+
+// ── Stale-while-revalidate cache ───────────────────────────────────
+// Tampilkan data terakhir secara instan saat refresh, lalu diganti data
+// live dari Firestore — pola yang sama dengan feed-cache di FeedPage.
+const MSG_CACHE_PREFIX = 'msg-cache:'
+
+function readMsgCache<T>(key: string): T | null {
+  try {
+    const raw = localStorage.getItem(MSG_CACHE_PREFIX + key)
+    return raw ? JSON.parse(raw) : null
+  } catch { return null }
+}
+
+function writeMsgCache(key: string, value: unknown) {
+  try { localStorage.setItem(MSG_CACHE_PREFIX + key, JSON.stringify(value)) } catch { /* ignore storage errors */ }
+}
+
+function ConvoSkeleton() {
+  return (
+    <div aria-hidden style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
+      <div className="post-skeleton__avatar"/>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 7 }}>
+        <div className="post-skeleton__line" style={{ width: '32%' }}/>
+        <div className="post-skeleton__line" style={{ width: '65%', height: 10 }}/>
+      </div>
+    </div>
+  )
 }
 
 // ── Swipeable Message Bubble ───────────────────────────────────────
@@ -107,7 +135,8 @@ function ThreadView({ partner, myProfile, onBack }: {
   myProfile: Profile
   onBack: () => void
 }) {
-  const [messages, setMessages] = useState<Message[]>([])
+  const threadCacheKey = `thread:${convoId(myProfile.id, partner.id)}`
+  const [messages, setMessages] = useState<Message[]>(() => readMsgCache<Message[]>(threadCacheKey) ?? [])
   const [text, setText] = useState('')
   const [replyTo, setReplyTo] = useState<Message | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -122,6 +151,8 @@ function ThreadView({ partner, myProfile, onBack }: {
 
   useEffect(() => {
     initializedRef.current = false
+    // Pesan dari cache sudah ter-render — langsung posisikan di pesan terakhir
+    bottomRef.current?.scrollIntoView({ behavior: 'instant' as ScrollBehavior })
     const unsub = subscribeToConversation(myProfile.id, partner.id, (msgs) => {
       setMessages(prev => {
         // Keep optimistic messages only until a matching real message arrives.
@@ -151,6 +182,12 @@ function ThreadView({ partner, myProfile, onBack }: {
     })
     return () => unsub()
   }, [myProfile.id, partner.id])
+
+  // Simpan 50 pesan terakhir agar thread langsung tampil saat dibuka lagi
+  useEffect(() => {
+    const confirmed = messages.filter(m => !m.id.startsWith('opt-'))
+    if (confirmed.length > 0) writeMsgCache(threadCacheKey, confirmed.slice(-50))
+  }, [messages, threadCacheKey])
 
   const handleSend = async () => {
     if (!text.trim()) return
@@ -450,7 +487,12 @@ function SwipeableConvoItem({
 
 export default function MessagesPage({ initialDM }: { initialDM?: string }) {
   const { profile } = useAuth()
-  const [convos, setConvos] = useState<Message[]>([])
+  const [convos, setConvos] = useState<Message[]>(() =>
+    profile ? readMsgCache<Message[]>(`inbox:${profile.id}`) ?? [] : []
+  )
+  // Empty state "No messages yet" hanya setelah fetch pertama selesai —
+  // mencegah flash teks kosong saat refresh sebelum data datang
+  const [loaded, setLoaded] = useState(false)
   const [activePartner, setActivePartner] = useState<Profile | null>(null)
   const [composingDM, setComposingDM] = useState(false)
   const [hiddenConvos, setHiddenConvos] = useState<Set<string>>(() => {
@@ -472,6 +514,8 @@ export default function MessagesPage({ initialDM }: { initialDM?: string }) {
     if (!profile) return
     const data = await getConversationList(profile.id)
     setConvos(data)
+    setLoaded(true)
+    writeMsgCache(`inbox:${profile.id}`, data)
   }, [profile])
 
   // Subscribe to inbox — fires when any message is sent/received
@@ -507,7 +551,8 @@ export default function MessagesPage({ initialDM }: { initialDM?: string }) {
       </header>
 
       <div className="convo-list">
-        {convos.filter(msg => {
+        {!loaded && convos.length === 0 && [0, 1, 2].map(i => <ConvoSkeleton key={i}/>)}
+        {loaded && convos.filter(msg => {
           const partner = msg.from_id === profile.id ? msg.to_profile : msg.from_profile
           return !hiddenConvos.has(partner.id)
         }).length === 0 && (
