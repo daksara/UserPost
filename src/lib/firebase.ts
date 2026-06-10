@@ -351,6 +351,17 @@ export async function getPosts(): Promise<Post[]> {
   return hydratePosts(snap.docs)
 }
 
+// Post aktif milik satu user (untuk halaman profil). Equality-only query —
+// tidak butuh composite index; post kedaluwarsa disaring oleh hydratePosts
+// dan sisanya dibersihkan server lewat TTL pada expires_at.
+export async function getMyActivePosts(userId: string): Promise<Post[]> {
+  const snap = await getDocs(
+    query(collection(db, 'posts'), where('user_id', '==', userId), limit(100))
+  )
+  const posts = await hydratePosts(snap.docs)
+  return posts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+}
+
 export async function createPost(userId: string, body: string, contractAddress?: string, linkUrl?: string): Promise<Post> {
   const expiresAt = Timestamp.fromDate(new Date(Date.now() + 24 * 60 * 60 * 1000))
   const ref = await addDoc(collection(db, 'posts'), {

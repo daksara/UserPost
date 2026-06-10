@@ -1,6 +1,10 @@
 // src/pages/ProfilePage.tsx
-import { useState, useRef } from 'react'
-import { signOut, updateProfile, changePassword, deleteAccount, uploadProfilePhoto } from '../lib/firebase'
+import { useState, useRef, useEffect } from 'react'
+import {
+  signOut, updateProfile, changePassword, deleteAccount, uploadProfilePhoto,
+  getMyActivePosts, deletePost, type Post,
+} from '../lib/firebase'
+import { expiresIn } from '../lib/utils'
 import { useAuth } from '../hooks/useAuth'
 import { getAvatarUrl } from '../components/Avatar'
 import { BadgeChip } from '../components/Badge'
@@ -56,7 +60,7 @@ function CopyButton({ text }: { text: string }) {
   )
 }
 
-export default function ProfilePage() {
+export default function ProfilePage({ active = true }: { active?: boolean }) {
   const { profile, refreshProfile } = useAuth()
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -85,6 +89,18 @@ export default function ProfilePage() {
   const [twitter, setTwitter] = useState('')
   const [telegram, setTelegram] = useState('')
   const [tipCA, setTipCA] = useState('')
+
+  // My posts — null = masih loading
+  const [myPosts, setMyPosts] = useState<Post[] | null>(null)
+  const [confirmPostId, setConfirmPostId] = useState<string | null>(null)
+  const profileId = profile?.id
+
+  // Refetch tiap tab profil dibuka — semua tab selalu mounted (AnimatedTab),
+  // jadi tanpa ini stats/list jadi basi setelah posting di feed
+  useEffect(() => {
+    if (!profileId || !active) return
+    getMyActivePosts(profileId).then(setMyPosts).catch(() => setMyPosts([]))
+  }, [profileId, active])
 
   if (!profile) return null
 
@@ -132,6 +148,20 @@ export default function ProfilePage() {
       setDeletingLoading(false)
     }
   }
+
+  const handleDeletePost = async (postId: string) => {
+    setConfirmPostId(null)
+    setMyPosts(prev => prev?.filter(p => p.id !== postId) ?? prev)
+    try {
+      await deletePost(postId)
+    } catch {
+      // Re-sync kalau gagal
+      getMyActivePosts(profile.id).then(setMyPosts).catch(() => {})
+    }
+  }
+
+  const activeCount = myPosts?.length
+  const commentTotal = myPosts?.reduce((sum, p) => sum + p.comment_count, 0)
 
   const avatarSrc = (profile as any).photo_url || getAvatarUrl(profile.username)
 
@@ -241,8 +271,17 @@ export default function ProfilePage() {
           </p>
         )}
 
-        <div className="profile-joined">
-          Joined {new Date(profile.created_at).toLocaleDateString('en', { month: 'long', year: 'numeric' })}
+        {/* Stats */}
+        <div style={{ display: 'flex', gap: 28, justifyContent: 'center', margin: '6px 0 12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+            <span style={{ fontWeight: 800, fontSize: '1.05rem' }}>{activeCount ?? '–'}</span>
+            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Active Posts</span>
+          </div>
+          <div style={{ width: 1, background: 'var(--border)', alignSelf: 'stretch' }}/>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+            <span style={{ fontWeight: 800, fontSize: '1.05rem' }}>{commentTotal ?? '–'}</span>
+            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Comments</span>
+          </div>
         </div>
 
         {/* Social links */}
@@ -297,6 +336,60 @@ export default function ProfilePage() {
           </div>
         )}
 
+
+        {/* My Active Posts */}
+        <div style={{ width: '100%' }}>
+          <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            My Active Posts
+          </div>
+          {myPosts === null && (
+            <div style={{ padding: '14px 0', textAlign: 'center' }}><span className="spinner"/></div>
+          )}
+          {myPosts?.length === 0 && (
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', padding: '6px 0' }}>
+              No active posts. Posts disappear after 24 hours.
+            </p>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {myPosts?.map(p => (
+              <div key={p.id} style={{
+                background: 'var(--bg-card)', border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-sm)', padding: '10px 12px',
+                boxShadow: 'var(--shadow-sm)', display: 'flex', alignItems: 'center', gap: 10,
+              }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: 1.4,
+                    overflow: 'hidden', display: '-webkit-box',
+                    WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', wordBreak: 'break-word',
+                  }}>
+                    {p.body}
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, marginTop: 4, fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    <span>{expiresIn(p.expires_at) ?? 'expired'}</span>
+                    <span>{p.comment_count} comments</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => confirmPostId === p.id ? handleDeletePost(p.id) : setConfirmPostId(p.id)}
+                  onBlur={() => setConfirmPostId(null)}
+                  title={confirmPostId === p.id ? 'Tap again to delete' : 'Delete post'}
+                  style={{
+                    background: confirmPostId === p.id ? 'var(--red)' : 'none',
+                    border: 'none', borderRadius: 'var(--radius-xs)', padding: 7,
+                    color: confirmPostId === p.id ? '#fff' : 'var(--text-muted)',
+                    display: 'flex', alignItems: 'center', flexShrink: 0,
+                    transition: 'background 0.15s, color 0.15s',
+                  }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
 
         <button
           className="signout-btn"
