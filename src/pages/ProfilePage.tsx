@@ -2,80 +2,8 @@
 import { useState, useRef } from 'react'
 import { signOut, updateProfile, changePassword, deleteAccount, uploadProfilePhoto } from '../lib/firebase'
 import { useAuth } from '../hooks/useAuth'
-import { useTheme, type Theme } from '../hooks/useTheme'
 import { getAvatarUrl } from '../components/Avatar'
 import { BadgeChip } from '../components/Badge'
-
-const THEME_OPTIONS: { value: Theme; label: string; icon: JSX.Element }[] = [
-  {
-    value: 'light',
-    label: 'Light',
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-      </svg>
-    ),
-  },
-  {
-    value: 'dark',
-    label: 'Dark',
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-      </svg>
-    ),
-  },
-]
-
-function ThemeSwitcher() {
-  const { theme, setTheme } = useTheme()
-  return (
-    <div style={{ width: '100%' }}>
-      <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-        Appearance
-      </div>
-      <div
-        style={{
-          display: 'flex',
-          gap: 4,
-          background: 'var(--bg-input)',
-          border: '1px solid var(--border)',
-          borderRadius: 'var(--radius-sm)',
-          padding: 4,
-        }}
-      >
-        {THEME_OPTIONS.map(opt => {
-          const active = theme === opt.value
-          return (
-            <button
-              key={opt.value}
-              onClick={() => setTheme(opt.value)}
-              style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 5,
-                padding: '10px 4px',
-                borderRadius: 'var(--radius-xs)',
-                border: 'none',
-                background: active ? 'var(--accent)' : 'transparent',
-                color: active ? '#fff' : 'var(--text-secondary)',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                transition: 'background 0.15s, color 0.15s',
-                WebkitTapHighlightColor: 'transparent',
-              }}
-            >
-              {opt.icon}
-              {opt.label}
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
 
 async function compressToBase64(file: File, maxSize = 200): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -300,12 +228,10 @@ export default function ProfilePage() {
           </button>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
           <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>{profile.username}</span>
-          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'center' }}>
-            {profile.is_verified && <BadgeChip type="official"/>}
-            {profile.badge_type && <BadgeChip type={profile.badge_type}/>}
-          </div>
+          {profile.is_verified && <BadgeChip type="official"/>}
+          {profile.badge_type && <BadgeChip type={profile.badge_type}/>}
         </div>
 
         {/* Bio */}
@@ -356,7 +282,7 @@ export default function ProfilePage() {
             boxShadow: 'var(--shadow-sm)',
           }}>
             <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              💰 Tip / Contract Address
+              Tip / Contract Address
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{
@@ -371,9 +297,6 @@ export default function ProfilePage() {
           </div>
         )}
 
-
-        {/* Pilihan tema tampilan */}
-        <ThemeSwitcher />
 
         <button
           className="signout-btn"

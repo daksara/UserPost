@@ -76,7 +76,7 @@ function cacheSet(profile: Profile) {
 
 // ── Types ──────────────────────────────────────────────────────────
 
-export type BadgeGrantType = 'partner' | 'contributor' | 'verified'
+export type BadgeGrantType = 'partner' | 'contributor' | 'verified' | 'og'
 
 export interface Profile {
   id: string
@@ -219,6 +219,9 @@ export async function signUp(username: string, email: string, password: string) 
       username,
       created_at: serverTimestamp(),
       is_verified: false,
+      // User baru otomatis dapat badge OG (early adopter) — satu-satunya
+      // badge yang boleh di-set sendiri saat create (lihat firestore.rules)
+      badge_type: 'og',
     })
     await sendEmailVerification(user).catch(() => {})
     return user

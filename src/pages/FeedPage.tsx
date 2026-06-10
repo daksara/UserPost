@@ -1,5 +1,5 @@
 // src/pages/FeedPage.tsx
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   getPosts, createPost, deletePost, addComment, deleteComment,
   getComments, subscribeToActivePosts,
@@ -8,8 +8,9 @@ import {
 } from '../lib/firebase'
 import { expiresIn } from '../lib/utils'
 import { useAuth } from '../hooks/useAuth'
+import { useTheme } from '../hooks/useTheme'
 import { UserAvatar } from '../components/Avatar'
-import { BadgeChip, BADGE_GRANT_TYPES } from '../components/Badge'
+import { BadgeChip, BADGE_GRANT_TYPES, badgeLabel } from '../components/Badge'
 
 function CACard({ address }: { address: string }) {
   const [copied, setCopied] = useState(false)
@@ -69,7 +70,6 @@ function DeleteConfirm({ onConfirm, onCancel }: { onConfirm: () => void; onCance
       <div className="sheet" style={{ gap: 16 }}>
         <div className="sheet__handle"/>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '2rem', marginBottom: 8 }}>🗑️</div>
           <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: 4 }}>Delete this post?</div>
           <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>This action cannot be undone.</div>
         </div>
@@ -192,7 +192,7 @@ function UserSheet({
                   disabled={busy !== null}
                   style={{ padding: '5px 12px', fontSize: '0.72rem', opacity: busy === type ? 0.5 : 1 }}
                 >
-                  {busy === type ? '…' : type.charAt(0).toUpperCase() + type.slice(1)}
+                  {busy === type ? '…' : badgeLabel(type)}
                 </button>
               ))}
             </div>
@@ -529,11 +529,11 @@ function PostSkeleton() {
 
 export default function FeedPage({ onDMClick }: { onDMClick: (username: string) => void }) {
   const { profile } = useAuth()
+  const { theme, cycleTheme } = useTheme()
   const [posts, setPosts] = useState<Post[]>(readCachedPosts)
   // Only show loading state when there's no cached data to display
   const [loading, setLoading] = useState(() => readCachedPosts().length === 0)
   const [composing, setComposing] = useState(false)
-  const [sort, setSort] = useState<'new' | 'top'>('new')
 
   const refreshPosts = useCallback(async () => {
     const data = await getPosts()
@@ -585,42 +585,25 @@ export default function FeedPage({ onDMClick }: { onDMClick: (username: string) 
     await deleteComment(postId, commentId)
   }, [])
 
-  const sortedPosts = useMemo(() => {
-    if (sort === 'top') {
-      return [...posts].sort((a, b) =>
-        (b.comment_count - a.comment_count) ||
-        (new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      )
-    }
-    return posts
-  }, [posts, sort])
-
   return (
     <div className="page">
       <header className="page-header">
         <h1 className="page-header__title">Feed</h1>
-        <div style={{ display: 'flex', gap: 4 }}>
-          <button
-            onClick={() => setSort('new')}
-            style={{
-              background: sort === 'new' ? 'var(--accent)' : 'none',
-              color: sort === 'new' ? '#fff' : 'var(--text-muted)',
-              border: '1.5px solid ' + (sort === 'new' ? 'var(--accent)' : 'var(--border)'),
-              borderRadius: 'var(--radius-full)', padding: '4px 12px',
-              fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer',
-            }}
-          >New</button>
-          <button
-            onClick={() => setSort('top')}
-            style={{
-              background: sort === 'top' ? 'var(--accent)' : 'none',
-              color: sort === 'top' ? '#fff' : 'var(--text-muted)',
-              border: '1.5px solid ' + (sort === 'top' ? 'var(--accent)' : 'var(--border)'),
-              borderRadius: 'var(--radius-full)', padding: '4px 12px',
-              fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer',
-            }}
-          >Top</button>
-        </div>
+        <button
+          className="icon-btn"
+          onClick={cycleTheme}
+          title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {theme === 'dark' ? (
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+          ) : (
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+          )}
+        </button>
       </header>
 
       <div className="feed">
@@ -628,7 +611,7 @@ export default function FeedPage({ onDMClick }: { onDMClick: (username: string) 
         {!loading && posts.length === 0 && (
           <div className="feed__empty">No posts yet. Be the first!</div>
         )}
-        {sortedPosts.map(post => (
+        {posts.map(post => (
           <PostCard
             key={post.id}
             post={post}

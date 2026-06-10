@@ -124,7 +124,6 @@ function VerifyEmailGate({ onVerified }: { onVerified: () => void }) {
       alignItems: 'center', justifyContent: 'center', padding: '0 24px',
       background: 'var(--bg)', gap: 12,
     }}>
-      <div style={{ fontSize: '2.5rem', marginBottom: 4 }}>✉️</div>
       <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center' }}>
         Verify your email
       </h2>
