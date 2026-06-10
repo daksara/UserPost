@@ -961,6 +961,12 @@ button.badge-partner,
 button.badge-contributor,
 button.badge-verified { cursor: pointer; }
 
+/* Chip badge di samping username: icon-only, bulat */
+span.badge-official,
+span.badge-partner,
+span.badge-contributor,
+span.badge-verified { padding: 4px; }
+
 .badge-official {
   background: linear-gradient(135deg, #6366f1, #8b5cf6, #6366f1);
   background-size: 200% 200%;
@@ -1085,19 +1091,22 @@ button.badge-verified { cursor: pointer; }
 }
 .bottom-nav__item--active svg { animation: nav-icon-pop 0.3s ease; }
 
-/* Konten masuk: stagger fade-up untuk feed & daftar percakapan */
+/* Konten masuk: stagger fade-up untuk feed & daftar percakapan.
+   Fill HARUS backwards (bukan both) — transform yang tersisa setelah animasi
+   membuat elemen jadi containing block untuk position:fixed, sehingga
+   dialog/sheet di dalam kartu ikut terjepit dan terpotong */
 @keyframes item-in {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.feed > .post-card { animation: item-in 0.3s ease both; }
+.feed > .post-card { animation: item-in 0.3s ease backwards; }
 .feed > .post-card:nth-child(2) { animation-delay: 40ms; }
 .feed > .post-card:nth-child(3) { animation-delay: 80ms; }
 .feed > .post-card:nth-child(4) { animation-delay: 120ms; }
 .feed > .post-card:nth-child(5) { animation-delay: 160ms; }
 .feed > .post-card:nth-child(n+6) { animation-delay: 200ms; }
 
-.convo-list > div { animation: item-in 0.25s ease both; }
+.convo-list > div { animation: item-in 0.25s ease backwards; }
 .convo-list > div:nth-child(2) { animation-delay: 35ms; }
 .convo-list > div:nth-child(3) { animation-delay: 70ms; }
 .convo-list > div:nth-child(4) { animation-delay: 105ms; }
@@ -1108,7 +1117,7 @@ button.badge-verified { cursor: pointer; }
   from { opacity: 0; transform: translateY(8px) scale(0.96); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
-.bubble-wrap { animation: bubble-in 0.2s ease both; }
+.bubble-wrap { animation: bubble-in 0.2s ease backwards; }
 
 /* Section komentar expand halus, tidak muncul mendadak */
 @keyframes section-in {
@@ -1124,7 +1133,7 @@ button.badge-verified { cursor: pointer; }
   70%  { transform: scale(1.25); }
   100% { transform: scale(1); }
 }
-.badge-pop, .convo-item__badge { animation: pop-in 0.3s cubic-bezier(.34,1.56,.64,1) both; }
+.badge-pop, .convo-item__badge { animation: pop-in 0.3s cubic-bezier(.34,1.56,.64,1) backwards; }
 
 /* Empty state fade-in, tidak flash */
 .feed__empty { animation: fadeIn 0.35s ease both; }

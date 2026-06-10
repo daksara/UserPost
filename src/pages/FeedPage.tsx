@@ -69,7 +69,6 @@ function DeleteConfirm({ onConfirm, onCancel }: { onConfirm: () => void; onCance
       <div className="sheet" style={{ gap: 16 }}>
         <div className="sheet__handle"/>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '2rem', marginBottom: 8 }}>🗑️</div>
           <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: 4 }}>Delete this post?</div>
           <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>This action cannot be undone.</div>
         </div>

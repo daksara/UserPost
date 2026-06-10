@@ -22,7 +22,6 @@ export class ErrorBoundary extends Component<Props, State> {
         alignItems: 'center', justifyContent: 'center', gap: 12,
         padding: '0 24px', background: 'var(--bg)', textAlign: 'center',
       }}>
-        <div style={{ fontSize: '2.5rem' }}>😵</div>
         <h2 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-primary)' }}>
           Something went wrong
         </h2>
