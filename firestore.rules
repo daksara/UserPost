@@ -23,9 +23,11 @@ service cloud.firestore {
         && request.auth.uid == userId
         && request.resource.data.username is string
         && request.resource.data.username.matches('^[a-zA-Z0-9_]{3,20}$')
-        // New accounts can never self-assign badges
+        // New accounts can never self-assign badges — except the automatic
+        // OG (early adopter) badge given to everyone at signup
         && request.resource.data.get('is_verified', false) == false
-        && request.resource.data.get('badge_type', null) == null;
+        && (request.resource.data.get('badge_type', null) == null
+            || request.resource.data.get('badge_type', null) == 'og');
 
       allow update: if signedIn() && (
         // Owner may edit own profile fields, but not badges/username

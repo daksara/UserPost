@@ -937,7 +937,8 @@ button {
 .badge-official,
 .badge-partner,
 .badge-contributor,
-.badge-verified {
+.badge-verified,
+.badge-og {
   display: inline-flex;
   align-items: center;
   gap: 3px;
@@ -959,13 +960,15 @@ button {
 button.badge-official,
 button.badge-partner,
 button.badge-contributor,
-button.badge-verified { cursor: pointer; }
+button.badge-verified,
+button.badge-og { cursor: pointer; }
 
 /* Chip badge di samping username: icon-only, bulat */
 span.badge-official,
 span.badge-partner,
 span.badge-contributor,
-span.badge-verified { padding: 4px; }
+span.badge-verified,
+span.badge-og { padding: 4px; }
 
 .badge-official {
   background: linear-gradient(135deg, #6366f1, #8b5cf6, #6366f1);
@@ -984,6 +987,12 @@ span.badge-verified { padding: 4px; }
 .badge-verified {
   background: linear-gradient(135deg, #3b82f6, #2563eb);
   box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+}
+.badge-og {
+  background: linear-gradient(135deg, #22d3ee, #0ea5e9, #22d3ee);
+  background-size: 200% 200%;
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.45);
+  animation: badge-shimmer 3s ease infinite;
 }
 
 /* ── Skeleton loader ────────────────────────────────────────────── */

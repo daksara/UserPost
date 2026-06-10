@@ -37,9 +37,22 @@ const CFG: Record<BadgeDisplayType, BadgeConfig> = {
       </svg>
     ),
   },
+  og: {
+    label: 'OG',
+    // Gem/diamond — ikon "diamond hands" yang ikonik di kripto/web3
+    icon: (
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 3h12l4 6-10 13L2 9z"/>
+        <path d="M11 3 8 9l4 13 4-13-3-6"/>
+        <path d="M2 9h20"/>
+      </svg>
+    ),
+  },
 }
 
-export const BADGE_GRANT_TYPES: BadgeGrantType[] = ['partner', 'contributor', 'verified']
+export const BADGE_GRANT_TYPES: BadgeGrantType[] = ['partner', 'contributor', 'verified', 'og']
+
+export const badgeLabel = (type: BadgeDisplayType) => CFG[type].label
 
 export function BadgeChip({ type }: { type: BadgeDisplayType }) {
   const { label, icon } = CFG[type]

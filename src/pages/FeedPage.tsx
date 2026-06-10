@@ -10,7 +10,7 @@ import { expiresIn } from '../lib/utils'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
 import { UserAvatar } from '../components/Avatar'
-import { BadgeChip, BADGE_GRANT_TYPES } from '../components/Badge'
+import { BadgeChip, BADGE_GRANT_TYPES, badgeLabel } from '../components/Badge'
 
 function CACard({ address }: { address: string }) {
   const [copied, setCopied] = useState(false)
@@ -192,7 +192,7 @@ function UserSheet({
                   disabled={busy !== null}
                   style={{ padding: '5px 12px', fontSize: '0.72rem', opacity: busy === type ? 0.5 : 1 }}
                 >
-                  {busy === type ? '…' : type.charAt(0).toUpperCase() + type.slice(1)}
+                  {busy === type ? '…' : badgeLabel(type)}
                 </button>
               ))}
             </div>
