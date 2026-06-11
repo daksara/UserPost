@@ -252,7 +252,7 @@ function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment,
   onDelete: (id: string) => void
   onComment: (postId: string, body: string) => Promise<Comment>
   onDeleteComment: (postId: string, commentId: string) => Promise<void>
-  onDMClick: (username: string) => void
+  onDMClick: (profile: Profile) => void
   onRefreshPosts: () => void
   onQuote: (post: Post) => void
   feedProfiles: Profile[]
@@ -385,7 +385,7 @@ function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment,
         <UserSheet
           target={post.profiles}
           isGranter={isGranter}
-          onDM={() => onDMClick(post.profiles.username)}
+          onDM={() => onDMClick(post.profiles)}
           onClose={() => setSheetOpen(false)}
           onGranted={() => { setSheetOpen(false); onRefreshPosts() }}
         />
@@ -643,7 +643,7 @@ function PostSkeleton() {
   )
 }
 
-export default function FeedPage({ onDMClick }: { onDMClick: (username: string) => void }) {
+export default function FeedPage({ onDMClick }: { onDMClick: (profile: Profile) => void }) {
   const { profile } = useAuth()
   const { theme, cycleTheme } = useTheme()
   const [posts, setPosts] = useState<Post[]>(readCachedPosts)

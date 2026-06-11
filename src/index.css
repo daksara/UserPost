@@ -124,8 +124,11 @@ button {
   padding: 12px 16px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
 }
+/* Jarak antar bubble: rapat saat pengirim sama, lebih lega saat ganti pengirim */
+.bubble-wrap + .bubble-wrap { margin-top: 6px; }
+.bubble-wrap--own + .bubble-wrap:not(.bubble-wrap--own),
+.bubble-wrap:not(.bubble-wrap--own) + .bubble-wrap--own { margin-top: 16px; }
 
 .page-header {
   height: var(--header-h);

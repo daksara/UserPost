@@ -485,7 +485,7 @@ function SwipeableConvoItem({
 }
 
 
-export default function MessagesPage({ initialDM }: { initialDM?: string }) {
+export default function MessagesPage({ initialDM }: { initialDM?: Profile }) {
   const { profile } = useAuth()
   const [convos, setConvos] = useState<Message[]>(() =>
     profile ? readMsgCache<Message[]>(`inbox:${profile.id}`) ?? [] : []
@@ -493,7 +493,9 @@ export default function MessagesPage({ initialDM }: { initialDM?: string }) {
   // Empty state "No messages yet" hanya setelah fetch pertama selesai —
   // mencegah flash teks kosong saat refresh sebelum data datang
   const [loaded, setLoaded] = useState(false)
-  const [activePartner, setActivePartner] = useState<Profile | null>(null)
+  // Profil dari feed sudah lengkap — buka thread langsung tanpa lookup async
+  // (lookup username dulu bikin user "nyangkut" di list saat fetch lambat/gagal)
+  const [activePartner, setActivePartner] = useState<Profile | null>(initialDM ?? null)
   const [composingDM, setComposingDM] = useState(false)
   const [hiddenConvos, setHiddenConvos] = useState<Set<string>>(() => {
     try {
@@ -524,14 +526,6 @@ export default function MessagesPage({ initialDM }: { initialDM?: string }) {
     const unsub = subscribeToInbox(profile.id, fetchConvos)
     return () => unsub()
   }, [profile, fetchConvos])
-
-  useEffect(() => {
-    if (!initialDM || !profile) return
-    setActivePartner(null)
-    getUserByUsername(initialDM).then(p => {
-      if (p && p.id && p.username) setActivePartner(p)
-    })
-  }, [initialDM, profile])
 
   if (!profile) return null
 
