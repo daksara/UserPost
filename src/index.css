@@ -1273,7 +1273,6 @@ span.badge-og { padding: 3px 7px; }
   gap: 5px;
   padding: 12px 16px;
   min-width: 56px;
-  animation: bubble-in 0.18s ease backwards;
 }
 .typing-dot {
   display: inline-block;

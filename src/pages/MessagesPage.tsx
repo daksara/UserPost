@@ -140,6 +140,7 @@ function ThreadView({ partner, myProfile, onBack }: {
   const [text, setText] = useState('')
   const [replyTo, setReplyTo] = useState<Message | null>(null)
   const [showTyping, setShowTyping] = useState(false)
+  const [typingExiting, setTypingExiting] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const initializedRef = useRef(false)
@@ -197,11 +198,20 @@ function ThreadView({ partner, myProfile, onBack }: {
     setText('')
     setReplyTo(null)
 
-    // Show typing indicator briefly before the message appears
+    // Tampilkan typing indicator
     setShowTyping(true)
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 30)
-    await new Promise<void>(r => setTimeout(r, 280))
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+
+    // Dots terlihat selama 600ms
+    await new Promise<void>(r => setTimeout(r, 600))
+
+    // Fade out selama 180ms sebelum pesan muncul
+    setTypingExiting(true)
+    await new Promise<void>(r => setTimeout(r, 180))
+
+    // Sembunyikan dots, tampilkan pesan dalam render yang sama
     setShowTyping(false)
+    setTypingExiting(false)
 
     const optimistic: Message = {
       id: `opt-${Date.now()}`,
@@ -289,7 +299,15 @@ function ThreadView({ partner, myProfile, onBack }: {
           )
         })}
         {showTyping && (
-          <div className="bubble-wrap bubble-wrap--own">
+          <div
+            className="bubble-wrap bubble-wrap--own"
+            style={typingExiting ? {
+              opacity: 0,
+              transform: 'scale(0.88) translateX(10px)',
+              transition: 'opacity 0.18s ease, transform 0.18s ease',
+              animation: 'none',
+            } : undefined}
+          >
             <div className="bubble bubble--own bubble--typing">
               <span className="typing-dot"/><span className="typing-dot"/><span className="typing-dot"/>
             </div>
