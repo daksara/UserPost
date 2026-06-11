@@ -3,7 +3,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import {
   getPosts, createPost, deletePost, addComment, deleteComment,
   getComments, subscribeToActivePosts,
-  grantBadge, revokeBadge,
+  grantBadge, revokeBadge, getUserByUsername,
   type Post, type Comment, type Profile, type BadgeGrantType, type QuoteRef,
 } from '../lib/firebase'
 import { expiresIn } from '../lib/utils'
@@ -118,14 +118,22 @@ function ExpiryBar({ expiresAt, createdAt }: { expiresAt: string; createdAt: str
   )
 }
 
-function MentionText({ text }: { text: string }) {
+function MentionText({ text, onMentionClick }: { text: string; onMentionClick?: (username: string) => void }) {
   const parts = text.split(/(@\w+)/g)
   if (parts.length === 1) return <>{text}</>
   return (
     <>
       {parts.map((part, i) =>
         /^@\w+$/.test(part)
-          ? <span key={i} className="mention">{part}</span>
+          ? (
+            <span
+              key={i}
+              className={onMentionClick ? 'mention mention--clickable' : 'mention'}
+              onClick={onMentionClick ? (e) => { e.stopPropagation(); onMentionClick(part.slice(1)) } : undefined}
+            >
+              {part}
+            </span>
+          )
           : <span key={i}>{part}</span>
       )}
     </>
@@ -271,6 +279,7 @@ function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment,
   const isGranter = myProfile?.is_verified === true
   const [, setTick] = useState(0)
   const [mentionQuery, setMentionQuery] = useState<string | null>(null)
+  const [mentionTarget, setMentionTarget] = useState<Profile | null>(null)
   const commentInputRef = useRef<HTMLInputElement>(null)
 
   const knownUsers = useMemo(() => {
@@ -310,6 +319,16 @@ function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment,
     }
     setMentionQuery(null)
     setTimeout(() => commentInputRef.current?.focus(), 0)
+  }
+
+  const handleMentionClick = async (username: string) => {
+    if (username === myProfile?.username) return
+    setSheetOpen(false)
+    const allKnown = [post.profiles, ...localComments.map(c => c.profiles), ...feedProfiles]
+    const found = allKnown.find(p => p.username === username)
+    if (found) { setMentionTarget(found); return }
+    const fetched = await getUserByUsername(username)
+    if (fetched) setMentionTarget(fetched)
   }
 
   // Force re-render every 30s so expiry bar and hot counter stay live
@@ -390,6 +409,15 @@ function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment,
           onGranted={() => { setSheetOpen(false); onRefreshPosts() }}
         />
       )}
+      {mentionTarget && (
+        <UserSheet
+          target={mentionTarget}
+          isGranter={isGranter}
+          onDM={() => { onDMClick(mentionTarget.username); setMentionTarget(null) }}
+          onClose={() => setMentionTarget(null)}
+          onGranted={() => { setMentionTarget(null); onRefreshPosts() }}
+        />
+      )}
 
       <div className="post-card__header">
         <UserAvatar username={post.profiles.username} size={36} photoUrl={post.profiles.photo_url} />
@@ -412,7 +440,7 @@ function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment,
         )}
       </div>
 
-      <div className="post-card__body"><MentionText text={post.body} /></div>
+      <div className="post-card__body"><MentionText text={post.body} onMentionClick={handleMentionClick} /></div>
       {post.quote && <QuoteCard quote={post.quote} />}
       {post.link_url && <LinkCard url={post.link_url} />}
       {post.contract_address && <CACard address={post.contract_address} />}
@@ -442,7 +470,7 @@ function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment,
           {!loadingComments && localComments.map(c => (
             <div key={c.id} className="comment" style={{ position: 'relative' }}>
               <span className="comment__username">{c.profiles.username}</span>
-              <span className="comment__body"><MentionText text={c.body} /></span>
+              <span className="comment__body"><MentionText text={c.body} onMentionClick={handleMentionClick} /></span>
               {c.user_id === myId && (
                 <button
                   onClick={() => handleDeleteComment(c.id)}
@@ -499,10 +527,11 @@ function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment,
   )
 }
 
-function ComposeSheet({ onPost, onClose, quotePost: initialQuote }: {
+function ComposeSheet({ onPost, onClose, quotePost: initialQuote, feedProfiles = [] }: {
   onPost: (body: string, ca?: string, link?: string, quotePost?: QuoteRef) => Promise<void>
   onClose: () => void
   quotePost?: QuoteRef
+  feedProfiles?: Profile[]
 }) {
   const [text, setText] = useState('')
   const [ca, setCa] = useState('')
@@ -513,7 +542,39 @@ function ComposeSheet({ onPost, onClose, quotePost: initialQuote }: {
   const [linkError, setLinkError] = useState('')
   const [posting, setPosting] = useState(false)
   const [localQuote, setLocalQuote] = useState<QuoteRef | undefined>(initialQuote)
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const remaining = 500 - text.length
+
+  const mentionMatches = mentionQuery !== null
+    ? feedProfiles.filter(u => u.username.toLowerCase().startsWith(mentionQuery.toLowerCase())).slice(0, 4)
+    : []
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value.slice(0, 500)
+    setText(val)
+    const cursor = e.target.selectionStart ?? val.length
+    const before = val.slice(0, cursor)
+    const match = before.match(/@(\w*)$/)
+    if (match && match.index !== undefined) {
+      setMentionQuery(match[1])
+    } else {
+      setMentionQuery(null)
+    }
+  }
+
+  const insertComposeMention = (username: string) => {
+    const cursor = textareaRef.current?.selectionStart ?? text.length
+    const before = text.slice(0, cursor)
+    const after = text.slice(cursor)
+    const match = before.match(/@(\w*)$/)
+    if (match && match.index !== undefined) {
+      const newText = (before.slice(0, match.index) + '@' + username + ' ' + after).slice(0, 500)
+      setText(newText)
+    }
+    setMentionQuery(null)
+    setTimeout(() => textareaRef.current?.focus(), 0)
+  }
 
   const isValidCA = (v: string) =>
     /^0x[a-fA-F0-9]{40}$/.test(v.trim()) || /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(v.trim())
@@ -556,13 +617,32 @@ function ComposeSheet({ onPost, onClose, quotePost: initialQuote }: {
             <button className="quote-preview__remove" onClick={() => setLocalQuote(undefined)} title="Remove quote">✕</button>
           </div>
         )}
-        <textarea
-          className="compose-textarea"
-          placeholder="What's on your mind?"
-          value={text}
-          onChange={e => setText(e.target.value.slice(0, 500))}
-          autoFocus
-        />
+        <div style={{ position: 'relative' }}>
+          {mentionMatches.length > 0 && (
+            <div className="mention-dropdown">
+              {mentionMatches.map(u => (
+                <button
+                  key={u.id}
+                  className="mention-dropdown__item"
+                  onMouseDown={e => { e.preventDefault(); insertComposeMention(u.username) }}
+                >
+                  <UserAvatar username={u.username} size={20} photoUrl={u.photo_url ?? null} />
+                  @{u.username}
+                </button>
+              ))}
+            </div>
+          )}
+          <textarea
+            ref={textareaRef}
+            className="compose-textarea"
+            placeholder="What's on your mind?"
+            value={text}
+            onChange={handleTextChange}
+            onKeyDown={e => { if (e.key === 'Escape') setMentionQuery(null) }}
+            onBlur={() => setTimeout(() => setMentionQuery(null), 150)}
+            autoFocus
+          />
+        </div>
         {!showLink && (
           <button className="ca-attach-btn" onClick={() => setShowLink(true)}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -769,7 +849,7 @@ export default function FeedPage({ onDMClick }: { onDMClick: (username: string) 
         </svg>
       </button>
 
-      {composing && <ComposeSheet onPost={handlePost} onClose={() => { setComposing(false); setQuotePost(undefined) }} quotePost={quotePost}/>}
+      {composing && <ComposeSheet onPost={handlePost} onClose={() => { setComposing(false); setQuotePost(undefined) }} quotePost={quotePost} feedProfiles={feedProfiles}/>}
     </div>
   )
 }
