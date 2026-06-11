@@ -139,6 +139,7 @@ function ThreadView({ partner, myProfile, onBack }: {
   const [messages, setMessages] = useState<Message[]>(() => readMsgCache<Message[]>(threadCacheKey) ?? [])
   const [text, setText] = useState('')
   const [replyTo, setReplyTo] = useState<Message | null>(null)
+  const [showTyping, setShowTyping] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const initializedRef = useRef(false)
@@ -196,6 +197,12 @@ function ThreadView({ partner, myProfile, onBack }: {
     setText('')
     setReplyTo(null)
 
+    // Show typing indicator briefly before the message appears
+    setShowTyping(true)
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 30)
+    await new Promise<void>(r => setTimeout(r, 280))
+    setShowTyping(false)
+
     const optimistic: Message = {
       id: `opt-${Date.now()}`,
       from_id: myProfile.id,
@@ -215,7 +222,6 @@ function ThreadView({ partner, myProfile, onBack }: {
     try {
       await sendMessage(myProfile.id, partner.id, trimmed, replyToMsg?.id)
     } catch {
-      // Rollback on failure
       setMessages(prev => prev.filter(m => m.id !== optimistic.id))
       setText(trimmed)
       setReplyTo(replyToMsg)
@@ -260,8 +266,8 @@ function ThreadView({ partner, myProfile, onBack }: {
               onDelete={() => handleDelete(msg.id)}
             >
               <div
-                className={`bubble ${isOwn ? 'bubble--own' : 'bubble--them'}`}
-                style={{ userSelect: 'none', opacity: isOptimistic ? 0.65 : 1 }}
+                className={`bubble ${isOwn ? 'bubble--own' : 'bubble--them'}${isOptimistic ? ' bubble--new-own' : ''}`}
+                style={{ userSelect: 'none' }}
               >
                 {msg.reply_to && (
                   <div style={{
@@ -282,6 +288,13 @@ function ThreadView({ partner, myProfile, onBack }: {
             </SwipeableMessage>
           )
         })}
+        {showTyping && (
+          <div className="bubble-wrap bubble-wrap--own">
+            <div className="bubble bubble--own bubble--typing">
+              <span className="typing-dot"/><span className="typing-dot"/><span className="typing-dot"/>
+            </div>
+          </div>
+        )}
         <div ref={bottomRef}/>
       </div>
 
