@@ -141,6 +141,7 @@ export interface PinnedAlert {
   type: 'whale' | 'dead_token' | 'accumulation'
   headline: string
   detail: string
+  chain: string | null
   contract_address: string | null
   link_url: string | null
   updated_at: string
@@ -539,6 +540,7 @@ export function subscribeToPinnedAlert(
       type: d.type,
       headline: d.headline,
       detail: d.detail,
+      chain: d.chain ?? null,
       contract_address: d.contract_address ?? null,
       link_url: d.link_url ?? null,
       updated_at: tsToISO(d.updated_at),

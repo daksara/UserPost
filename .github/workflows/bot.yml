@@ -30,8 +30,8 @@ jobs:
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           BOT_UID: ${{ secrets.BOT_UID }}
-          WHALE_THRESHOLD_USD: '10000'
-          DEAD_VOLUME_THRESHOLD_USD: '100'
-          DEAD_HOURS_REQUIRED: '24'
-          MIN_LIQUIDITY_USD: '5000'
+          WHALE_THRESHOLD_USD: '1000'
+          DEAD_VOLUME_THRESHOLD_USD: '500'
+          DEAD_HOURS_REQUIRED: '6'
+          MIN_LIQUIDITY_USD: '1000'
         run: node scripts/bot-run.mjs
