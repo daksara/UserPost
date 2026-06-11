@@ -1,0 +1,35 @@
+name: Market Alert Bot
+
+on:
+  schedule:
+    # Setiap 30 menit — cukup untuk whale/dead token detection
+    - cron: '*/30 * * * *'
+  # Tombol "Run workflow" di GitHub Actions tab untuk test manual
+  workflow_dispatch:
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: scripts/package.json
+
+      - name: Install bot dependencies
+        run: npm install --prefix scripts
+
+      - name: Run bot
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          BOT_UID: ${{ secrets.BOT_UID }}
+          WHALE_THRESHOLD_USD: '10000'
+          DEAD_VOLUME_THRESHOLD_USD: '100'
+          DEAD_HOURS_REQUIRED: '24'
+          MIN_LIQUIDITY_USD: '5000'
+        run: node scripts/bot-run.mjs
