@@ -414,7 +414,7 @@ function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment,
         <UserSheet
           target={mentionTarget}
           isGranter={isGranter}
-          onDM={() => { onDMClick(mentionTarget.username); setMentionTarget(null) }}
+          onDM={() => { onDMClick(mentionTarget); setMentionTarget(null) }}
           onClose={() => setMentionTarget(null)}
           onGranted={() => { setMentionTarget(null); onRefreshPosts() }}
         />
