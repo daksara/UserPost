@@ -539,15 +539,13 @@ export function subscribeToPinnedAlerts(
   onAlerts: (alerts: PinnedAlert[]) => void
 ): Unsubscribe {
   return onSnapshot(collection(db, 'pinned_feed'), (snap) => {
-    const alerts: PinnedAlert[] = []
+    const perType: PinnedAlert[] = []
+    let legacyLive: PinnedAlert | null = null
     for (const docSnap of snap.docs) {
-      // 'live' is a legacy mirror of the latest alert; the per-type docs
-      // already cover it
-      if (docSnap.id === 'live') continue
       const d = docSnap.data()
       const updatedAt = tsToISO(d.updated_at)
       if (Date.now() - new Date(updatedAt).getTime() > PINNED_ALERT_TTL_MS) continue
-      alerts.push({
+      const alert: PinnedAlert = {
         type: d.type,
         headline: d.headline,
         detail: d.detail,
@@ -556,8 +554,14 @@ export function subscribeToPinnedAlerts(
         link_url: d.link_url ?? null,
         followup_pct: d.followup_pct ?? null,
         updated_at: updatedAt,
-      })
+      }
+      if (docSnap.id === 'live') legacyLive = alert
+      else perType.push(alert)
     }
+    // Until the bot writes per-type docs, fall back to the legacy 'live' doc
+    // so the feed never goes blank during the rollout. Once per-type docs
+    // exist, 'live' is just a mirror of the latest one and is skipped.
+    const alerts = perType.length > 0 ? perType : legacyLive ? [legacyLive] : []
     alerts.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
     onAlerts(alerts)
   })
