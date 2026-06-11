@@ -245,7 +245,7 @@ function UserSheet({
   )
 }
 
-function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment, onDMClick, onRefreshPosts, onQuote }: {
+function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment, onDMClick, onRefreshPosts, onQuote, feedProfiles }: {
   post: Post
   myId: string
   myProfile: Profile | null
@@ -255,6 +255,7 @@ function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment,
   onDMClick: (username: string) => void
   onRefreshPosts: () => void
   onQuote: (post: Post) => void
+  feedProfiles: Profile[]
 }) {
   const [showComments, setShowComments] = useState(false)
   const [localComments, setLocalComments] = useState<Comment[]>([])
@@ -274,11 +275,12 @@ function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment,
 
   const knownUsers = useMemo(() => {
     const map = new Map<string, Profile>()
+    feedProfiles.forEach(p => map.set(p.username, p))
     map.set(post.profiles.username, post.profiles)
     localComments.forEach(c => map.set(c.profiles.username, c.profiles))
     map.delete(myProfile?.username ?? '')
     return [...map.values()]
-  }, [post.profiles, localComments, myProfile])
+  }, [post.profiles, localComments, myProfile, feedProfiles])
 
   const mentionMatches = mentionQuery !== null
     ? knownUsers.filter(u => u.username.toLowerCase().startsWith(mentionQuery.toLowerCase())).slice(0, 4)
@@ -473,7 +475,7 @@ function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment,
               <input
                 ref={commentInputRef}
                 className="comment-input"
-                placeholder="Add a comment… (@mention)"
+                placeholder="Add a comment…"
                 value={commentText}
                 onChange={handleCommentInputChange}
                 onKeyDown={e => {
@@ -687,6 +689,13 @@ export default function FeedPage({ onDMClick }: { onDMClick: (username: string) 
     setQuotePost(undefined)
   }
 
+  const feedProfiles = useMemo(() => {
+    const map = new Map<string, Profile>()
+    posts.forEach(p => map.set(p.profiles.username, p.profiles))
+    map.delete(profile?.username ?? '')
+    return [...map.values()]
+  }, [posts, profile])
+
   const handleQuote = useCallback((post: Post) => {
     setQuotePost({
       post_id: post.id,
@@ -749,6 +758,7 @@ export default function FeedPage({ onDMClick }: { onDMClick: (username: string) 
             onDMClick={onDMClick}
             onRefreshPosts={refreshPosts}
             onQuote={handleQuote}
+            feedProfiles={feedProfiles}
           />
         ))}
       </div>
