@@ -138,12 +138,13 @@ export interface Message {
 }
 
 export interface PinnedAlert {
-  type: 'whale' | 'dead_token' | 'accumulation'
+  type: 'whale' | 'dead_token' | 'accumulation' | 'new_listing'
   headline: string
   detail: string
   chain: string | null
   contract_address: string | null
   link_url: string | null
+  followup_pct: number | null
   updated_at: string
 }
 
@@ -530,21 +531,35 @@ export function subscribeToActivePosts(
   }
 }
 
-export function subscribeToPinnedAlert(
-  onAlert: (alert: PinnedAlert | null) => void
+// Alerts older than this are hidden — with one slot per type, a quiet slot
+// would otherwise show a days-old alert forever.
+const PINNED_ALERT_TTL_MS = 24 * 60 * 60 * 1000
+
+export function subscribeToPinnedAlerts(
+  onAlerts: (alerts: PinnedAlert[]) => void
 ): Unsubscribe {
-  return onSnapshot(doc(db, 'pinned_feed', 'live'), (snap) => {
-    if (!snap.exists()) { onAlert(null); return }
-    const d = snap.data()
-    onAlert({
-      type: d.type,
-      headline: d.headline,
-      detail: d.detail,
-      chain: d.chain ?? null,
-      contract_address: d.contract_address ?? null,
-      link_url: d.link_url ?? null,
-      updated_at: tsToISO(d.updated_at),
-    })
+  return onSnapshot(collection(db, 'pinned_feed'), (snap) => {
+    const alerts: PinnedAlert[] = []
+    for (const docSnap of snap.docs) {
+      // 'live' is a legacy mirror of the latest alert; the per-type docs
+      // already cover it
+      if (docSnap.id === 'live') continue
+      const d = docSnap.data()
+      const updatedAt = tsToISO(d.updated_at)
+      if (Date.now() - new Date(updatedAt).getTime() > PINNED_ALERT_TTL_MS) continue
+      alerts.push({
+        type: d.type,
+        headline: d.headline,
+        detail: d.detail,
+        chain: d.chain ?? null,
+        contract_address: d.contract_address ?? null,
+        link_url: d.link_url ?? null,
+        followup_pct: d.followup_pct ?? null,
+        updated_at: updatedAt,
+      })
+    }
+    alerts.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+    onAlerts(alerts)
   })
 }
 

@@ -2,7 +2,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import {
   getPosts, createPost, deletePost, addComment, deleteComment,
-  getComments, subscribeToActivePosts, subscribeToPinnedAlert,
+  getComments, subscribeToActivePosts, subscribeToPinnedAlerts,
   grantBadge, revokeBadge, getUserByUsername,
   type Post, type Comment, type Profile, type BadgeGrantType, type QuoteRef, type PinnedAlert,
 } from '../lib/firebase'
@@ -712,8 +712,8 @@ const CHAIN_LABEL: Record<string, string> = {
 
 function LiveAlertCard({ alert }: { alert: PinnedAlert }) {
   const [copied, setCopied] = useState(false)
-  const typeLabel = { whale: 'WHALE', dead_token: 'DEAD TOKEN', accumulation: 'ACCUMULATION' }[alert.type]
-  const typeCls   = { whale: 'live-alert--whale', dead_token: 'live-alert--dead', accumulation: 'live-alert--accum' }[alert.type]
+  const typeLabel = { whale: 'WHALE', dead_token: 'DEAD TOKEN', accumulation: 'ACCUMULATION', new_listing: 'NEW LISTING' }[alert.type]
+  const typeCls   = { whale: 'live-alert--whale', dead_token: 'live-alert--dead', accumulation: 'live-alert--accum', new_listing: 'live-alert--new' }[alert.type]
   const chainLabel = alert.chain
     ? (CHAIN_LABEL[alert.chain] ?? alert.chain.toUpperCase().slice(0, 5))
     : null
@@ -736,6 +736,11 @@ function LiveAlertCard({ alert }: { alert: PinnedAlert }) {
       </div>
       <div className="live-alert__headline">{alert.headline}</div>
       <div className="live-alert__detail">{alert.detail}</div>
+      {alert.followup_pct != null && (
+        <div className={`live-alert__followup ${alert.followup_pct >= 0 ? 'live-alert__followup--up' : 'live-alert__followup--down'}`}>
+          {alert.followup_pct >= 0 ? '▲' : '▼'} {alert.followup_pct >= 0 ? '+' : ''}{alert.followup_pct.toFixed(1)}% since alert
+        </div>
+      )}
       <div className="live-alert__footer">
         {alert.link_url && (
           <a href={alert.link_url} target="_blank" rel="noopener noreferrer" className="live-alert__link">
@@ -782,7 +787,7 @@ export default function FeedPage({ onDMClick }: { onDMClick: (profile: Profile) 
   const [loading, setLoading] = useState(() => readCachedPosts().length === 0)
   const [composing, setComposing] = useState(false)
   const [quotePost, setQuotePost] = useState<QuoteRef | undefined>()
-  const [pinnedAlert, setPinnedAlert] = useState<PinnedAlert | null>(null)
+  const [pinnedAlerts, setPinnedAlerts] = useState<PinnedAlert[]>([])
 
   const refreshPosts = useCallback(async () => {
     const data = await getPosts()
@@ -797,7 +802,7 @@ export default function FeedPage({ onDMClick }: { onDMClick: (profile: Profile) 
   }, [posts])
 
   useEffect(() => {
-    return subscribeToPinnedAlert(setPinnedAlert)
+    return subscribeToPinnedAlerts(setPinnedAlerts)
   }, [])
 
   // Comment counts live on the post docs, so this subscription also fires
@@ -878,7 +883,9 @@ export default function FeedPage({ onDMClick }: { onDMClick: (profile: Profile) 
       </header>
 
       <div className="feed">
-        {pinnedAlert && <LiveAlertCard key={pinnedAlert.updated_at} alert={pinnedAlert}/>}
+        {pinnedAlerts.map(alert => (
+          <LiveAlertCard key={`${alert.type}-${alert.updated_at}`} alert={alert}/>
+        ))}
         {loading && [0, 1, 2].map(i => <PostSkeleton key={i}/>)}
         {!loading && posts.length === 0 && (
           <div className="feed__empty">No posts yet. Be the first!</div>
