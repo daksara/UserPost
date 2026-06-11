@@ -1261,11 +1261,6 @@ span.badge-og { padding: 3px 7px; }
 }
 .bubble-wrap { animation: bubble-in 0.22s ease backwards; }
 
-/* Animasi spring untuk pesan yang baru dikirim */
-.bubble--new-own {
-  animation: bubble-send 0.36s cubic-bezier(.34,1.56,.64,1) backwards;
-}
-
 /* Typing indicator dots */
 .bubble--typing {
   display: flex;

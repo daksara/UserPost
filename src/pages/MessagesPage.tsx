@@ -156,23 +156,7 @@ function ThreadView({ partner, myProfile, onBack }: {
     // Pesan dari cache sudah ter-render — langsung posisikan di pesan terakhir
     bottomRef.current?.scrollIntoView({ behavior: 'instant' as ScrollBehavior })
     const unsub = subscribeToConversation(myProfile.id, partner.id, (msgs) => {
-      setMessages(prev => {
-        // Keep optimistic messages only until a matching real message arrives.
-        // Match by sender + body + close timestamp (ids never match), so the
-        // optimistic twin is dropped the moment Firestore confirms it.
-        const pendingOptimistic = prev.filter(m => {
-          if (!m.id.startsWith('opt-')) return false
-          const confirmed = msgs.some(r =>
-            r.from_id === m.from_id &&
-            r.body === m.body &&
-            Math.abs(new Date(r.created_at).getTime() - new Date(m.created_at).getTime()) < 60_000
-          )
-          return !confirmed
-        })
-        return [...msgs, ...pendingOptimistic].sort(
-          (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-        )
-      })
+      setMessages(msgs)
       // May fail when the inbox entry doesn't exist yet (brand-new thread)
       markMessagesRead(myProfile.id, partner.id).catch(() => {})
       if (!initializedRef.current) {
@@ -198,41 +182,19 @@ function ThreadView({ partner, myProfile, onBack }: {
     setText('')
     setReplyTo(null)
 
-    // Tampilkan typing indicator
     setShowTyping(true)
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
 
-    // Dots terlihat selama 600ms
     await new Promise<void>(r => setTimeout(r, 600))
-
-    // Fade out selama 180ms sebelum pesan muncul
     setTypingExiting(true)
     await new Promise<void>(r => setTimeout(r, 180))
-
-    // Sembunyikan dots, tampilkan pesan dalam render yang sama
     setShowTyping(false)
     setTypingExiting(false)
 
-    const optimistic: Message = {
-      id: `opt-${Date.now()}`,
-      from_id: myProfile.id,
-      to_id: partner.id,
-      body: trimmed,
-      reply_to_id: replyToMsg?.id ?? null,
-      read_at: null,
-      deleted_at: null,
-      created_at: new Date().toISOString(),
-      from_profile: myProfile,
-      to_profile: partner,
-      reply_to: replyToMsg ?? null,
-    }
-    setMessages(prev => [...prev, optimistic])
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
-
     try {
       await sendMessage(myProfile.id, partner.id, trimmed, replyToMsg?.id)
+      // Subscription brings the real message — no optimistic needed
     } catch {
-      setMessages(prev => prev.filter(m => m.id !== optimistic.id))
       setText(trimmed)
       setReplyTo(replyToMsg)
     }
@@ -265,18 +227,17 @@ function ThreadView({ partner, myProfile, onBack }: {
       <div className="thread-messages" ref={containerRef} style={{ overflowX: 'hidden' }}>
         {messages.map(msg => {
           const isOwn = msg.from_id === myProfile.id
-          const isOptimistic = msg.id.startsWith('opt-')
           return (
             <SwipeableMessage
               key={msg.id}
               isOwn={isOwn}
-              canReply={!isOptimistic}
-              canDelete={isOwn && !isOptimistic}
+              canReply={true}
+              canDelete={isOwn}
               onReply={() => setReplyTo(msg)}
               onDelete={() => handleDelete(msg.id)}
             >
               <div
-                className={`bubble ${isOwn ? 'bubble--own' : 'bubble--them'}${isOptimistic ? ' bubble--new-own' : ''}`}
+                className={`bubble ${isOwn ? 'bubble--own' : 'bubble--them'}`}
                 style={{ userSelect: 'none' }}
               >
                 {msg.reply_to && (
