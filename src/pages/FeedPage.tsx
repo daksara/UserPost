@@ -1,10 +1,10 @@
 // src/pages/FeedPage.tsx
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import {
   getPosts, createPost, deletePost, addComment, deleteComment,
   getComments, subscribeToActivePosts,
   grantBadge, revokeBadge,
-  type Post, type Comment, type Profile, type BadgeGrantType,
+  type Post, type Comment, type Profile, type BadgeGrantType, type QuoteRef,
 } from '../lib/firebase'
 import { expiresIn } from '../lib/utils'
 import { useAuth } from '../hooks/useAuth'
@@ -118,6 +118,34 @@ function ExpiryBar({ expiresAt, createdAt }: { expiresAt: string; createdAt: str
   )
 }
 
+function MentionText({ text }: { text: string }) {
+  const parts = text.split(/(@\w+)/g)
+  if (parts.length === 1) return <>{text}</>
+  return (
+    <>
+      {parts.map((part, i) =>
+        /^@\w+$/.test(part)
+          ? <span key={i} className="mention">{part}</span>
+          : <span key={i}>{part}</span>
+      )}
+    </>
+  )
+}
+
+function QuoteCard({ quote }: { quote: QuoteRef }) {
+  return (
+    <div className="quote-card">
+      <div className="quote-card__author">
+        <UserAvatar username={quote.username} size={14} photoUrl={quote.photo_url ?? null} />
+        <span className="quote-card__username">@{quote.username}</span>
+      </div>
+      <p className="quote-card__body">
+        {quote.body.length > 140 ? quote.body.slice(0, 140) + '…' : quote.body}
+      </p>
+    </div>
+  )
+}
+
 function UserSheet({
   target, isGranter, onDM, onClose, onGranted,
 }: {
@@ -217,7 +245,7 @@ function UserSheet({
   )
 }
 
-function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment, onDMClick, onRefreshPosts }: {
+function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment, onDMClick, onRefreshPosts, onQuote }: {
   post: Post
   myId: string
   myProfile: Profile | null
@@ -226,6 +254,7 @@ function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment,
   onDeleteComment: (postId: string, commentId: string) => Promise<void>
   onDMClick: (username: string) => void
   onRefreshPosts: () => void
+  onQuote: (post: Post) => void
 }) {
   const [showComments, setShowComments] = useState(false)
   const [localComments, setLocalComments] = useState<Comment[]>([])
@@ -240,6 +269,48 @@ function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment,
   const isOwn = post.user_id === myId
   const isGranter = myProfile?.is_verified === true
   const [, setTick] = useState(0)
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null)
+  const [mentionAnchorIdx, setMentionAnchorIdx] = useState(0)
+  const commentInputRef = useRef<HTMLInputElement>(null)
+
+  const knownUsers = useMemo(() => {
+    const map = new Map<string, Profile>()
+    map.set(post.profiles.username, post.profiles)
+    localComments.forEach(c => map.set(c.profiles.username, c.profiles))
+    map.delete(myProfile?.username ?? '')
+    return [...map.values()]
+  }, [post.profiles, localComments, myProfile])
+
+  const mentionMatches = mentionQuery !== null
+    ? knownUsers.filter(u => u.username.toLowerCase().startsWith(mentionQuery.toLowerCase())).slice(0, 4)
+    : []
+
+  const handleCommentInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.slice(0, 280)
+    setCommentText(val)
+    const cursor = e.target.selectionStart ?? val.length
+    const before = val.slice(0, cursor)
+    const match = before.match(/@(\w*)$/)
+    if (match && match.index !== undefined) {
+      setMentionQuery(match[1])
+      setMentionAnchorIdx(match.index)
+    } else {
+      setMentionQuery(null)
+    }
+  }
+
+  const insertMention = (username: string) => {
+    const cursor = commentInputRef.current?.selectionStart ?? commentText.length
+    const before = commentText.slice(0, cursor)
+    const after = commentText.slice(cursor)
+    const match = before.match(/@(\w*)$/)
+    if (match && match.index !== undefined) {
+      const newText = (before.slice(0, match.index) + '@' + username + ' ' + after).slice(0, 280)
+      setCommentText(newText)
+    }
+    setMentionQuery(null)
+    setTimeout(() => commentInputRef.current?.focus(), 0)
+  }
 
   // Force re-render every 30s so expiry bar and hot counter stay live
   useEffect(() => {
@@ -341,7 +412,8 @@ function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment,
         )}
       </div>
 
-      <div className="post-card__body">{post.body}</div>
+      <div className="post-card__body"><MentionText text={post.body} /></div>
+      {post.quote && <QuoteCard quote={post.quote} />}
       {post.link_url && <LinkCard url={post.link_url} />}
       {post.contract_address && <CACard address={post.contract_address} />}
 
@@ -352,6 +424,15 @@ function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment,
           </svg>
           {commentCount > 0 ? commentCount : ''} Comments
         </button>
+        <button className="post-card__quote-btn" onClick={() => onQuote(post)} title="Quote post">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="17 1 21 5 17 9"/>
+            <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+            <polyline points="7 23 3 19 7 15"/>
+            <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+          </svg>
+          Quote
+        </button>
         <HotIndicator commentCount={commentCount} createdAt={post.created_at}/>
       </div>
 
@@ -361,7 +442,7 @@ function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment,
           {!loadingComments && localComments.map(c => (
             <div key={c.id} className="comment" style={{ position: 'relative' }}>
               <span className="comment__username">{c.profiles.username}</span>
-              <span className="comment__body">{c.body}</span>
+              <span className="comment__body"><MentionText text={c.body} /></span>
               {c.user_id === myId && (
                 <button
                   onClick={() => handleDeleteComment(c.id)}
@@ -375,19 +456,40 @@ function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment,
               )}
             </div>
           ))}
-          <div className="comment-input-row">
-            <input
-              className="comment-input"
-              placeholder="Add a comment…"
-              value={commentText}
-              onChange={e => setCommentText(e.target.value.slice(0, 280))}
-              onKeyDown={e => e.key === 'Enter' && handleComment()}
-            />
-            <button className="comment-send" onClick={handleComment} disabled={!commentText.trim() || sending}>
-              {sending
-                ? <span className="spinner spinner--sm"/>
-                : <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>}
-            </button>
+          <div style={{ position: 'relative' }}>
+            {mentionMatches.length > 0 && (
+              <div className="mention-dropdown">
+                {mentionMatches.map(u => (
+                  <button
+                    key={u.id}
+                    className="mention-dropdown__item"
+                    onMouseDown={e => { e.preventDefault(); insertMention(u.username) }}
+                  >
+                    <UserAvatar username={u.username} size={20} photoUrl={u.photo_url ?? null} />
+                    @{u.username}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="comment-input-row">
+              <input
+                ref={commentInputRef}
+                className="comment-input"
+                placeholder="Add a comment… (@mention)"
+                value={commentText}
+                onChange={handleCommentInputChange}
+                onKeyDown={e => {
+                  if (e.key === 'Escape') setMentionQuery(null)
+                  else if (e.key === 'Enter') handleComment()
+                }}
+                onBlur={() => setTimeout(() => setMentionQuery(null), 150)}
+              />
+              <button className="comment-send" onClick={handleComment} disabled={!commentText.trim() || sending}>
+                {sending
+                  ? <span className="spinner spinner--sm"/>
+                  : <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -397,7 +499,11 @@ function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment,
   )
 }
 
-function ComposeSheet({ onPost, onClose }: { onPost: (body: string, ca?: string, link?: string) => Promise<void>; onClose: () => void }) {
+function ComposeSheet({ onPost, onClose, quotePost: initialQuote }: {
+  onPost: (body: string, ca?: string, link?: string, quotePost?: QuoteRef) => Promise<void>
+  onClose: () => void
+  quotePost?: QuoteRef
+}) {
   const [text, setText] = useState('')
   const [ca, setCa] = useState('')
   const [showCA, setShowCA] = useState(false)
@@ -406,6 +512,7 @@ function ComposeSheet({ onPost, onClose }: { onPost: (body: string, ca?: string,
   const [showLink, setShowLink] = useState(false)
   const [linkError, setLinkError] = useState('')
   const [posting, setPosting] = useState(false)
+  const [localQuote, setLocalQuote] = useState<QuoteRef | undefined>(initialQuote)
   const remaining = 500 - text.length
 
   const isValidCA = (v: string) =>
@@ -431,7 +538,7 @@ function ComposeSheet({ onPost, onClose }: { onPost: (body: string, ca?: string,
     if (ca && !isValidCA(ca)) { setCaError('Invalid address'); return }
     if (link && !isAllowedUrl(link)) { setLinkError('Only trusted domains allowed (x.com, t.me, github.com, etc)'); return }
     setPosting(true)
-    await onPost(text.trim(), ca.trim() || undefined, link.trim() || undefined)
+    await onPost(text.trim(), ca.trim() || undefined, link.trim() || undefined, localQuote)
     setPosting(false)
   }
 
@@ -439,7 +546,16 @@ function ComposeSheet({ onPost, onClose }: { onPost: (body: string, ca?: string,
     <div className="sheet-overlay" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="sheet">
         <div className="sheet__handle"/>
-        <div className="sheet__title">New Post</div>
+        <div className="sheet__title">{localQuote ? 'Quote Post' : 'New Post'}</div>
+        {localQuote && (
+          <div className="quote-preview">
+            <div className="quote-preview__content">
+              <div className="quote-preview__author">@{localQuote.username}</div>
+              <div className="quote-preview__body">{localQuote.body}</div>
+            </div>
+            <button className="quote-preview__remove" onClick={() => setLocalQuote(undefined)} title="Remove quote">✕</button>
+          </div>
+        )}
         <textarea
           className="compose-textarea"
           placeholder="What's on your mind?"
@@ -534,6 +650,7 @@ export default function FeedPage({ onDMClick }: { onDMClick: (username: string) 
   // Only show loading state when there's no cached data to display
   const [loading, setLoading] = useState(() => readCachedPosts().length === 0)
   const [composing, setComposing] = useState(false)
+  const [quotePost, setQuotePost] = useState<QuoteRef | undefined>()
 
   const refreshPosts = useCallback(async () => {
     const data = await getPosts()
@@ -565,11 +682,22 @@ export default function FeedPage({ onDMClick }: { onDMClick: (username: string) 
     return () => clearInterval(timer)
   }, [])
 
-  const handlePost = async (body: string, ca?: string, link?: string) => {
+  const handlePost = async (body: string, ca?: string, link?: string, quote?: QuoteRef) => {
     if (!profile) return
-    await createPost(profile.id, body, ca, link)
+    await createPost(profile.id, body, ca, link, quote)
     setComposing(false)
+    setQuotePost(undefined)
   }
+
+  const handleQuote = useCallback((post: Post) => {
+    setQuotePost({
+      post_id: post.id,
+      body: post.body,
+      username: post.profiles.username,
+      photo_url: post.profiles.photo_url ?? null,
+    })
+    setComposing(true)
+  }, [])
 
   const handleDelete = async (postId: string) => {
     await deletePost(postId)
@@ -622,6 +750,7 @@ export default function FeedPage({ onDMClick }: { onDMClick: (username: string) 
             onDeleteComment={handleDeleteComment}
             onDMClick={onDMClick}
             onRefreshPosts={refreshPosts}
+            onQuote={handleQuote}
           />
         ))}
       </div>
@@ -632,7 +761,7 @@ export default function FeedPage({ onDMClick }: { onDMClick: (username: string) 
         </svg>
       </button>
 
-      {composing && <ComposeSheet onPost={handlePost} onClose={() => setComposing(false)}/>}
+      {composing && <ComposeSheet onPost={handlePost} onClose={() => { setComposing(false); setQuotePost(undefined) }} quotePost={quotePost}/>}
     </div>
   )
 }

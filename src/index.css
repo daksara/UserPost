@@ -676,6 +676,123 @@ button {
   font-weight: 600;
 }
 
+/* ── Mention ────────────────────────────────────────────────────── */
+.mention {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.mention-dropdown {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  right: 56px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  z-index: 50;
+  animation: fadeIn 0.1s ease;
+}
+
+.mention-dropdown__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.mention-dropdown__item:hover { background: var(--accent-soft); color: var(--accent); }
+
+/* ── Quote Card (in feed) ───────────────────────────────────────── */
+.quote-card {
+  border: 1.5px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-xs);
+  padding: 8px 10px;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.quote-card__author {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.quote-card__username {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.quote-card__body {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── Quote Preview (in compose) ─────────────────────────────────── */
+.quote-preview {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 8px 10px;
+  background: var(--accent-soft);
+  border: 1.5px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-xs);
+}
+
+.quote-preview__content { flex: 1; min-width: 0; }
+.quote-preview__author { font-size: 0.72rem; font-weight: 700; color: var(--accent); margin-bottom: 2px; }
+.quote-preview__body {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quote-preview__remove {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  padding: 0 2px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.quote-preview__remove:hover { color: var(--red); }
+
+/* ── Quote Button (post card) ───────────────────────────────────── */
+.post-card__quote-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  padding: 4px 0;
+  font-weight: 500;
+  transition: color 0.12s;
+}
+.post-card__quote-btn:hover { color: var(--accent); }
+
 /* ── Messages ───────────────────────────────────────────────────── */
 .convo-list {
   flex: 1;
@@ -1044,13 +1161,13 @@ span.badge-og { padding: 3px 7px; }
 /* Feedback tekan universal — snap saat ditekan, spring saat dilepas */
 .icon-btn, .back-btn, .auth-btn, .auth-tab, .btn-post, .btn-cancel,
 .comment-send, .thread-composer__send, .signout-btn, .ca-attach-btn,
-.post-card__delete, .post-card__comments-btn, .user-result, .ca-card {
+.post-card__delete, .post-card__comments-btn, .post-card__quote-btn, .user-result, .ca-card {
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease,
               box-shadow 0.2s ease, transform 0.2s cubic-bezier(.34,1.56,.64,1);
 }
 .icon-btn:active, .back-btn:active, .auth-tab:active, .btn-cancel:active,
 .signout-btn:active, .ca-attach-btn:active, .post-card__delete:active,
-.post-card__comments-btn:active, .user-result:active, .ca-card:active {
+.post-card__comments-btn:active, .post-card__quote-btn:active, .user-result:active, .ca-card:active {
   transform: scale(0.95);
 }
 .auth-btn:active:not(:disabled),
