@@ -25,10 +25,12 @@ const db = getFirestore()
 
 // ── Config ─────────────────────────────────────────────────────────
 
-const WHALE_THRESHOLD    = parseFloat(process.env.WHALE_THRESHOLD_USD       ?? '10000')
-const DEAD_VOL_THRESHOLD = parseFloat(process.env.DEAD_VOLUME_THRESHOLD_USD ?? '100')
-const DEAD_HOURS         = parseFloat(process.env.DEAD_HOURS_REQUIRED       ?? '24')
-const MIN_LIQUIDITY      = parseFloat(process.env.MIN_LIQUIDITY_USD         ?? '5000')
+const WHALE_THRESHOLD    = parseFloat(process.env.WHALE_THRESHOLD_USD        ?? '10000')
+const DEAD_VOL_THRESHOLD = parseFloat(process.env.DEAD_VOLUME_THRESHOLD_USD  ?? '100')
+const DEAD_HOURS         = parseFloat(process.env.DEAD_HOURS_REQUIRED        ?? '24')
+const MIN_LIQUIDITY      = parseFloat(process.env.MIN_LIQUIDITY_USD          ?? '5000')
+const NEW_LISTING_VOL    = parseFloat(process.env.NEW_LISTING_VOL_THRESHOLD_USD ?? '5000')
+const NEW_LISTING_PUMP   = parseFloat(process.env.NEW_LISTING_PUMP_PCT       ?? '5')
 const ALERT_COOLDOWN_MS  = 4 * 60 * 60 * 1000  // 4 hours
 
 // ── Types (JSDoc) ──────────────────────────────────────────────────
@@ -119,20 +121,48 @@ async function fetchBestPair(address) {
   )
 }
 
-// ── Update pinned live alert ───────────────────────────────────────
+// ── Update pinned alerts (one slot per alert type) ─────────────────
 
-async function setPinnedAlert(type, headline, detail, contractAddress, linkUrl, chain) {
-  await db.collection('pinned_feed').doc('live').set({
+async function setPinnedAlert(type, headline, detail, contractAddress, linkUrl, chain, priceUsd) {
+  const data = {
     type,
     headline,
     detail,
     chain: chain ?? null,
     contract_address: contractAddress ?? null,
     link_url: linkUrl ?? null,
+    price_usd_at_alert: priceUsd > 0 ? priceUsd : null,
+    followup_pct: null,
+    followup_at: null,
     updated_at: Timestamp.now(),
-  })
+  }
+  // Each alert type gets its own slot so a whale alert doesn't overwrite a
+  // still-relevant dead-token alert. The legacy 'live' doc mirrors the most
+  // recent alert for clients that haven't been redeployed yet.
+  await Promise.all([
+    db.collection('pinned_feed').doc(type).set(data),
+    db.collection('pinned_feed').doc('live').set(data),
+  ])
   console.log('Pinned alert:', headline)
 }
+
+// Pinned alerts keyed by contract address, loaded once per run so each token
+// can update the "% since alert" follow-up on the slot it triggered.
+async function getPinnedAlertsByAddress() {
+  const snap = await db.collection('pinned_feed').get()
+  const map = new Map()
+  for (const d of snap.docs) {
+    if (d.id === 'live') continue
+    const data = d.data()
+    const addr = data.contract_address?.toLowerCase()
+    if (!addr || !(data.price_usd_at_alert > 0)) continue
+    if (!map.has(addr)) map.set(addr, [])
+    map.get(addr).push({ ref: d.ref, priceAtAlert: data.price_usd_at_alert })
+  }
+  return map
+}
+
+let pinnedByAddress = new Map()
 
 // ── Process one token ──────────────────────────────────────────────
 
@@ -163,6 +193,18 @@ async function processToken(address) {
   const isDead     = volume24h < DEAD_VOL_THRESHOLD
   const firstDeadAt = isDead ? (prev?.firstDeadAt ?? now) : null
 
+  // Follow-up tracking: if this token is still pinned, record how its price
+  // moved since the alert fired. A fresh alert below resets these fields.
+  const pinnedSlots = pinnedByAddress.get(address.toLowerCase()) ?? []
+  if (priceUsd > 0) {
+    await Promise.all(pinnedSlots.map(slot =>
+      slot.ref.set({
+        followup_pct: ((priceUsd / slot.priceAtAlert) - 1) * 100,
+        followup_at: now,
+      }, { merge: true })
+    ))
+  }
+
   const canAlert = !prev?.lastAlertAt ||
     (now.toMillis() - prev.lastAlertAt.toMillis()) > ALERT_COOLDOWN_MS
 
@@ -183,6 +225,7 @@ async function processToken(address) {
         pair.baseToken.address,
         pair.url,
         chain,
+        priceUsd,
       )
       alertType = 'dead_token'
     }
@@ -196,11 +239,27 @@ async function processToken(address) {
         pair.baseToken.address,
         pair.url,
         chain,
+        priceUsd,
       )
       alertType = 'whale'
     }
 
-    // 3. ACCUMULATION SIGNAL
+    // 3. NEW LISTING BREAKOUT — first time the bot sees this token and it's
+    // already trading hot (high 1h volume + pumping)
+    else if (!prev && volume1h >= NEW_LISTING_VOL && change1h >= NEW_LISTING_PUMP) {
+      await setPinnedAlert(
+        'new_listing',
+        `New token $${sym} breaking out${mcLabel}`,
+        `${fmt$(volume1h)} in 1h · ${fmtPct(change1h)} · liq ${fmt$(liq)}`,
+        pair.baseToken.address,
+        pair.url,
+        chain,
+        priceUsd,
+      )
+      alertType = 'new_listing'
+    }
+
+    // 4. ACCUMULATION SIGNAL
     else if (
       prev &&
       Math.abs(change24h) < 3 &&
@@ -218,6 +277,7 @@ async function processToken(address) {
         pair.baseToken.address,
         pair.url,
         chain,
+        priceUsd,
       )
       alertType = 'accumulation'
     }
@@ -239,13 +299,17 @@ async function processToken(address) {
 async function main() {
   console.log('Bot started:', new Date().toISOString())
 
-  const [discovered, deadAddresses] = await Promise.all([
+  const [discovered, deadAddresses, pinned] = await Promise.all([
     discoverTokens(),
     getTrackedDeadAddresses(),
+    getPinnedAlertsByAddress(),
   ])
+  pinnedByAddress = pinned
 
-  const all = new Set([...discovered, ...deadAddresses])
-  console.log(`Processing ${all.size} tokens (${discovered.length} discovered + ${deadAddresses.length} dead tracked)`)
+  // Pinned tokens stay in the processing set so follow-ups keep updating
+  // even after the token drops out of DexScreener discovery.
+  const all = new Set([...discovered, ...deadAddresses, ...pinned.keys()])
+  console.log(`Processing ${all.size} tokens (${discovered.length} discovered + ${deadAddresses.length} dead tracked + ${pinned.size} pinned)`)
 
   const results = await Promise.allSettled(
     [...all].map(addr => processToken(addr))

@@ -34,4 +34,6 @@ jobs:
           DEAD_VOLUME_THRESHOLD_USD: '500'
           DEAD_HOURS_REQUIRED: '6'
           MIN_LIQUIDITY_USD: '1000'
+          NEW_LISTING_VOL_THRESHOLD_USD: '2000'
+          NEW_LISTING_PUMP_PCT: '5'
         run: node scripts/bot-run.mjs
