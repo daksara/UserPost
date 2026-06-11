@@ -6,7 +6,7 @@ import FeedPage from './pages/FeedPage'
 import MessagesPage from './pages/MessagesPage'
 import ProfilePage from './pages/ProfilePage'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import { subscribeToInbox, getUnreadCount, resendVerificationEmail, signOut as fbSignOut, auth } from './lib/firebase'
+import { subscribeToInbox, getUnreadCount, resendVerificationEmail, signOut as fbSignOut, auth, type Profile } from './lib/firebase'
 
 type Tab = 'feed' | 'messages' | 'profile'
 
@@ -171,7 +171,9 @@ function VerifyEmailGate({ onVerified }: { onVerified: () => void }) {
 function App() {
   const { user, loading } = useAuth()
   const [tab, setTab] = useState<Tab>(tabFromHash)
-  const [dmTarget, setDmTarget] = useState<string | undefined>()
+  // Simpan profil lengkap + timestamp agar klik "Send DM" SELALU membuka
+  // thread — string username yang sama tidak memicu remount/efek ulang
+  const [dmTarget, setDmTarget] = useState<{ profile: Profile; ts: number } | null>(null)
   const [unreadCount, setUnreadCount] = useState(0)
   const [emailVerified, setEmailVerified] = useState<boolean>(() => user?.emailVerified ?? true)
   const [splashDone, setSplashDone] = useState(false)
@@ -230,8 +232,8 @@ function App() {
     return <><VerifyEmailGate onVerified={() => setEmailVerified(true)}/>{splash}</>
   }
 
-  const handleDMClick = (username: string) => {
-    setDmTarget(username)
+  const handleDMClick = (profile: Profile) => {
+    setDmTarget({ profile, ts: Date.now() })
     setTab('messages')
   }
 
@@ -243,7 +245,7 @@ function App() {
           <FeedPage onDMClick={handleDMClick}/>
         </AnimatedTab>
         <AnimatedTab active={tab === 'messages'}>
-          <MessagesPage key={dmTarget ?? 'messages'} initialDM={dmTarget}/>
+          <MessagesPage key={dmTarget ? `dm-${dmTarget.profile.id}-${dmTarget.ts}` : 'messages'} initialDM={dmTarget?.profile}/>
         </AnimatedTab>
         <AnimatedTab active={tab === 'profile'}>
           <ProfilePage active={tab === 'profile'}/>
@@ -263,7 +265,7 @@ function App() {
         </button>
         <button
           className={`bottom-nav__item ${tab === 'messages' ? 'bottom-nav__item--active' : ''}`}
-          onClick={() => { setDmTarget(undefined); setTab('messages') }}
+          onClick={() => { setDmTarget(null); setTab('messages') }}
         >
           <div style={{ position: 'relative', display: 'inline-flex' }}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
