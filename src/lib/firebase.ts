@@ -77,7 +77,7 @@ function cacheSet(profile: Profile) {
 
 // ── Types ──────────────────────────────────────────────────────────
 
-export type BadgeGrantType = 'partner' | 'contributor' | 'verified' | 'og'
+export type BadgeGrantType = 'partner' | 'contributor' | 'verified' | 'og' | 'bot'
 
 export interface Profile {
   id: string

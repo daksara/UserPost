@@ -268,6 +268,7 @@ function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment,
   const prevCommentCountRef = useRef(post.comment_count)
   const [sheetOpen, setSheetOpen] = useState(false)
   const isOwn = post.user_id === myId
+  const isBot = post.profiles.badge_type === 'bot'
   const isGranter = myProfile?.is_verified === true
   const [, setTick] = useState(0)
   const [mentionQuery, setMentionQuery] = useState<string | null>(null)
@@ -381,7 +382,7 @@ function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment,
           onCancel={() => setConfirmDelete(false)}
         />
       )}
-      {sheetOpen && !isOwn && (
+      {sheetOpen && !isOwn && !isBot && (
         <UserSheet
           target={post.profiles}
           isGranter={isGranter}
@@ -394,7 +395,7 @@ function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment,
       <div className="post-card__header">
         <UserAvatar username={post.profiles.username} size={36} photoUrl={post.profiles.photo_url} />
         <div className="post-card__meta">
-          <button className="post-card__username" onClick={() => { if (!isOwn) setSheetOpen(true) }}>
+          <button className="post-card__username" onClick={() => { if (!isOwn && !isBot) setSheetOpen(true) }}>
             {post.profiles.username}
             {post.profiles.is_verified && <BadgeChip type="official"/>}
             {post.profiles.badge_type && <BadgeChip type={post.profiles.badge_type}/>}
