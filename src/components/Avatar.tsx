@@ -36,7 +36,7 @@ export function UserAvatar({ username, size = 36, photoUrl }: { username: string
       style={{
         width: size, height: size, borderRadius: '50%',
         flexShrink: 0, display: 'block', objectFit: 'cover',
-        background: '#eeeeff',
+        background: 'var(--accent-soft)',
       }}
       onError={() => setError(true)}
     />
