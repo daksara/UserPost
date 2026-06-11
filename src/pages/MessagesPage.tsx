@@ -139,6 +139,8 @@ function ThreadView({ partner, myProfile, onBack }: {
   const [messages, setMessages] = useState<Message[]>(() => readMsgCache<Message[]>(threadCacheKey) ?? [])
   const [text, setText] = useState('')
   const [replyTo, setReplyTo] = useState<Message | null>(null)
+  const [showTyping, setShowTyping] = useState(false)
+  const [typingExiting, setTypingExiting] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const initializedRef = useRef(false)
@@ -154,23 +156,7 @@ function ThreadView({ partner, myProfile, onBack }: {
     // Pesan dari cache sudah ter-render — langsung posisikan di pesan terakhir
     bottomRef.current?.scrollIntoView({ behavior: 'instant' as ScrollBehavior })
     const unsub = subscribeToConversation(myProfile.id, partner.id, (msgs) => {
-      setMessages(prev => {
-        // Keep optimistic messages only until a matching real message arrives.
-        // Match by sender + body + close timestamp (ids never match), so the
-        // optimistic twin is dropped the moment Firestore confirms it.
-        const pendingOptimistic = prev.filter(m => {
-          if (!m.id.startsWith('opt-')) return false
-          const confirmed = msgs.some(r =>
-            r.from_id === m.from_id &&
-            r.body === m.body &&
-            Math.abs(new Date(r.created_at).getTime() - new Date(m.created_at).getTime()) < 60_000
-          )
-          return !confirmed
-        })
-        return [...msgs, ...pendingOptimistic].sort(
-          (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-        )
-      })
+      setMessages(msgs)
       // May fail when the inbox entry doesn't exist yet (brand-new thread)
       markMessagesRead(myProfile.id, partner.id).catch(() => {})
       if (!initializedRef.current) {
@@ -196,27 +182,19 @@ function ThreadView({ partner, myProfile, onBack }: {
     setText('')
     setReplyTo(null)
 
-    const optimistic: Message = {
-      id: `opt-${Date.now()}`,
-      from_id: myProfile.id,
-      to_id: partner.id,
-      body: trimmed,
-      reply_to_id: replyToMsg?.id ?? null,
-      read_at: null,
-      deleted_at: null,
-      created_at: new Date().toISOString(),
-      from_profile: myProfile,
-      to_profile: partner,
-      reply_to: replyToMsg ?? null,
-    }
-    setMessages(prev => [...prev, optimistic])
+    setShowTyping(true)
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+
+    await new Promise<void>(r => setTimeout(r, 600))
+    setTypingExiting(true)
+    await new Promise<void>(r => setTimeout(r, 180))
+    setShowTyping(false)
+    setTypingExiting(false)
 
     try {
       await sendMessage(myProfile.id, partner.id, trimmed, replyToMsg?.id)
+      // Subscription brings the real message — no optimistic needed
     } catch {
-      // Rollback on failure
-      setMessages(prev => prev.filter(m => m.id !== optimistic.id))
       setText(trimmed)
       setReplyTo(replyToMsg)
     }
@@ -249,19 +227,18 @@ function ThreadView({ partner, myProfile, onBack }: {
       <div className="thread-messages" ref={containerRef} style={{ overflowX: 'hidden' }}>
         {messages.map(msg => {
           const isOwn = msg.from_id === myProfile.id
-          const isOptimistic = msg.id.startsWith('opt-')
           return (
             <SwipeableMessage
               key={msg.id}
               isOwn={isOwn}
-              canReply={!isOptimistic}
-              canDelete={isOwn && !isOptimistic}
+              canReply={true}
+              canDelete={isOwn}
               onReply={() => setReplyTo(msg)}
               onDelete={() => handleDelete(msg.id)}
             >
               <div
                 className={`bubble ${isOwn ? 'bubble--own' : 'bubble--them'}`}
-                style={{ userSelect: 'none', opacity: isOptimistic ? 0.65 : 1 }}
+                style={{ userSelect: 'none' }}
               >
                 {msg.reply_to && (
                   <div style={{
@@ -282,6 +259,21 @@ function ThreadView({ partner, myProfile, onBack }: {
             </SwipeableMessage>
           )
         })}
+        {showTyping && (
+          <div
+            className="bubble-wrap bubble-wrap--own"
+            style={typingExiting ? {
+              opacity: 0,
+              transform: 'scale(0.88) translateX(10px)',
+              transition: 'opacity 0.18s ease, transform 0.18s ease',
+              animation: 'none',
+            } : undefined}
+          >
+            <div className="bubble bubble--own bubble--typing">
+              <span className="typing-dot"/><span className="typing-dot"/><span className="typing-dot"/>
+            </div>
+          </div>
+        )}
         <div ref={bottomRef}/>
       </div>
 
