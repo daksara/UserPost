@@ -2,8 +2,8 @@ name: Market Alert Bot
 
 on:
   schedule:
-    # Setiap 30 menit — cukup untuk whale/dead token detection
-    - cron: '*/30 * * * *'
+    # Setiap 5 menit
+    - cron: '*/5 * * * *'
   # Tombol "Run workflow" di GitHub Actions tab untuk test manual
   workflow_dispatch:
 
