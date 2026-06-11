@@ -184,7 +184,7 @@ async function processToken(address) {
     }
 
     // 2. WHALE ALERT
-    else if (volume1h >= WHALE_THRESHOLD && change1h >= 2) {
+    else if (volume1h >= WHALE_THRESHOLD && change1h >= 1) {
       await setPinnedAlert(
         'whale',
         `Whale buying $${sym}${mcLabel}`,
