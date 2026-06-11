@@ -104,6 +104,7 @@ export interface Post {
   comment_count: number
   profiles: Profile
   comments: Comment[]
+  quote: QuoteRef | null
 }
 
 export interface Comment {
@@ -113,6 +114,13 @@ export interface Comment {
   body: string
   created_at: string
   profiles: Profile
+}
+
+export interface QuoteRef {
+  post_id: string
+  body: string
+  username: string
+  photo_url?: string | null
 }
 
 export interface Message {
@@ -317,6 +325,12 @@ function buildPost(postId: string, data: Record<string, any>, profile: Profile):
     comment_count: data.comment_count ?? 0,
     profiles: profile,
     comments: [],
+    quote: data.quote_post_id ? {
+      post_id: data.quote_post_id,
+      body: data.quote_body ?? '',
+      username: data.quote_username ?? '',
+      photo_url: data.quote_photo_url ?? null,
+    } : null,
   }
 }
 
@@ -363,8 +377,14 @@ export async function getMyActivePosts(userId: string): Promise<Post[]> {
   return posts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 }
 
-export async function createPost(userId: string, body: string, contractAddress?: string, linkUrl?: string): Promise<Post> {
+export async function createPost(userId: string, body: string, contractAddress?: string, linkUrl?: string, quotePost?: QuoteRef): Promise<Post> {
   const expiresAt = Timestamp.fromDate(new Date(Date.now() + 24 * 60 * 60 * 1000))
+  const quoteFields = quotePost ? {
+    quote_post_id: quotePost.post_id,
+    quote_body: quotePost.body,
+    quote_username: quotePost.username,
+    quote_photo_url: quotePost.photo_url ?? null,
+  } : {}
   const ref = await addDoc(collection(db, 'posts'), {
     user_id: userId,
     body,
@@ -372,6 +392,7 @@ export async function createPost(userId: string, body: string, contractAddress?:
     link_url: linkUrl ?? null,
     expires_at: expiresAt,
     created_at: serverTimestamp(),
+    ...quoteFields,
   })
   return hydratePost(ref.id, {
     user_id: userId,
@@ -380,6 +401,7 @@ export async function createPost(userId: string, body: string, contractAddress?:
     link_url: linkUrl ?? null,
     expires_at: expiresAt,
     created_at: Timestamp.now(),
+    ...quoteFields,
   })
 }
 
