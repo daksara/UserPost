@@ -146,6 +146,12 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ── Pinned live alert (bot-written via Admin SDK, read-only for clients) ──
+    match /pinned_feed/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
     // Deny everything not matched above
     match /{document=**} {
       allow read, write: if false;

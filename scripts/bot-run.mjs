@@ -1,10 +1,10 @@
 /**
- * Bot script — dijalankan oleh GitHub Actions setiap 30 menit.
- * Mengambil data token dari DexScreener lalu memposting alert ke feed.
+ * Bot script — runs via GitHub Actions every 30 minutes.
+ * Discovers tokens from DexScreener and updates the live pinned alert.
  *
- * Environment variables yang dibutuhkan (GitHub Secrets):
- *   FIREBASE_SERVICE_ACCOUNT  – isi JSON service account Firebase (satu baris)
- *   BOT_UID                   – UID akun userpostbot di Firebase Auth
+ * Required environment variables (GitHub Secrets):
+ *   FIREBASE_SERVICE_ACCOUNT  – Firebase service account JSON (single line)
+ *   BOT_UID                   – UID of the userpostbot Firebase Auth account
  */
 
 import { initializeApp, cert } from 'firebase-admin/app'
@@ -16,7 +16,7 @@ const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT
 const botUid = process.env.BOT_UID
 
 if (!serviceAccount || !botUid) {
-  console.error('FIREBASE_SERVICE_ACCOUNT dan BOT_UID harus diset di GitHub Secrets.')
+  console.error('FIREBASE_SERVICE_ACCOUNT and BOT_UID must be set in GitHub Secrets.')
   process.exit(1)
 }
 
@@ -25,11 +25,11 @@ const db = getFirestore()
 
 // ── Config ─────────────────────────────────────────────────────────
 
-const WHALE_THRESHOLD    = parseFloat(process.env.WHALE_THRESHOLD_USD    ?? '10000')
+const WHALE_THRESHOLD    = parseFloat(process.env.WHALE_THRESHOLD_USD       ?? '10000')
 const DEAD_VOL_THRESHOLD = parseFloat(process.env.DEAD_VOLUME_THRESHOLD_USD ?? '100')
-const DEAD_HOURS         = parseFloat(process.env.DEAD_HOURS_REQUIRED    ?? '24')
-const MIN_LIQUIDITY      = parseFloat(process.env.MIN_LIQUIDITY_USD      ?? '5000')
-const ALERT_COOLDOWN_MS  = 4 * 60 * 60 * 1000  // 4 jam
+const DEAD_HOURS         = parseFloat(process.env.DEAD_HOURS_REQUIRED       ?? '24')
+const MIN_LIQUIDITY      = parseFloat(process.env.MIN_LIQUIDITY_USD         ?? '5000')
+const ALERT_COOLDOWN_MS  = 4 * 60 * 60 * 1000  // 4 hours
 
 // ── Types (JSDoc) ──────────────────────────────────────────────────
 
@@ -39,6 +39,7 @@ const ALERT_COOLDOWN_MS  = 4 * 60 * 60 * 1000  // 4 jam
  *   chainId: string, url: string,
  *   baseToken: { address: string, name: string, symbol: string },
  *   priceUsd?: string,
+ *   fdv?: number,
  *   txns: { h1: { buys: number, sells: number }, h24: { buys: number, sells: number } },
  *   volume: { h24: number, h1: number },
  *   priceChange: { h1: number, h24: number },
@@ -58,6 +59,14 @@ function fmtPct(n) {
   return (n >= 0 ? '+' : '') + n.toFixed(2) + '%'
 }
 
+function fmtMC(n) {
+  if (!n || n <= 0) return null
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B MC`
+  if (n >= 1_000_000)     return `${(n / 1_000_000).toFixed(1)}M MC`
+  if (n >= 1_000)         return `${Math.round(n / 1_000)}K MC`
+  return null
+}
+
 async function dexGet(url) {
   try {
     const res = await fetch(url, { headers: { Accept: 'application/json' } })
@@ -69,12 +78,11 @@ async function dexGet(url) {
   }
 }
 
-// ── Auto-discovery token dari DexScreener ─────────────────────────
+// ── Token discovery ────────────────────────────────────────────────
 
 async function discoverTokens() {
   const seen = new Map()
 
-  // Sumber 1: Token yang baru aktif / diberi profil di DexScreener
   const profiles = await dexGet('https://api.dexscreener.com/token-profiles/latest/v1')
   if (Array.isArray(profiles)) {
     for (const p of profiles.slice(0, 25)) {
@@ -82,7 +90,6 @@ async function discoverTokens() {
     }
   }
 
-  // Sumber 2: Token yang sedang di-boost (trending di DexScreener)
   const boosts = await dexGet('https://api.dexscreener.com/token-boosts/top/v1')
   if (Array.isArray(boosts)) {
     for (const b of boosts.slice(0, 15)) {
@@ -102,7 +109,7 @@ async function getTrackedDeadAddresses() {
   return snap.docs.map(d => d.id)
 }
 
-// ── Ambil pair terbaik untuk satu token ───────────────────────────
+// ── Fetch best pair for a token ────────────────────────────────────
 
 async function fetchBestPair(address) {
   const data = await dexGet(`https://api.dexscreener.com/latest/dex/tokens/${address}`)
@@ -112,47 +119,46 @@ async function fetchBestPair(address) {
   )
 }
 
-// ── Post ke feed sebagai bot ───────────────────────────────────────
+// ── Update pinned live alert ───────────────────────────────────────
 
-async function postAsBot(body, contractAddress, linkUrl) {
-  const expiresAt = Timestamp.fromDate(new Date(Date.now() + 24 * 60 * 60 * 1000))
-  await db.collection('posts').add({
-    user_id: botUid,
-    body,
+async function setPinnedAlert(type, headline, detail, contractAddress, linkUrl) {
+  await db.collection('pinned_feed').doc('live').set({
+    type,
+    headline,
+    detail,
     contract_address: contractAddress ?? null,
     link_url: linkUrl ?? null,
-    expires_at: expiresAt,
-    created_at: Timestamp.now(),
-    like_count: 0,
-    comment_count: 0,
+    updated_at: Timestamp.now(),
   })
-  console.log('Posted:', body.split('\n')[0])
+  console.log('Pinned alert:', headline)
 }
 
-// ── Proses satu token ─────────────────────────────────────────────
+// ── Process one token ──────────────────────────────────────────────
 
 async function processToken(address) {
   const pair = await fetchBestPair(address)
   if (!pair) return
   if ((pair.liquidity?.usd ?? 0) < MIN_LIQUIDITY) return
 
-  const stateRef = db.collection('bot_state').doc(address.toLowerCase())
+  const stateRef  = db.collection('bot_state').doc(address.toLowerCase())
   const stateSnap = await stateRef.get()
-  const prev = stateSnap.exists ? stateSnap.data() : null
+  const prev      = stateSnap.exists ? stateSnap.data() : null
 
-  const now = Timestamp.now()
-  const sym          = pair.baseToken.symbol
-  const name         = pair.baseToken.name
-  const priceUsd     = parseFloat(pair.priceUsd ?? '0')
-  const volume24h    = pair.volume?.h24   ?? 0
-  const volume1h     = pair.volume?.h1    ?? 0
-  const change24h    = pair.priceChange?.h24 ?? 0
-  const change1h     = pair.priceChange?.h1  ?? 0
-  const buys24h      = pair.txns?.h24?.buys  ?? 0
-  const sells24h     = pair.txns?.h24?.sells ?? 0
+  const now        = Timestamp.now()
+  const sym        = pair.baseToken.symbol
+  const priceUsd   = parseFloat(pair.priceUsd ?? '0')
+  const volume24h  = pair.volume?.h24     ?? 0
+  const volume1h   = pair.volume?.h1      ?? 0
+  const change24h  = pair.priceChange?.h24 ?? 0
+  const change1h   = pair.priceChange?.h1  ?? 0
+  const buys24h    = pair.txns?.h24?.buys  ?? 0
+  const fdv        = pair.fdv              ?? 0
 
-  const isDead       = volume24h < DEAD_VOL_THRESHOLD
-  const firstDeadAt  = isDead ? (prev?.firstDeadAt ?? now) : null
+  const mc         = fmtMC(fdv)
+  const mcLabel    = mc ? ` at ${mc}` : ''
+
+  const isDead     = volume24h < DEAD_VOL_THRESHOLD
+  const firstDeadAt = isDead ? (prev?.firstDeadAt ?? now) : null
 
   const canAlert = !prev?.lastAlertAt ||
     (now.toMillis() - prev.lastAlertAt.toMillis()) > ALERT_COOLDOWN_MS
@@ -166,9 +172,11 @@ async function processToken(address) {
     // 1. DEAD TOKEN BUYER
     if (prev?.firstDeadAt && deadHours >= DEAD_HOURS && volume1h > DEAD_VOL_THRESHOLD * 5) {
       const deadDays = Math.floor(deadHours / 24)
-      const label    = deadDays >= 1 ? `${deadDays} hari` : `${Math.floor(deadHours)} jam`
-      await postAsBot(
-        `[DEAD TOKEN BUYER]\n$${sym} — ${name}\nVolume (1j): ${fmt$(volume1h)}  |  Harga: $${priceUsd.toPrecision(4)} (${fmtPct(change1h)})\nToken tidak aktif selama ${label}, sinyal beli pertama terdeteksi.`,
+      const inactive = deadDays >= 1 ? `${deadDays}d inactive` : `${Math.floor(deadHours)}h inactive`
+      await setPinnedAlert(
+        'dead_token',
+        `Someone bought $${sym} in dead market${mcLabel}`,
+        `${inactive} · 1h vol ${fmt$(volume1h)} · $${priceUsd.toPrecision(4)}`,
         pair.baseToken.address,
         pair.url,
       )
@@ -177,8 +185,10 @@ async function processToken(address) {
 
     // 2. WHALE ALERT
     else if (volume1h >= WHALE_THRESHOLD && change1h >= 2) {
-      await postAsBot(
-        `[WHALE ALERT]\n$${sym} — ${name}\nVolume (1j): ${fmt$(volume1h)}  |  Harga: $${priceUsd.toPrecision(4)} (${fmtPct(change1h)})\nBeli/Jual (24j): ${buys24h} / ${sells24h}`,
+      await setPinnedAlert(
+        'whale',
+        `Whale buying $${sym}${mcLabel}`,
+        `${fmt$(volume1h)} in 1h · ${fmtPct(change1h)} · ${buys24h.toLocaleString()} buys`,
         pair.baseToken.address,
         pair.url,
       )
@@ -195,9 +205,11 @@ async function processToken(address) {
     ) {
       const growth = prev.volume24h > 0
         ? `+${(((volume24h / prev.volume24h) - 1) * 100).toFixed(0)}%`
-        : 'naik'
-      await postAsBot(
-        `[ACCUMULATION SIGNAL]\n$${sym} — ${name}\nHarga (24j): ${fmtPct(change24h)}  |  Volume (24j): ${fmt$(volume24h)} (${growth})\nHarga sideways, jumlah beli meningkat — kemungkinan akumulasi.`,
+        : 'rising'
+      await setPinnedAlert(
+        'accumulation',
+        `Someone buying $${sym} in accumulation${mcLabel}`,
+        `Vol ${growth} · ${buys24h.toLocaleString()} buys · price ${fmtPct(change24h)}`,
         pair.baseToken.address,
         pair.url,
       )
@@ -206,10 +218,10 @@ async function processToken(address) {
   }
 
   await stateRef.set({
-    symbol: sym, name, chain: pair.chainId, pairUrl: pair.url,
+    symbol: sym, chain: pair.chainId, pairUrl: pair.url,
     priceUsd, volume24h, volume1h,
     priceChange24h: change24h, priceChange1h: change1h,
-    buys24h, sells24h,
+    buys24h,
     lastChecked: now,
     firstDeadAt,
     ...(alertType ? { lastAlertAt: now, lastAlertType: alertType } : {}),
@@ -227,7 +239,7 @@ async function main() {
   ])
 
   const all = new Set([...discovered, ...deadAddresses])
-  console.log(`Memproses ${all.size} token (${discovered.length} discovery + ${deadAddresses.length} dead tracked)`)
+  console.log(`Processing ${all.size} tokens (${discovered.length} discovered + ${deadAddresses.length} dead tracked)`)
 
   const results = await Promise.allSettled(
     [...all].map(addr => processToken(addr))
@@ -235,7 +247,7 @@ async function main() {
 
   const ok     = results.filter(r => r.status === 'fulfilled').length
   const failed = results.filter(r => r.status === 'rejected').length
-  console.log(`Selesai: ${ok} OK, ${failed} gagal`)
+  console.log(`Done: ${ok} OK, ${failed} failed`)
 
   process.exit(0)
 }

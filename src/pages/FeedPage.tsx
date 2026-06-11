@@ -2,11 +2,11 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import {
   getPosts, createPost, deletePost, addComment, deleteComment,
-  getComments, subscribeToActivePosts,
+  getComments, subscribeToActivePosts, subscribeToPinnedAlert,
   grantBadge, revokeBadge, getUserByUsername,
-  type Post, type Comment, type Profile, type BadgeGrantType, type QuoteRef,
+  type Post, type Comment, type Profile, type BadgeGrantType, type QuoteRef, type PinnedAlert,
 } from '../lib/firebase'
-import { expiresIn } from '../lib/utils'
+import { expiresIn, timeAgo } from '../lib/utils'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
 import { UserAvatar } from '../components/Avatar'
@@ -704,6 +704,47 @@ function readCachedPosts(): Post[] {
   } catch { return [] }
 }
 
+function LiveAlertCard({ alert }: { alert: PinnedAlert }) {
+  const [copied, setCopied] = useState(false)
+  const typeLabel = { whale: 'WHALE', dead_token: 'DEAD TOKEN', accumulation: 'ACCUMULATION' }[alert.type]
+  const typeCls   = { whale: 'live-alert--whale', dead_token: 'live-alert--dead', accumulation: 'live-alert--accum' }[alert.type]
+
+  const copy = () => {
+    if (!alert.contract_address) return
+    navigator.clipboard.writeText(alert.contract_address)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+
+  return (
+    <div className={`live-alert ${typeCls}`}>
+      <div className="live-alert__header">
+        <span className="live-alert__dot"/>
+        <span className="live-alert__live">LIVE</span>
+        <span className="live-alert__type">{typeLabel}</span>
+        <span className="live-alert__ago">{timeAgo(alert.updated_at)}</span>
+      </div>
+      <div className="live-alert__headline">{alert.headline}</div>
+      <div className="live-alert__detail">{alert.detail}</div>
+      <div className="live-alert__footer">
+        {alert.link_url && (
+          <a href={alert.link_url} target="_blank" rel="noopener noreferrer" className="live-alert__link">
+            dexscreener.com
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+            </svg>
+          </a>
+        )}
+        {alert.contract_address && (
+          <button className="live-alert__copy" onClick={copy}>
+            {copied ? 'Copied' : alert.contract_address.slice(0, 6) + '...' + alert.contract_address.slice(-4)}
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function PostSkeleton() {
   return (
     <div className="post-card post-skeleton" aria-hidden>
@@ -728,10 +769,10 @@ export default function FeedPage({ onDMClick }: { onDMClick: (profile: Profile) 
   const { profile } = useAuth()
   const { theme, cycleTheme } = useTheme()
   const [posts, setPosts] = useState<Post[]>(readCachedPosts)
-  // Only show loading state when there's no cached data to display
   const [loading, setLoading] = useState(() => readCachedPosts().length === 0)
   const [composing, setComposing] = useState(false)
   const [quotePost, setQuotePost] = useState<QuoteRef | undefined>()
+  const [pinnedAlert, setPinnedAlert] = useState<PinnedAlert | null>(null)
 
   const refreshPosts = useCallback(async () => {
     const data = await getPosts()
@@ -744,6 +785,10 @@ export default function FeedPage({ onDMClick }: { onDMClick: (profile: Profile) 
       try { localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(posts.slice(0, 30))) } catch { /* ignore storage errors */ }
     }
   }, [posts])
+
+  useEffect(() => {
+    return subscribeToPinnedAlert(setPinnedAlert)
+  }, [])
 
   // Comment counts live on the post docs, so this subscription also fires
   // when someone comments — no separate comments listener needed.
@@ -823,6 +868,7 @@ export default function FeedPage({ onDMClick }: { onDMClick: (profile: Profile) 
       </header>
 
       <div className="feed">
+        {pinnedAlert && <LiveAlertCard alert={pinnedAlert}/>}
         {loading && [0, 1, 2].map(i => <PostSkeleton key={i}/>)}
         {!loading && posts.length === 0 && (
           <div className="feed__empty">No posts yet. Be the first!</div>
