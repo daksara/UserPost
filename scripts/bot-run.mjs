@@ -29,7 +29,6 @@ const WHALE_THRESHOLD    = parseFloat(process.env.WHALE_THRESHOLD_USD       ?? '
 const DEAD_VOL_THRESHOLD = parseFloat(process.env.DEAD_VOLUME_THRESHOLD_USD ?? '100')
 const DEAD_HOURS         = parseFloat(process.env.DEAD_HOURS_REQUIRED       ?? '24')
 const MIN_LIQUIDITY      = parseFloat(process.env.MIN_LIQUIDITY_USD         ?? '5000')
-const ALERT_COOLDOWN_MS  = 4 * 60 * 60 * 1000  // 4 hours
 
 // ── Types (JSDoc) ──────────────────────────────────────────────────
 
@@ -160,66 +159,61 @@ async function processToken(address) {
   const mc         = fmtMC(fdv)
   const mcLabel    = mc ? ` at ${mc}` : ''
 
-  const isDead     = volume24h < DEAD_VOL_THRESHOLD
+  const isDead      = volume24h < DEAD_VOL_THRESHOLD
   const firstDeadAt = isDead ? (prev?.firstDeadAt ?? now) : null
 
-  const canAlert = !prev?.lastAlertAt ||
-    (now.toMillis() - prev.lastAlertAt.toMillis()) > ALERT_COOLDOWN_MS
+  const deadMs    = prev?.firstDeadAt ? now.toMillis() - prev.firstDeadAt.toMillis() : 0
+  const deadHours = deadMs / (1000 * 60 * 60)
 
-  let alertType = null
+  let candidate = null
 
-  if (canAlert) {
-    const deadMs    = prev?.firstDeadAt ? now.toMillis() - prev.firstDeadAt.toMillis() : 0
-    const deadHours = deadMs / (1000 * 60 * 60)
-
-    // 1. DEAD TOKEN BUYER
-    if (prev?.firstDeadAt && deadHours >= DEAD_HOURS && volume1h > DEAD_VOL_THRESHOLD * 5) {
-      const deadDays = Math.floor(deadHours / 24)
-      const inactive = deadDays >= 1 ? `${deadDays}d inactive` : `${Math.floor(deadHours)}h inactive`
-      await setPinnedAlert(
-        'dead_token',
-        `Someone bought $${sym} in dead market${mcLabel}`,
-        `${inactive} · 1h vol ${fmt$(volume1h)} · liq ${fmt$(liq)}`,
-        pair.baseToken.address,
-        pair.url,
-        chain,
-      )
-      alertType = 'dead_token'
+  // 1. DEAD TOKEN BUYER
+  if (prev?.firstDeadAt && deadHours >= DEAD_HOURS && volume1h > DEAD_VOL_THRESHOLD * 5) {
+    const deadDays = Math.floor(deadHours / 24)
+    const inactive = deadDays >= 1 ? `${deadDays}d inactive` : `${Math.floor(deadHours)}h inactive`
+    candidate = {
+      type: 'dead_token',
+      score: volume1h * 3,
+      headline: `Someone bought $${sym} in dead market${mcLabel}`,
+      detail: `${inactive} · 1h vol ${fmt$(volume1h)} · liq ${fmt$(liq)}`,
+      contract_address: pair.baseToken.address,
+      link_url: pair.url,
+      chain,
     }
+  }
 
-    // 2. WHALE ALERT
-    else if (volume1h >= WHALE_THRESHOLD && change1h >= 1) {
-      await setPinnedAlert(
-        'whale',
-        `Whale buying $${sym}${mcLabel}`,
-        `${fmt$(volume1h)} in 1h · ${fmtPct(change1h)} · liq ${fmt$(liq)}`,
-        pair.baseToken.address,
-        pair.url,
-        chain,
-      )
-      alertType = 'whale'
+  // 2. WHALE ALERT
+  else if (volume1h >= WHALE_THRESHOLD && change1h >= 1) {
+    candidate = {
+      type: 'whale',
+      score: volume1h,
+      headline: `Whale buying $${sym}${mcLabel}`,
+      detail: `${fmt$(volume1h)} in 1h · ${fmtPct(change1h)} · liq ${fmt$(liq)}`,
+      contract_address: pair.baseToken.address,
+      link_url: pair.url,
+      chain,
     }
+  }
 
-    // 3. ACCUMULATION SIGNAL
-    else if (
-      prev &&
-      Math.abs(change24h) < 3 &&
-      volume24h > (prev.volume24h ?? 0) * 1.5 &&
-      buys24h > (prev.buys24h ?? 0) * 1.3 &&
-      volume24h > 1000
-    ) {
-      const growth = prev.volume24h > 0
-        ? `+${(((volume24h / prev.volume24h) - 1) * 100).toFixed(0)}%`
-        : 'rising'
-      await setPinnedAlert(
-        'accumulation',
-        `Someone buying $${sym} in accumulation${mcLabel}`,
-        `Vol ${growth} · ${buys24h.toLocaleString()} buys · liq ${fmt$(liq)}`,
-        pair.baseToken.address,
-        pair.url,
-        chain,
-      )
-      alertType = 'accumulation'
+  // 3. ACCUMULATION SIGNAL
+  else if (
+    prev &&
+    Math.abs(change24h) < 3 &&
+    volume24h > (prev.volume24h ?? 0) * 1.5 &&
+    buys24h > (prev.buys24h ?? 0) * 1.3 &&
+    volume24h > 1000
+  ) {
+    const growth = prev.volume24h > 0
+      ? `+${(((volume24h / prev.volume24h) - 1) * 100).toFixed(0)}%`
+      : 'rising'
+    candidate = {
+      type: 'accumulation',
+      score: volume24h * 0.3,
+      headline: `Someone buying $${sym} in accumulation${mcLabel}`,
+      detail: `Vol ${growth} · ${buys24h.toLocaleString()} buys · liq ${fmt$(liq)}`,
+      contract_address: pair.baseToken.address,
+      link_url: pair.url,
+      chain,
     }
   }
 
@@ -230,8 +224,9 @@ async function processToken(address) {
     buys24h,
     lastChecked: now,
     firstDeadAt,
-    ...(alertType ? { lastAlertAt: now, lastAlertType: alertType } : {}),
   }, { merge: true })
+
+  return candidate
 }
 
 // ── Main ───────────────────────────────────────────────────────────
@@ -251,9 +246,20 @@ async function main() {
     [...all].map(addr => processToken(addr))
   )
 
-  const ok     = results.filter(r => r.status === 'fulfilled').length
-  const failed = results.filter(r => r.status === 'rejected').length
-  console.log(`Done: ${ok} OK, ${failed} failed`)
+  const ok        = results.filter(r => r.status === 'fulfilled').length
+  const failed    = results.filter(r => r.status === 'rejected').length
+  const candidates = results
+    .filter(r => r.status === 'fulfilled' && r.value)
+    .map(r => r.value)
+
+  console.log(`Done: ${ok} OK, ${failed} failed, ${candidates.length} alert candidates`)
+
+  if (candidates.length > 0) {
+    const best = candidates.sort((a, b) => b.score - a.score)[0]
+    await setPinnedAlert(best.type, best.headline, best.detail, best.contract_address, best.link_url, best.chain)
+  } else {
+    console.log('No alert candidates this run')
+  }
 
   process.exit(0)
 }
