@@ -13,6 +13,10 @@ const CFG: Record<BadgeDisplayType, BadgeConfig> = {
       </svg>
     ),
   },
+  bot: {
+    label: 'Bot',
+    icon: <>BOT</>,
+  },
   partner: {
     label: 'Partner',
     icon: (
