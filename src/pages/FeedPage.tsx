@@ -270,7 +270,6 @@ function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment,
   const isGranter = myProfile?.is_verified === true
   const [, setTick] = useState(0)
   const [mentionQuery, setMentionQuery] = useState<string | null>(null)
-  const [mentionAnchorIdx, setMentionAnchorIdx] = useState(0)
   const commentInputRef = useRef<HTMLInputElement>(null)
 
   const knownUsers = useMemo(() => {
@@ -293,7 +292,6 @@ function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment,
     const match = before.match(/@(\w*)$/)
     if (match && match.index !== undefined) {
       setMentionQuery(match[1])
-      setMentionAnchorIdx(match.index)
     } else {
       setMentionQuery(null)
     }
