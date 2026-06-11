@@ -6,20 +6,13 @@ import { getFirestore, Timestamp } from 'firebase-admin/firestore'
 initializeApp()
 const db = getFirestore()
 
-// Konfigurasi via: firebase functions:config:set (atau .env di Functions v2)
 const BOT_UID = defineString('BOT_UID')
 const WHALE_THRESHOLD_USD = defineString('WHALE_THRESHOLD_USD', { default: '10000' })
 const DEAD_VOLUME_THRESHOLD_USD = defineString('DEAD_VOLUME_THRESHOLD_USD', { default: '100' })
 const DEAD_HOURS_REQUIRED = defineString('DEAD_HOURS_REQUIRED', { default: '24' })
+const MIN_LIQUIDITY_USD = defineString('MIN_LIQUIDITY_USD', { default: '5000' })
 
 // ── Types ──────────────────────────────────────────────────────────
-
-interface WatchlistToken {
-  address: string
-  chain: string
-  symbol?: string
-  name?: string
-}
 
 interface BotState {
   symbol: string
@@ -35,7 +28,7 @@ interface BotState {
   sells24h: number
   buys1h: number
   lastChecked: Timestamp
-  firstDeadAt?: Timestamp
+  firstDeadAt?: Timestamp | null
   lastAlertAt?: Timestamp
   lastAlertType?: string
 }
@@ -66,23 +59,73 @@ function formatChange(n: number): string {
   return (n >= 0 ? '+' : '') + n.toFixed(2) + '%'
 }
 
-async function fetchBestPair(address: string): Promise<DexPair | null> {
+async function dexGet<T>(url: string): Promise<T | null> {
   try {
-    const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${address}`, {
-      headers: { 'Accept': 'application/json' },
-    })
+    const res = await fetch(url, { headers: { Accept: 'application/json' } })
     if (!res.ok) return null
-    const data = await res.json() as { pairs?: DexPair[] }
-    if (!data.pairs?.length) return null
-    // Ambil pair dengan likuiditas tertinggi
-    return data.pairs.reduce((best, p) =>
-      (p.liquidity?.usd ?? 0) > (best.liquidity?.usd ?? 0) ? p : best
-    )
+    return await res.json() as T
   } catch (err) {
-    console.error(`fetchBestPair(${address}) error:`, err)
+    console.error(`dexGet(${url}) error:`, err)
     return null
   }
 }
+
+// ── Auto-discovery dari DexScreener (tanpa watchlist manual) ───────
+
+interface DexProfile {
+  tokenAddress: string
+  chainId: string
+}
+
+async function discoverTokens(): Promise<{ address: string; chainId: string }[]> {
+  const seen = new Map<string, string>() // address → chainId
+
+  // Sumber 1: Token yang baru-baru ini aktif / diberi profil di DexScreener
+  const profiles = await dexGet<DexProfile[]>(
+    'https://api.dexscreener.com/token-profiles/latest/v1'
+  )
+  if (Array.isArray(profiles)) {
+    for (const p of profiles.slice(0, 25)) {
+      if (p.tokenAddress) seen.set(p.tokenAddress.toLowerCase(), p.chainId)
+    }
+  }
+
+  // Sumber 2: Token yang sedang di-boost (populer di DexScreener)
+  const boosts = await dexGet<DexProfile[]>(
+    'https://api.dexscreener.com/token-boosts/top/v1'
+  )
+  if (Array.isArray(boosts)) {
+    for (const b of boosts.slice(0, 15)) {
+      if (b.tokenAddress) seen.set(b.tokenAddress.toLowerCase(), b.chainId)
+    }
+  }
+
+  return [...seen.entries()].map(([address, chainId]) => ({ address, chainId }))
+}
+
+// Ambil token yang pernah kita catat sebagai "mati" dari bot_state —
+// ini untuk mendeteksi dead token revival setelah bot sudah berjalan beberapa saat
+async function getTrackedDeadTokens(): Promise<string[]> {
+  const snap = await db
+    .collection('bot_state')
+    .where('firstDeadAt', '!=', null)
+    .limit(20)
+    .get()
+  return snap.docs.map(d => d.id)
+}
+
+// Fetch pair terbaik (likuiditas tertinggi) untuk satu token address
+async function fetchBestPair(address: string): Promise<DexPair | null> {
+  const data = await dexGet<{ pairs?: DexPair[] }>(
+    `https://api.dexscreener.com/latest/dex/tokens/${address}`
+  )
+  if (!data?.pairs?.length) return null
+  return data.pairs.reduce((best, p) =>
+    (p.liquidity?.usd ?? 0) > (best.liquidity?.usd ?? 0) ? p : best
+  )
+}
+
+// ── Kirim post sebagai bot ─────────────────────────────────────────
 
 async function postAsBot(
   botUid: string,
@@ -103,17 +146,25 @@ async function postAsBot(
   })
 }
 
-// ── Alert deteksi per token ────────────────────────────────────────
+// ── Proses satu token: cek kondisi, posting alert kalau perlu ──────
 
 async function processToken(
-  token: WatchlistToken,
+  address: string,
   botUid: string,
-  config: { whaleThreshold: number; deadVolumeThreshold: number; deadHoursRequired: number },
+  config: {
+    whaleThreshold: number
+    deadVolumeThreshold: number
+    deadHoursRequired: number
+    minLiquidity: number
+  },
 ): Promise<void> {
-  const pair = await fetchBestPair(token.address)
+  const pair = await fetchBestPair(address)
   if (!pair) return
 
-  const stateRef = db.collection('bot_state').doc(token.address.toLowerCase())
+  // Filter token tanpa cukup likuiditas — hindari scam/honeypot
+  if ((pair.liquidity?.usd ?? 0) < config.minLiquidity) return
+
+  const stateRef = db.collection('bot_state').doc(address.toLowerCase())
   const stateSnap = await stateRef.get()
   const prev = stateSnap.exists ? (stateSnap.data() as BotState) : null
 
@@ -129,46 +180,39 @@ async function processToken(
   const sells24h = pair.txns?.h24?.sells ?? 0
   const buys1h = pair.txns?.h1?.buys ?? 0
 
-  // Lacak kapan token pertama kali "mati" (volume < threshold)
+  // Lacak kapan token pertama kali "mati"
   const isDead = volume24h < config.deadVolumeThreshold
-  let firstDeadAt: Timestamp | undefined
-  if (isDead) {
-    firstDeadAt = prev?.firstDeadAt ?? now
-  }
+  const firstDeadAt = isDead ? (prev?.firstDeadAt ?? now) : null
 
-  // Cooldown 4 jam per token — hindari spam alert yang sama
+  // Cooldown 4 jam per token agar tidak spam
   const alertCooldownMs = 4 * 60 * 60 * 1000
-  const canAlert = !prev?.lastAlertAt ||
-    (now.toMillis() - prev.lastAlertAt.toMillis()) > alertCooldownMs
+  const canAlert =
+    !prev?.lastAlertAt ||
+    now.toMillis() - prev.lastAlertAt.toMillis() > alertCooldownMs
 
   let alertType: string | null = null
 
   if (canAlert) {
-    const prevWasDead = !!prev?.firstDeadAt
     const deadMs = prev?.firstDeadAt
-      ? now.toMillis() - prev.firstDeadAt.toMillis()
+      ? now.toMillis() - (prev.firstDeadAt as Timestamp).toMillis()
       : 0
     const deadHours = deadMs / (1000 * 60 * 60)
 
-    // 1. DEAD TOKEN BUYER
-    // Token tidak aktif cukup lama, lalu tiba-tiba ada aktivitas beli
-    if (prevWasDead && deadHours >= config.deadHoursRequired && volume1h > config.deadVolumeThreshold * 5) {
+    // 1. DEAD TOKEN BUYER — token lama tidak aktif, tiba-tiba ada yang beli
+    if (prev?.firstDeadAt && deadHours >= config.deadHoursRequired && volume1h > config.deadVolumeThreshold * 5) {
       const deadDays = Math.floor(deadHours / 24)
-      const deadLabel = deadDays >= 1
-        ? `${deadDays} hari tidak aktif`
-        : `${Math.floor(deadHours)} jam tidak aktif`
+      const deadLabel = deadDays >= 1 ? `${deadDays} hari` : `${Math.floor(deadHours)} jam`
       const body = [
         '[DEAD TOKEN BUYER]',
         `$${sym} — ${name}`,
         `Volume (1j): ${formatUsd(volume1h)}  |  Harga: $${priceUsd.toPrecision(4)} (${formatChange(priceChange1h)})`,
-        `Token ${deadLabel}, sinyal beli pertama terdeteksi.`,
+        `Token tidak aktif selama ${deadLabel}, sinyal beli pertama terdeteksi.`,
       ].join('\n')
-      await postAsBot(botUid, body, token.address, pair.url)
+      await postAsBot(botUid, body, pair.baseToken.address, pair.url)
       alertType = 'dead_token'
     }
 
-    // 2. WHALE ALERT
-    // Volume 1 jam melampaui threshold + harga naik signifikan
+    // 2. WHALE ALERT — volume 1 jam besar + harga naik signifikan
     else if (volume1h >= config.whaleThreshold && priceChange1h >= 2) {
       const body = [
         '[WHALE ALERT]',
@@ -176,12 +220,11 @@ async function processToken(
         `Volume (1j): ${formatUsd(volume1h)}  |  Harga: $${priceUsd.toPrecision(4)} (${formatChange(priceChange1h)})`,
         `Beli/Jual (24j): ${buys24h} / ${sells24h}`,
       ].join('\n')
-      await postAsBot(botUid, body, token.address, pair.url)
+      await postAsBot(botUid, body, pair.baseToken.address, pair.url)
       alertType = 'whale'
     }
 
-    // 3. SIDEWAYS ACCUMULATION
-    // Harga flat tapi volume dan jumlah beli naik signifikan
+    // 3. ACCUMULATION SIGNAL — harga flat, volume & jumlah beli naik
     else if (
       prev &&
       Math.abs(priceChange24h) < 3 &&
@@ -189,21 +232,22 @@ async function processToken(
       buys24h > (prev.buys24h ?? 0) * 1.3 &&
       volume24h > 1000
     ) {
-      const volGrowth = prev.volume24h > 0
-        ? `+${(((volume24h / prev.volume24h) - 1) * 100).toFixed(0)}%`
-        : 'naik'
+      const volGrowth =
+        prev.volume24h > 0
+          ? `+${(((volume24h / prev.volume24h) - 1) * 100).toFixed(0)}%`
+          : 'naik'
       const body = [
         '[ACCUMULATION SIGNAL]',
         `$${sym} — ${name}`,
         `Harga (24j): ${formatChange(priceChange24h)}  |  Volume (24j): ${formatUsd(volume24h)} (${volGrowth})`,
-        `Harga bergerak sideways, jumlah beli meningkat — kemungkinan akumulasi.`,
+        `Harga sideways, jumlah beli meningkat — kemungkinan akumulasi.`,
       ].join('\n')
-      await postAsBot(botUid, body, token.address, pair.url)
+      await postAsBot(botUid, body, pair.baseToken.address, pair.url)
       alertType = 'accumulation'
     }
   }
 
-  // Simpan state terbaru
+  // Simpan state terbaru ke Firestore
   const newState: Partial<BotState> = {
     symbol: sym,
     name,
@@ -218,7 +262,7 @@ async function processToken(
     sells24h,
     buys1h,
     lastChecked: now,
-    ...(firstDeadAt ? { firstDeadAt } : { firstDeadAt: null }),
+    firstDeadAt,
     ...(alertType ? { lastAlertAt: now, lastAlertType: alertType } : {}),
   }
   await stateRef.set(newState, { merge: true })
@@ -229,41 +273,44 @@ async function processToken(
 export const pollMarketAlerts = onSchedule(
   {
     schedule: 'every 5 minutes',
-    timeoutSeconds: 120,
-    memory: '256MiB',
+    timeoutSeconds: 240,
+    memory: '512MiB',
   },
   async () => {
     const botUid = BOT_UID.value()
     if (!botUid) {
-      console.error('BOT_UID belum dikonfigurasi. Jalankan: firebase functions:secrets:set BOT_UID')
+      console.error('BOT_UID belum diset. Jalankan: firebase functions:secrets:set BOT_UID')
       return
     }
 
-    const whaleThreshold = parseFloat(WHALE_THRESHOLD_USD.value())
-    const deadVolumeThreshold = parseFloat(DEAD_VOLUME_THRESHOLD_USD.value())
-    const deadHoursRequired = parseFloat(DEAD_HOURS_REQUIRED.value())
-
-    // Baca watchlist dari Firestore: bot_config/watchlist { tokens: [...] }
-    const watchlistSnap = await db.collection('bot_config').doc('watchlist').get()
-    if (!watchlistSnap.exists) {
-      console.log('Watchlist belum ada. Buat dokumen bot_config/watchlist dengan field tokens: []')
-      return
+    const config = {
+      whaleThreshold: parseFloat(WHALE_THRESHOLD_USD.value()),
+      deadVolumeThreshold: parseFloat(DEAD_VOLUME_THRESHOLD_USD.value()),
+      deadHoursRequired: parseFloat(DEAD_HOURS_REQUIRED.value()),
+      minLiquidity: parseFloat(MIN_LIQUIDITY_USD.value()),
     }
 
-    const tokens: WatchlistToken[] = watchlistSnap.data()?.tokens ?? []
-    if (tokens.length === 0) {
-      console.log('Watchlist kosong. Tambahkan token di Firestore: bot_config/watchlist')
-      return
-    }
+    // Kumpulkan token dari 2 sumber:
+    // 1. Auto-discovery dari DexScreener (token baru / boosted)
+    // 2. Token yang sudah kita catat sebagai "mati" sebelumnya
+    const [discovered, deadTokenAddresses] = await Promise.all([
+      discoverTokens(),
+      getTrackedDeadTokens(),
+    ])
 
-    console.log(`Memproses ${tokens.length} token dari watchlist...`)
+    // Gabungkan, hindari duplikat
+    const allAddresses = new Set<string>(discovered.map(t => t.address))
+    for (const addr of deadTokenAddresses) allAddresses.add(addr)
 
-    // Proses semua token secara paralel, error satu tidak hentikan yang lain
+    console.log(`Memproses ${allAddresses.size} token (${discovered.length} discovery + ${deadTokenAddresses.length} tracked dead)`)
+
+    // Proses semua token secara paralel
     const results = await Promise.allSettled(
-      tokens.map(t => processToken(t, botUid, { whaleThreshold, deadVolumeThreshold, deadHoursRequired }))
+      [...allAddresses].map(addr => processToken(addr, botUid, config))
     )
 
     const failed = results.filter(r => r.status === 'rejected').length
     if (failed > 0) console.warn(`${failed} token gagal diproses`)
+    console.log(`Selesai. ${results.length - failed}/${results.length} token berhasil.`)
   }
 )

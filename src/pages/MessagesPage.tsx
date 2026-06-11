@@ -423,7 +423,7 @@ function SwipeableConvoItem({
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
             onClick={() => { setShowConfirm(false); setOffsetX(0) }}
-            style={{ flex: 1, padding: '9px', borderRadius: 'var(--radius-xs)', border: '1.5px solid var(--border)', background: 'none', fontWeight: 600, fontSize: '0.85rem' }}
+            style={{ flex: 1, padding: '9px', borderRadius: 'var(--radius-xs)', border: '1.5px solid var(--border)', background: 'none', color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.85rem' }}
           >Cancel</button>
           <button
             onClick={onDelete}

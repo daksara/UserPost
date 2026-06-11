@@ -64,11 +64,10 @@ async function main() {
   })
   console.log(`Profile bot dibuat dengan badge_type: "bot"`)
 
-  // 4. Buat watchlist kosong
-  await db.collection('bot_config').doc('watchlist').set({
-    tokens: [],
-  }, { merge: true })
-  console.log('Dokumen bot_config/watchlist dibuat (kosong)')
+  // 4. Buat koleksi bot_state kosong (akan terisi otomatis saat function berjalan)
+  await db.collection('bot_state').doc('_init').set({ ready: true })
+  await db.collection('bot_state').doc('_init').delete()
+  console.log('Koleksi bot_state siap')
 
   console.log('\n=== SELESAI ===')
   console.log(`Bot UID: ${uid}`)
@@ -76,11 +75,11 @@ async function main() {
   console.log(`1. Set BOT_UID di Firebase Functions params:`)
   console.log(`   firebase functions:secrets:set BOT_UID`)
   console.log(`   (masukkan: ${uid})`)
-  console.log('2. Tambahkan token ke bot_config/watchlist di Firestore Console:')
-  console.log('   tokens: [{ address: "0x...", chain: "ethereum" }]')
-  console.log('3. Deploy functions:')
+  console.log('2. Deploy functions:')
+  console.log('   cd functions && npm install && npm run build')
   console.log('   cd functions && npm install && npm run build')
   console.log('   cd .. && firebase deploy --only functions')
+  console.log('3. Bot akan otomatis ambil token dari DexScreener — tidak perlu input manual.')
 }
 
 main().catch(console.error)

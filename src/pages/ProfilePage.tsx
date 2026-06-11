@@ -494,7 +494,7 @@ export default function ProfilePage({ active = true }: { active?: boolean }) {
               <img
                 src={photoPreview || photoUrl || getAvatarUrl(profile.username)}
                 alt="preview"
-                style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', background: '#eeeeff', border: '2px solid var(--border)' }}
+                style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', background: 'var(--accent-soft)', border: '2px solid var(--border)' }}
                 onError={(e) => { (e.currentTarget as HTMLImageElement).src = getAvatarUrl(profile.username) }}
               />
               <button

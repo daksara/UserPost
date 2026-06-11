@@ -82,7 +82,7 @@ body {
   -webkit-touch-callout: none;
 }
 
-button { font-family: var(--font); cursor: pointer; }
+button { font-family: var(--font); cursor: pointer; color: inherit; }
 input, textarea {
   font-family: var(--font);
   color: var(--text-primary);
@@ -1161,7 +1161,7 @@ span.badge-bot { padding: 3px 7px; }
   border-radius: 50%;
   object-fit: cover;
   margin-bottom: 8px;
-  background: #eeeeff;
+  background: var(--accent-soft);
   box-shadow: 0 0 0 3px var(--bg-card), 0 0 0 5px var(--border);
 }
 
