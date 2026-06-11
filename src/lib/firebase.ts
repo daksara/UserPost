@@ -137,6 +137,15 @@ export interface Message {
   reply_to?: Message | null
 }
 
+export interface PinnedAlert {
+  type: 'whale' | 'dead_token' | 'accumulation'
+  headline: string
+  detail: string
+  contract_address: string | null
+  link_url: string | null
+  updated_at: string
+}
+
 // ── Helpers ────────────────────────────────────────────────────────
 
 function tsToISO(ts: Timestamp | null | undefined): string {
@@ -518,6 +527,23 @@ export function subscribeToActivePosts(
     clearInterval(refresh)
     unsubSnapshot()
   }
+}
+
+export function subscribeToPinnedAlert(
+  onAlert: (alert: PinnedAlert | null) => void
+): Unsubscribe {
+  return onSnapshot(doc(db, 'pinned_feed', 'live'), (snap) => {
+    if (!snap.exists()) { onAlert(null); return }
+    const d = snap.data()
+    onAlert({
+      type: d.type,
+      headline: d.headline,
+      detail: d.detail,
+      contract_address: d.contract_address ?? null,
+      link_url: d.link_url ?? null,
+      updated_at: tsToISO(d.updated_at),
+    })
+  })
 }
 
 export function subscribeToConversation(
