@@ -704,10 +704,19 @@ function readCachedPosts(): Post[] {
   } catch { return [] }
 }
 
+const CHAIN_LABEL: Record<string, string> = {
+  solana: 'SOL', ethereum: 'ETH', bsc: 'BSC',
+  base: 'BASE', arbitrum: 'ARB', polygon: 'POL',
+  avalanche: 'AVAX', blast: 'BLAST',
+}
+
 function LiveAlertCard({ alert }: { alert: PinnedAlert }) {
   const [copied, setCopied] = useState(false)
   const typeLabel = { whale: 'WHALE', dead_token: 'DEAD TOKEN', accumulation: 'ACCUMULATION' }[alert.type]
   const typeCls   = { whale: 'live-alert--whale', dead_token: 'live-alert--dead', accumulation: 'live-alert--accum' }[alert.type]
+  const chainLabel = alert.chain
+    ? (CHAIN_LABEL[alert.chain] ?? alert.chain.toUpperCase().slice(0, 5))
+    : null
 
   const copy = () => {
     if (!alert.contract_address) return
@@ -722,6 +731,7 @@ function LiveAlertCard({ alert }: { alert: PinnedAlert }) {
         <span className="live-alert__dot"/>
         <span className="live-alert__live">LIVE</span>
         <span className="live-alert__type">{typeLabel}</span>
+        {chainLabel && <span className="live-alert__chain">{chainLabel}</span>}
         <span className="live-alert__ago">{timeAgo(alert.updated_at)}</span>
       </div>
       <div className="live-alert__headline">{alert.headline}</div>
@@ -868,7 +878,7 @@ export default function FeedPage({ onDMClick }: { onDMClick: (profile: Profile) 
       </header>
 
       <div className="feed">
-        {pinnedAlert && <LiveAlertCard alert={pinnedAlert}/>}
+        {pinnedAlert && <LiveAlertCard key={pinnedAlert.updated_at} alert={pinnedAlert}/>}
         {loading && [0, 1, 2].map(i => <PostSkeleton key={i}/>)}
         {!loading && posts.length === 0 && (
           <div className="feed__empty">No posts yet. Be the first!</div>

@@ -121,11 +121,12 @@ async function fetchBestPair(address) {
 
 // ── Update pinned live alert ───────────────────────────────────────
 
-async function setPinnedAlert(type, headline, detail, contractAddress, linkUrl) {
+async function setPinnedAlert(type, headline, detail, contractAddress, linkUrl, chain) {
   await db.collection('pinned_feed').doc('live').set({
     type,
     headline,
     detail,
+    chain: chain ?? null,
     contract_address: contractAddress ?? null,
     link_url: linkUrl ?? null,
     updated_at: Timestamp.now(),
@@ -153,6 +154,8 @@ async function processToken(address) {
   const change1h   = pair.priceChange?.h1  ?? 0
   const buys24h    = pair.txns?.h24?.buys  ?? 0
   const fdv        = pair.fdv              ?? 0
+  const liq        = pair.liquidity?.usd   ?? 0
+  const chain      = pair.chainId
 
   const mc         = fmtMC(fdv)
   const mcLabel    = mc ? ` at ${mc}` : ''
@@ -176,9 +179,10 @@ async function processToken(address) {
       await setPinnedAlert(
         'dead_token',
         `Someone bought $${sym} in dead market${mcLabel}`,
-        `${inactive} · 1h vol ${fmt$(volume1h)} · $${priceUsd.toPrecision(4)}`,
+        `${inactive} · 1h vol ${fmt$(volume1h)} · liq ${fmt$(liq)}`,
         pair.baseToken.address,
         pair.url,
+        chain,
       )
       alertType = 'dead_token'
     }
@@ -188,9 +192,10 @@ async function processToken(address) {
       await setPinnedAlert(
         'whale',
         `Whale buying $${sym}${mcLabel}`,
-        `${fmt$(volume1h)} in 1h · ${fmtPct(change1h)} · ${buys24h.toLocaleString()} buys`,
+        `${fmt$(volume1h)} in 1h · ${fmtPct(change1h)} · liq ${fmt$(liq)}`,
         pair.baseToken.address,
         pair.url,
+        chain,
       )
       alertType = 'whale'
     }
@@ -209,9 +214,10 @@ async function processToken(address) {
       await setPinnedAlert(
         'accumulation',
         `Someone buying $${sym} in accumulation${mcLabel}`,
-        `Vol ${growth} · ${buys24h.toLocaleString()} buys · price ${fmtPct(change24h)}`,
+        `Vol ${growth} · ${buys24h.toLocaleString()} buys · liq ${fmt$(liq)}`,
         pair.baseToken.address,
         pair.url,
+        chain,
       )
       alertType = 'accumulation'
     }
