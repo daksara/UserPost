@@ -130,20 +130,25 @@ function SwipeableMessage({ isOwn, canReply, canDelete, onReply, onDelete, child
 }
 
 // ── Thread View ────────────────────────────────────────────────────
+// renderKey: pesan confirmed pengganti pesan optimistic memakai key React
+// milik optimistic-nya supaya bubble tidak remount (remount = animasi
+// replay = terlihat kedip)
+type ThreadMessage = Message & { renderKey?: string }
+
 function ThreadView({ partner, myProfile, onBack }: {
   partner: Profile
   myProfile: Profile
   onBack: () => void
 }) {
   const threadCacheKey = `thread:${convoId(myProfile.id, partner.id)}`
-  const [messages, setMessages] = useState<Message[]>(() => readMsgCache<Message[]>(threadCacheKey) ?? [])
+  const [messages, setMessages] = useState<ThreadMessage[]>(() => readMsgCache<ThreadMessage[]>(threadCacheKey) ?? [])
   const [text, setText] = useState('')
   const [replyTo, setReplyTo] = useState<Message | null>(null)
-  const [showTyping, setShowTyping] = useState(false)
-  const [typingExiting, setTypingExiting] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const initializedRef = useRef(false)
+  // Alias id-confirmed → id-optimistic, bertahan antar snapshot
+  const idAliasRef = useRef(new Map<string, string>())
 
   const isNearBottom = () => {
     const el = containerRef.current
@@ -153,13 +158,38 @@ function ThreadView({ partner, myProfile, onBack }: {
 
   useEffect(() => {
     initializedRef.current = false
+    idAliasRef.current = new Map()
     // Pesan dari cache sudah ter-render — langsung posisikan di pesan terakhir
     bottomRef.current?.scrollIntoView({ behavior: 'instant' as ScrollBehavior })
     const unsub = subscribeToConversation(myProfile.id, partner.id, (msgs) => {
-      setMessages(msgs)
+      const firstSnapshot = !initializedRef.current
+      setMessages(prev => {
+        // Pertahankan pesan optimistic yang belum terkonfirmasi; yang sudah
+        // muncul sebagai pesan asli di-alias key-nya agar tidak dobel/kedip
+        const prevIds = new Set(prev.map(m => m.id))
+        const aliases = idAliasRef.current
+        const pending: ThreadMessage[] = []
+        for (const p of prev) {
+          if (!p.id.startsWith('opt-')) continue
+          const confirmed = msgs.find(c =>
+            c.from_id === myProfile.id && c.body === p.body &&
+            !prevIds.has(c.id) && !aliases.has(c.id)
+          )
+          if (confirmed) aliases.set(confirmed.id, p.id)
+          else pending.push(p)
+        }
+        const withKeys: ThreadMessage[] = msgs.map(m =>
+          aliases.has(m.id) ? { ...m, renderKey: aliases.get(m.id) } : m
+        )
+        return [...withKeys, ...pending]
+      })
+      // Tandai read hanya saat memang ada pesan masuk yang belum dibaca —
+      // memanggil tiap snapshot memicu siklus write→snapshot→render ekstra.
       // May fail when the inbox entry doesn't exist yet (brand-new thread)
-      markMessagesRead(myProfile.id, partner.id).catch(() => {})
-      if (!initializedRef.current) {
+      if (firstSnapshot || msgs.some(m => m.to_id === myProfile.id && !m.read_at)) {
+        markMessagesRead(myProfile.id, partner.id).catch(() => {})
+      }
+      if (firstSnapshot) {
         initializedRef.current = true
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'instant' as ScrollBehavior }), 100)
       } else if (isNearBottom()) {
@@ -172,7 +202,10 @@ function ThreadView({ partner, myProfile, onBack }: {
   // Simpan 50 pesan terakhir agar thread langsung tampil saat dibuka lagi
   useEffect(() => {
     const confirmed = messages.filter(m => !m.id.startsWith('opt-'))
-    if (confirmed.length > 0) writeMsgCache(threadCacheKey, confirmed.slice(-50))
+    // renderKey tidak ikut disimpan — hanya relevan untuk sesi render ini
+    if (confirmed.length > 0) {
+      writeMsgCache(threadCacheKey, confirmed.slice(-50).map(m => ({ ...m, renderKey: undefined })))
+    }
   }, [messages, threadCacheKey])
 
   const handleSend = async () => {
@@ -182,19 +215,29 @@ function ThreadView({ partner, myProfile, onBack }: {
     setText('')
     setReplyTo(null)
 
-    setShowTyping(true)
+    // Optimistic: bubble langsung tampil tanpa menunggu round-trip server.
+    // Snapshot berikutnya membawa pesan asli yang di-alias ke id ini.
+    const optimistic: Message = {
+      id: `opt-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      from_id: myProfile.id,
+      to_id: partner.id,
+      body: trimmed,
+      reply_to_id: replyToMsg?.id ?? null,
+      read_at: null,
+      deleted_at: null,
+      created_at: new Date().toISOString(),
+      from_profile: myProfile,
+      to_profile: partner,
+      reply_to: replyToMsg ?? null,
+    }
+    setMessages(prev => [...prev, optimistic])
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
-
-    await new Promise<void>(r => setTimeout(r, 600))
-    setTypingExiting(true)
-    await new Promise<void>(r => setTimeout(r, 180))
-    setShowTyping(false)
-    setTypingExiting(false)
 
     try {
       await sendMessage(myProfile.id, partner.id, trimmed, replyToMsg?.id)
-      // Subscription brings the real message — no optimistic needed
     } catch {
+      // Gagal kirim: cabut bubble optimistic & kembalikan draft
+      setMessages(prev => prev.filter(m => m.id !== optimistic.id))
       setText(trimmed)
       setReplyTo(replyToMsg)
     }
@@ -229,7 +272,7 @@ function ThreadView({ partner, myProfile, onBack }: {
           const isOwn = msg.from_id === myProfile.id
           return (
             <SwipeableMessage
-              key={msg.id}
+              key={msg.renderKey ?? msg.id}
               isOwn={isOwn}
               canReply={true}
               canDelete={isOwn}
@@ -259,21 +302,6 @@ function ThreadView({ partner, myProfile, onBack }: {
             </SwipeableMessage>
           )
         })}
-        {showTyping && (
-          <div
-            className="bubble-wrap bubble-wrap--own"
-            style={typingExiting ? {
-              opacity: 0,
-              transform: 'scale(0.88) translateX(10px)',
-              transition: 'opacity 0.18s ease, transform 0.18s ease',
-              animation: 'none',
-            } : undefined}
-          >
-            <div className="bubble bubble--own bubble--typing">
-              <span className="typing-dot"/><span className="typing-dot"/><span className="typing-dot"/>
-            </div>
-          </div>
-        )}
         <div ref={bottomRef}/>
       </div>
 
@@ -504,9 +532,15 @@ export default function MessagesPage({ initialDM }: { initialDM?: Profile }) {
     })
   }
 
+  // Snapshot inbox bisa beruntun (pesan baru mengubah dua dokumen + status
+  // read) — tanpa guard, fetch yang lambat bisa menimpa hasil yang lebih baru
+  // dan list "mundur" sesaat ke data lama
+  const fetchSeq = useRef(0)
   const fetchConvos = useCallback(async () => {
     if (!profile) return
+    const seq = ++fetchSeq.current
     const data = await getConversationList(profile.id)
+    if (seq !== fetchSeq.current) return
     setConvos(data)
     setLoaded(true)
     writeMsgCache(`inbox:${profile.id}`, data)
@@ -525,6 +559,11 @@ export default function MessagesPage({ initialDM }: { initialDM?: Profile }) {
     return <ThreadView partner={activePartner} myProfile={profile} onBack={() => setActivePartner(null)}/>
   }
 
+  const visibleConvos = convos.filter(msg => {
+    const partner = msg.from_id === profile.id ? msg.to_profile : msg.from_profile
+    return !hiddenConvos.has(partner.id)
+  })
+
   return (
     <div className="page">
       <header className="page-header">
@@ -538,30 +577,23 @@ export default function MessagesPage({ initialDM }: { initialDM?: Profile }) {
 
       <div className="convo-list">
         {!loaded && convos.length === 0 && [0, 1, 2].map(i => <ConvoSkeleton key={i}/>)}
-        {loaded && convos.filter(msg => {
-          const partner = msg.from_id === profile.id ? msg.to_profile : msg.from_profile
-          return !hiddenConvos.has(partner.id)
-        }).length === 0 && (
+        {loaded && visibleConvos.length === 0 && (
           <div className="feed__empty">No messages yet.</div>
         )}
-        {convos
-          .filter(msg => {
-            const partner = msg.from_id === profile.id ? msg.to_profile : msg.from_profile
-            return !hiddenConvos.has(partner.id)
-          })
-          .map(msg => {
-            const partner = msg.from_id === profile.id ? msg.to_profile : msg.from_profile
-            return (
-              <SwipeableConvoItem
-                key={msg.id}
-                msg={msg}
-                profileId={profile.id}
-                onOpen={() => setActivePartner(partner)}
-                onDelete={() => hideConvo(partner.id)}
-              />
-            )
-          })
-        }
+        {visibleConvos.map(msg => {
+          const partner = msg.from_id === profile.id ? msg.to_profile : msg.from_profile
+          return (
+            <SwipeableConvoItem
+              // Key per-partner, BUKAN per-pesan-terakhir: id pesan berubah
+              // tiap pesan baru → item remount → animasi masuk replay (kedip)
+              key={partner.id}
+              msg={msg}
+              profileId={profile.id}
+              onOpen={() => setActivePartner(partner)}
+              onDelete={() => hideConvo(partner.id)}
+            />
+          )
+        })}
       </div>
 
       {composingDM && (
