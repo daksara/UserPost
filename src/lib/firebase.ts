@@ -500,7 +500,8 @@ export async function toggleLike(
 // time, so the snapshot handler re-filters by the current clock and the
 // subscription is recreated periodically to refresh the cutoff.
 export function subscribeToActivePosts(
-  onPosts: (posts: Post[]) => void
+  onPosts: (posts: Post[]) => void,
+  onError?: (error: Error) => void
 ): Unsubscribe {
   let version = 0
   let unsubSnapshot: Unsubscribe = () => {}
@@ -517,9 +518,14 @@ export function subscribeToActivePosts(
       ),
       async (snap) => {
         const v = ++version
-        const posts = await hydratePosts(snap.docs)
-        if (v === version) onPosts(posts)
-      }
+        try {
+          const posts = await hydratePosts(snap.docs)
+          if (v === version) onPosts(posts)
+        } catch (err) {
+          if (v === version) onError?.(err as Error)
+        }
+      },
+      (err) => onError?.(err)
     )
   }
 
@@ -536,7 +542,8 @@ export function subscribeToActivePosts(
 const PINNED_ALERT_TTL_MS = 24 * 60 * 60 * 1000
 
 export function subscribeToPinnedAlerts(
-  onAlerts: (alerts: PinnedAlert[]) => void
+  onAlerts: (alerts: PinnedAlert[]) => void,
+  onError?: (error: Error) => void
 ): Unsubscribe {
   return onSnapshot(collection(db, 'pinned_feed'), (snap) => {
     const alerts: PinnedAlert[] = []
@@ -560,7 +567,7 @@ export function subscribeToPinnedAlerts(
     }
     alerts.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
     onAlerts(alerts)
-  })
+  }, (err) => onError?.(err))
 }
 
 export function subscribeToConversation(
