@@ -1,5 +1,5 @@
 // src/pages/MessagesPage.tsx
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { Fragment, useState, useEffect, useRef, useCallback } from 'react'
 import {
   getConversationList, sendMessage, markMessagesRead,
   softDeleteMessage, getUserByUsername, subscribeToConversation, subscribeToInbox,
@@ -52,10 +52,61 @@ function ConvoSkeleton() {
   )
 }
 
+// ── Helper waktu untuk thread ──────────────────────────────────────
+// Pesan beruntun dari pengirim sama dalam jeda ini dirangkai jadi satu grup
+const GROUP_GAP_MS = 4 * 60 * 1000
+
+const sameDay = (a: string, b: string) => new Date(a).toDateString() === new Date(b).toDateString()
+
+const closeInTime = (a: Message, b: Message) =>
+  Math.abs(new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) < GROUP_GAP_MS
+
+function fmtTime(iso: string) {
+  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+function dayLabel(iso: string) {
+  const d = new Date(iso)
+  const now = new Date()
+  const startOf = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime()
+  const diffDays = Math.round((startOf(now) - startOf(d)) / 86_400_000)
+  if (diffDays === 0) return 'Today'
+  if (diffDays === 1) return 'Yesterday'
+  return d.toLocaleDateString([], {
+    day: 'numeric', month: 'short',
+    ...(d.getFullYear() !== now.getFullYear() ? { year: 'numeric' } : {}),
+  })
+}
+
+// Status pesan sendiri: jam (mengirim) → ✓ (terkirim) → ✓✓ aksen (dibaca)
+function DeliveryStatus({ msg }: { msg: Message }) {
+  if (msg.id.startsWith('opt-')) {
+    return (
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-label="Sending">
+        <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+      </svg>
+    )
+  }
+  const read = !!msg.read_at
+  return (
+    <svg
+      width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+      style={{ color: read ? 'var(--accent)' : undefined }}
+      aria-label={read ? 'Read' : 'Sent'}
+    >
+      <path d="M1.5 12.5l4.5 4.5L15 8"/>
+      {read && <path d="M9.5 15.5l1.5 1.5L22 6.5"/>}
+    </svg>
+  )
+}
+
 // ── Swipeable Message Bubble ───────────────────────────────────────
 // Swipe right to reply, swipe left to delete (own messages) — no buttons
-function SwipeableMessage({ isOwn, canReply, canDelete, onReply, onDelete, children }: {
+function SwipeableMessage({ isOwn, cont, animate, canReply, canDelete, onReply, onDelete, children }: {
   isOwn: boolean
+  cont: boolean      // lanjutan grup pengirim yang sama → rapat ke atas
+  animate: boolean   // hanya pesan baru yang dianimasikan, histori tidak
   canReply: boolean
   canDelete: boolean
   onReply: () => void
@@ -102,7 +153,7 @@ function SwipeableMessage({ isOwn, canReply, canDelete, onReply, onDelete, child
 
   return (
     <div
-      className={`bubble-wrap ${isOwn ? 'bubble-wrap--own' : ''}`}
+      className={`bubble-wrap ${isOwn ? 'bubble-wrap--own' : ''}${cont ? ' bubble-wrap--cont' : ''}${animate ? ' bubble-wrap--anim' : ''}`}
       style={{ position: 'relative' }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
@@ -144,16 +195,31 @@ function ThreadView({ partner, myProfile, onBack }: {
   const [messages, setMessages] = useState<ThreadMessage[]>(() => readMsgCache<ThreadMessage[]>(threadCacheKey) ?? [])
   const [text, setText] = useState('')
   const [replyTo, setReplyTo] = useState<Message | null>(null)
+  // Histori (cache + snapshot pertama) tampil tenang tanpa animasi — hanya
+  // pesan yang datang setelah thread terbuka yang dianimasikan. Set ini
+  // dimutasi langsung (bukan via setState) karena tidak perlu memicu render.
+  const [staticIds] = useState(() => new Set((readMsgCache<ThreadMessage[]>(threadCacheKey) ?? []).map(m => m.id)))
+  // Tombol "ke bawah" + badge jumlah pesan baru saat user sedang scroll ke atas
+  const [atBottom, setAtBottom] = useState(true)
+  const [unseenCount, setUnseenCount] = useState(0)
   const bottomRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const initializedRef = useRef(false)
   // Alias id-confirmed → id-optimistic, bertahan antar snapshot
   const idAliasRef = useRef(new Map<string, string>())
+  // Id pesan yang sudah ter-render — untuk menghitung pesan baru dari partner
+  const knownIdsRef = useRef<Set<string>>(new Set())
 
   const isNearBottom = () => {
     const el = containerRef.current
     if (!el) return true
     return el.scrollHeight - el.scrollTop - el.clientHeight < 120
+  }
+
+  const handleScroll = () => {
+    const near = isNearBottom()
+    setAtBottom(near)
+    if (near) setUnseenCount(0)
   }
 
   useEffect(() => {
@@ -191,13 +257,27 @@ function ThreadView({ partner, myProfile, onBack }: {
       }
       if (firstSnapshot) {
         initializedRef.current = true
+        // Histori snapshot pertama tidak ikut dianimasikan
+        msgs.forEach(m => staticIds.add(m.id))
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'instant' as ScrollBehavior }), 100)
       } else if (isNearBottom()) {
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+      } else {
+        // User sedang membaca histori di atas — jangan tarik paksa ke bawah,
+        // cukup naikkan badge pesan baru di tombol "ke bawah"
+        const fresh = msgs.filter(m => m.from_id === partner.id && !knownIdsRef.current.has(m.id)).length
+        if (fresh > 0) setUnseenCount(c => c + fresh)
       }
     })
     return () => unsub()
+    // staticIds stabil seumur komponen (useState tanpa setter)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [myProfile.id, partner.id])
+
+  // Mirror id pesan yang sudah ter-render, dipakai callback subscription
+  useEffect(() => {
+    knownIdsRef.current = new Set(messages.map(m => m.id))
+  }, [messages])
 
   // Simpan 50 pesan terakhir agar thread langsung tampil saat dibuka lagi
   useEffect(() => {
@@ -267,42 +347,84 @@ function ThreadView({ partner, myProfile, onBack }: {
         </span>
       </header>
 
-      <div className="thread-messages" ref={containerRef} style={{ overflowX: 'hidden' }}>
-        {messages.map(msg => {
-          const isOwn = msg.from_id === myProfile.id
-          return (
-            <SwipeableMessage
-              key={msg.renderKey ?? msg.id}
-              isOwn={isOwn}
-              canReply={true}
-              canDelete={isOwn}
-              onReply={() => setReplyTo(msg)}
-              onDelete={() => handleDelete(msg.id)}
-            >
-              <div
-                className={`bubble ${isOwn ? 'bubble--own' : 'bubble--them'}`}
-                style={{ userSelect: 'none' }}
-              >
-                {msg.reply_to && (
-                  <div style={{
-                    fontSize: '0.72rem',
-                    color: isOwn ? 'rgba(255,255,255,0.65)' : 'var(--text-muted)',
-                    borderLeft: `2px solid ${isOwn ? 'rgba(255,255,255,0.45)' : 'var(--accent)'}`,
-                    paddingLeft: '7px',
-                    marginBottom: '5px',
-                    overflow: 'hidden',
-                    maxHeight: '36px',
-                  }}>
-                    <span style={{ fontWeight: 700 }}>{msg.reply_to.from_profile.username}</span>
-                    {': '}{msg.reply_to.body.slice(0, 70)}{msg.reply_to.body.length > 70 ? '…' : ''}
+      <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        <div className="thread-messages" ref={containerRef} onScroll={handleScroll} style={{ overflowX: 'hidden' }}>
+          {messages.map((msg, i) => {
+            const prev = messages[i - 1]
+            const next = messages[i + 1]
+            const isOwn = msg.from_id === myProfile.id
+            const key = msg.renderKey ?? msg.id
+            const newDay = !prev || !sameDay(prev.created_at, msg.created_at)
+            // Grup: pengirim sama + selisih waktu kecil → bubble dirangkai
+            const contPrev = !newDay && prev.from_id === msg.from_id && closeInTime(prev, msg)
+            const contNext = !!next && sameDay(msg.created_at, next.created_at) &&
+              next.from_id === msg.from_id && closeInTime(msg, next)
+            return (
+              <Fragment key={key}>
+                {newDay && (
+                  <div className="day-divider">
+                    <span className="day-divider__chip">{dayLabel(msg.created_at)}</span>
                   </div>
                 )}
-                {msg.body}
-              </div>
-            </SwipeableMessage>
-          )
-        })}
-        <div ref={bottomRef}/>
+                <SwipeableMessage
+                  isOwn={isOwn}
+                  cont={contPrev}
+                  animate={!staticIds.has(key)}
+                  canReply={true}
+                  canDelete={isOwn}
+                  onReply={() => setReplyTo(msg)}
+                  onDelete={() => handleDelete(msg.id)}
+                >
+                  <div
+                    className={`bubble ${isOwn ? 'bubble--own' : 'bubble--them'}${contPrev ? ' bubble--cont-prev' : ''}${!contNext ? ' bubble--tail' : ''}`}
+                    style={{ userSelect: 'none' }}
+                  >
+                    {msg.reply_to && (
+                      <div style={{
+                        fontSize: '0.72rem',
+                        color: isOwn ? 'rgba(255,255,255,0.65)' : 'var(--text-muted)',
+                        borderLeft: `2px solid ${isOwn ? 'rgba(255,255,255,0.45)' : 'var(--accent)'}`,
+                        paddingLeft: '7px',
+                        marginBottom: '5px',
+                        overflow: 'hidden',
+                        maxHeight: '36px',
+                      }}>
+                        <span style={{ fontWeight: 700 }}>{msg.reply_to.from_profile.username}</span>
+                        {': '}{msg.reply_to.body.slice(0, 70)}{msg.reply_to.body.length > 70 ? '…' : ''}
+                      </div>
+                    )}
+                    {msg.body}
+                  </div>
+                  {!contNext && (
+                    <div className="bubble-meta">
+                      {fmtTime(msg.created_at)}
+                      {isOwn && <DeliveryStatus msg={msg}/>}
+                    </div>
+                  )}
+                </SwipeableMessage>
+              </Fragment>
+            )
+          })}
+          <div ref={bottomRef}/>
+        </div>
+
+        {!atBottom && (
+          <button
+            className="thread-jump"
+            aria-label="Jump to latest messages"
+            onClick={() => {
+              setUnseenCount(0)
+              bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+            }}
+          >
+            {unseenCount > 0 && (
+              <span className="thread-jump__count">{unseenCount > 99 ? '99+' : unseenCount}</span>
+            )}
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </button>
+        )}
       </div>
 
       {replyTo && (

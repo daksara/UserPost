@@ -61,10 +61,13 @@ function CopyButton({ text }: { text: string }) {
 }
 
 export default function ProfilePage({ active = true }: { active?: boolean }) {
-  const { profile, refreshProfile } = useAuth()
+  const { profile } = useAuth()
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  // Foto baru (base64) ditampilkan di avatar selagi upload berjalan di
+  // belakang — ditahan sampai URL hasil upload selesai diunduh browser
+  const [pendingPhoto, setPendingPhoto] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Change password
@@ -162,7 +165,7 @@ export default function ProfilePage({ active = true }: { active?: boolean }) {
     }
   }
 
-  const avatarSrc = (profile as any).photo_url || getAvatarUrl(profile.username)
+  const avatarSrc = pendingPhoto || (profile as any).photo_url || getAvatarUrl(profile.username)
 
   const openEdit = () => {
     setPhotoUrl((profile as any).photo_url || '')
@@ -188,12 +191,19 @@ export default function ProfilePage({ active = true }: { active?: boolean }) {
   }
 
   const handleSave = async () => {
+    if (saving) return
     setSaving(true)
     setError('')
+    const newPhotoBase64 = photoPreview
+    // Optimistic: sheet langsung ditutup dan avatar memakai preview lokal —
+    // upload Storage + simpan profil berjalan di belakang, bukan menahan UI.
+    // Profil di context ter-update otomatis lewat listener onSnapshot AuthProvider.
+    setEditing(false)
+    if (newPhotoBase64) setPendingPhoto(newPhotoBase64)
     try {
       let finalPhotoUrl = photoUrl.trim() || null
-      if (photoPreview) {
-        finalPhotoUrl = await uploadProfilePhoto(profile.id, photoPreview)
+      if (newPhotoBase64) {
+        finalPhotoUrl = await uploadProfilePhoto(profile.id, newPhotoBase64)
       }
       await updateProfile(profile.id, {
         photo_url: finalPhotoUrl,
@@ -202,10 +212,21 @@ export default function ProfilePage({ active = true }: { active?: boolean }) {
         telegram: telegram.trim() || null,
         tip_ca: tipCA.trim() || null,
       })
-      await refreshProfile()
-      setEditing(false)
-    } catch (e: any) {
+      if (newPhotoBase64 && finalPhotoUrl) {
+        // Tahan preview sampai foto dari URL baru selesai diunduh — tanpa
+        // ini avatar sempat kosong/menampilkan foto lama saat URL loading
+        const img = new Image()
+        img.onload = () => setPendingPhoto(null)
+        img.onerror = () => setPendingPhoto(null)
+        img.src = finalPhotoUrl
+      } else {
+        setPendingPhoto(null)
+      }
+    } catch {
+      // Gagal: buka lagi sheet dengan nilai yang tadi diisi + pesan error
+      setPendingPhoto(null)
       setError('Failed to save. Try again.')
+      setEditing(true)
     } finally {
       setSaving(false)
     }
@@ -228,7 +249,7 @@ export default function ProfilePage({ active = true }: { active?: boolean }) {
           <img
             src={avatarSrc}
             alt={profile.username}
-            className="profile-avatar-img"
+            className={`profile-avatar-img${saving ? ' profile-avatar-img--uploading' : ''}`}
             onError={(e) => {
               const img = e.currentTarget
               img.style.display = 'none'

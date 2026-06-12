@@ -125,10 +125,11 @@ button {
   display: flex;
   flex-direction: column;
 }
-/* Jarak antar bubble: rapat saat pengirim sama, lebih lega saat ganti pengirim */
-.bubble-wrap + .bubble-wrap { margin-top: 6px; }
-.bubble-wrap--own + .bubble-wrap:not(.bubble-wrap--own),
-.bubble-wrap:not(.bubble-wrap--own) + .bubble-wrap--own { margin-top: 16px; }
+/* Jarak antar bubble: grup pengirim sama dirangkai rapat, antar grup lega */
+.bubble-wrap { margin-top: 14px; }
+.thread-messages > .bubble-wrap:first-child,
+.day-divider + .bubble-wrap { margin-top: 4px; }
+.bubble-wrap--cont { margin-top: 3px; }
 
 .page-header {
   height: var(--header-h);
@@ -851,7 +852,7 @@ button {
 
 .bubble {
   padding: 9px 13px;
-  border-radius: 16px;
+  border-radius: 18px;
   font-size: 0.9rem;
   line-height: 1.45;
   word-break: break-word;
@@ -861,19 +862,79 @@ button {
 .bubble--them {
   background: var(--bg-card);
   color: var(--text-primary);
-  border-bottom-left-radius: 4px;
   box-shadow: var(--shadow-sm);
 }
 .bubble--own {
-  background: var(--accent);
+  background: linear-gradient(160deg, var(--accent), var(--accent-dark));
   color: #fff;
-  border-bottom-right-radius: 4px;
+}
+/* Rangkaian grup: sudut sisi pengirim dirapikan, ekor hanya di akhir grup */
+.bubble--own.bubble--cont-prev  { border-top-right-radius: 6px; }
+.bubble--own.bubble--tail       { border-bottom-right-radius: 5px; }
+.bubble--them.bubble--cont-prev { border-top-left-radius: 6px; }
+.bubble--them.bubble--tail      { border-bottom-left-radius: 5px; }
+
+/* Waktu + status kirim (jam/✓/✓✓) di akhir tiap grup */
+.bubble-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  padding: 3px 4px 0;
 }
 
-.bubble-time {
-  font-size: 0.65rem;
+/* Pemisah hari di tengah thread */
+.day-divider {
+  display: flex;
+  justify-content: center;
+  margin: 18px 0 10px;
+}
+.day-divider:first-child { margin-top: 4px; }
+.day-divider__chip {
+  font-size: 0.68rem;
+  font-weight: 600;
   color: var(--text-muted);
-  padding: 2px 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 3px 11px;
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Tombol lompat ke pesan terbaru saat user scroll ke atas */
+.thread-jump {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  animation: pop-in 0.25s cubic-bezier(.34,1.56,.64,1) backwards;
+}
+.thread-jump__count {
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* ── Reply Preview ──────────────────────────────────────────────── */
@@ -930,7 +991,10 @@ button {
   flex-shrink: 0;
   transition: background 0.12s;
 }
-.thread-composer__send:disabled { opacity: 0.4; }
+.thread-composer__send:disabled { opacity: 0.35; transform: scale(0.88); }
+.thread-composer__send:not(:disabled) {
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--accent) 40%, transparent);
+}
 
 /* ── Profile ────────────────────────────────────────────────────── */
 .profile-body {
@@ -1161,6 +1225,13 @@ span.badge-bot { padding: 3px 7px; }
 }
 
 /* ── Avatar DiceBear (profile page) ────────────────────────────── */
+/* Cincin berdenyut selama foto baru di-upload di belakang layar */
+@keyframes avatar-uploading {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent); }
+  50%      { box-shadow: 0 0 0 7px color-mix(in srgb, var(--accent) 12%, transparent); }
+}
+.profile-avatar-img--uploading { animation: avatar-uploading 1.2s ease-in-out infinite; }
+
 .profile-avatar-img {
   width: 88px;
   height: 88px;
@@ -1265,9 +1336,10 @@ span.badge-bot { padding: 3px 7px; }
   55%  { opacity: 1; transform: translateX(-3px) scale(1.03); }
   100% { opacity: 1; transform: translateX(0) scale(1); }
 }
-.bubble-wrap { animation: bubble-in 0.22s ease backwards; }
+/* Hanya pesan baru (bukan histori saat thread dibuka) yang dianimasikan */
+.bubble-wrap--anim { animation: bubble-in 0.22s ease backwards; }
 /* Pesan sendiri meluncur dari kanan dengan sedikit overshoot */
-.bubble-wrap--own { animation: bubble-send 0.25s cubic-bezier(0.2, 0.8, 0.25, 1) backwards; }
+.bubble-wrap--anim.bubble-wrap--own { animation: bubble-send 0.28s cubic-bezier(0.34, 1.3, 0.5, 1) backwards; }
 
 /* Section komentar expand halus, tidak muncul mendadak */
 @keyframes section-in {

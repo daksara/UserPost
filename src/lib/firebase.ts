@@ -637,7 +637,11 @@ export async function getMessageStats(myId: string): Promise<{ sent: number; rec
 export async function uploadProfilePhoto(userId: string, base64DataUrl: string): Promise<string> {
   const ref = storageRef(storage, `avatars/${userId}.jpg`)
   await uploadString(ref, base64DataUrl, 'data_url')
-  return getDownloadURL(ref)
+  const url = await getDownloadURL(ref)
+  // Path upload selalu sama → URL download bisa identik antar upload,
+  // sehingga browser menampilkan foto lama dari cache. Param versi memaksa
+  // semua avatar memuat foto yang baru.
+  return `${url}${url.includes('?') ? '&' : '?'}v=${Date.now()}`
 }
 
 // ── Messages ───────────────────────────────────────────────────────
