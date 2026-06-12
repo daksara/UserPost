@@ -2,8 +2,12 @@ name: Market Alert Bot
 
 on:
   schedule:
-    # Setiap 5 menit
-    - cron: '*/5 * * * *'
+    # Setiap 5 menit. Catatan: cron GitHub Actions bersifat best-effort —
+    # saat infra sibuk, run terjadwal bisa molor 1-2 jam. Offset menit
+    # (2-57/5, bukan */5) mengurangi skip karena menit kelipatan 5 paling
+    # ramai. Kalau butuh kepastian 5 menit, pindahkan ke Cloud Scheduler
+    # (functions/src/index.ts sudah punya pollMarketAlerts) atau cron eksternal.
+    - cron: '2-57/5 * * * *'
   # Tombol "Run workflow" di GitHub Actions tab untuk test manual
   workflow_dispatch:
 

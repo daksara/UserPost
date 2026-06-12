@@ -700,7 +700,9 @@ const FEED_CACHE_KEY = 'feed-cache'
 function readCachedPosts(): Post[] {
   try {
     const raw = localStorage.getItem(FEED_CACHE_KEY)
-    return raw ? JSON.parse(raw) : []
+    const cached: Post[] = raw ? JSON.parse(raw) : []
+    // Posts may have expired since the cache was written
+    return cached.filter(p => new Date(p.expires_at) > new Date())
   } catch { return [] }
 }
 
@@ -785,6 +787,7 @@ export default function FeedPage({ onDMClick }: { onDMClick: (profile: Profile) 
   const { theme, cycleTheme } = useTheme()
   const [posts, setPosts] = useState<Post[]>(readCachedPosts)
   const [loading, setLoading] = useState(() => readCachedPosts().length === 0)
+  const [loadError, setLoadError] = useState(false)
   const [composing, setComposing] = useState(false)
   const [quotePost, setQuotePost] = useState<QuoteRef | undefined>()
   const [pinnedAlerts, setPinnedAlerts] = useState<PinnedAlert[]>([])
@@ -802,16 +805,27 @@ export default function FeedPage({ onDMClick }: { onDMClick: (profile: Profile) 
   }, [posts])
 
   useEffect(() => {
-    return subscribeToPinnedAlerts(setPinnedAlerts)
+    return subscribeToPinnedAlerts(
+      setPinnedAlerts,
+      (err) => console.error('Pinned alerts subscription error:', err)
+    )
   }, [])
 
   // Comment counts live on the post docs, so this subscription also fires
   // when someone comments — no separate comments listener needed.
   useEffect(() => {
-    const unsubPosts = subscribeToActivePosts((updated) => {
-      setPosts(updated)
-      setLoading(false)
-    })
+    const unsubPosts = subscribeToActivePosts(
+      (updated) => {
+        setPosts(updated)
+        setLoading(false)
+        setLoadError(false)
+      },
+      (err) => {
+        console.error('Feed subscription error:', err)
+        setLoading(false)
+        setLoadError(true)
+      }
+    )
     return () => unsubPosts()
   }, [])
 
@@ -888,7 +902,9 @@ export default function FeedPage({ onDMClick }: { onDMClick: (profile: Profile) 
         ))}
         {loading && [0, 1, 2].map(i => <PostSkeleton key={i}/>)}
         {!loading && posts.length === 0 && (
-          <div className="feed__empty">No posts yet. Be the first!</div>
+          <div className="feed__empty">
+            {loadError ? 'Couldn’t load the feed. Check your connection and try again.' : 'No posts yet. Be the first!'}
+          </div>
         )}
         {posts.map(post => (
           <PostCard
