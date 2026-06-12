@@ -2,9 +2,8 @@
 import { useState, useRef, useEffect } from 'react'
 import {
   signOut, updateProfile, changePassword, deleteAccount, uploadProfilePhoto,
-  getMyActivePosts, deletePost, getMessageStats, type Post,
+  getMyActivePosts, getMessageStats, getRememberedPassword, type Post,
 } from '../lib/firebase'
-import { expiresIn } from '../lib/utils'
 import { useAuth } from '../hooks/useAuth'
 import { getAvatarUrl } from '../components/Avatar'
 import { BadgeChip } from '../components/Badge'
@@ -93,10 +92,12 @@ export default function ProfilePage({ active = true }: { active?: boolean }) {
   const [telegram, setTelegram] = useState('')
   const [tipCA, setTipCA] = useState('')
 
-  // My posts & stats pesan — null = masih loading
+  // Jumlah post aktif & stats pesan (untuk kartu statistik) — null = loading
   const [myPosts, setMyPosts] = useState<Post[] | null>(null)
   const [msgStats, setMsgStats] = useState<{ sent: number; received: number } | null>(null)
-  const [confirmPostId, setConfirmPostId] = useState<string | null>(null)
+  // See Password: null = panel tertutup; string = password yang ditampilkan
+  const [shownPw, setShownPw] = useState<string | null>(null)
+  const [pwUnavailable, setPwUnavailable] = useState(false)
   const profileId = profile?.id
 
   // Refetch tiap tab profil dibuka — semua tab selalu mounted (AnimatedTab),
@@ -154,16 +155,17 @@ export default function ProfilePage({ active = true }: { active?: boolean }) {
     }
   }
 
-  const handleDeletePost = async (postId: string) => {
-    setConfirmPostId(null)
-    setMyPosts(prev => prev?.filter(p => p.id !== postId) ?? prev)
-    try {
-      await deletePost(postId)
-    } catch {
-      // Re-sync kalau gagal
-      getMyActivePosts(profile.id).then(setMyPosts).catch(() => {})
+  const toggleSeePassword = () => {
+    if (shownPw !== null || pwUnavailable) {
+      setShownPw(null)
+      setPwUnavailable(false)
+      return
     }
+    const pw = getRememberedPassword()
+    if (pw) setShownPw(pw)
+    else setPwUnavailable(true)
   }
+  const pwOpen = shownPw !== null || pwUnavailable
 
   const avatarSrc = pendingPhoto || (profile as any).photo_url || getAvatarUrl(profile.username)
 
@@ -380,73 +382,38 @@ export default function ProfilePage({ active = true }: { active?: boolean }) {
         )}
 
 
-        {/* My Active Posts */}
-        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
-          <div className="section-label">
-            My Active Posts
-            {myPosts !== null && myPosts.length > 0 && (
-              <span className="section-label__count">{myPosts.length}</span>
-            )}
-          </div>
-          {myPosts === null && (
-            <div style={{ padding: '14px 0', textAlign: 'center' }}><span className="spinner"/></div>
-          )}
-          {myPosts?.length === 0 && (
-            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', padding: '2px 0 4px' }}>
-              No active posts. Posts disappear after 24 hours.
-            </p>
-          )}
-          {myPosts?.map(p => {
-            const total = new Date(p.expires_at).getTime() - new Date(p.created_at).getTime()
-            const remainingMs = Math.max(0, new Date(p.expires_at).getTime() - Date.now())
-            const pct = total > 0 ? remainingMs / total : 0
-            const hoursLeft = remainingMs / 3600000
-            const barColor = hoursLeft > 12 ? 'var(--accent)' : hoursLeft > 4 ? '#f97316' : 'var(--red)'
-            return (
-              <div key={p.id} className="mypost-card">
-                <div className="mypost-card__row">
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{
-                      fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: 1.4,
-                      overflow: 'hidden', display: '-webkit-box',
-                      WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', wordBreak: 'break-word',
-                    }}>
-                      {p.body}
-                    </div>
-                    <div style={{ display: 'flex', gap: 10, marginTop: 4, fontSize: '0.72rem', color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
-                      <span>{expiresIn(p.expires_at) ?? 'expired'}</span>
-                      <span>{p.comment_count} comments</span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => confirmPostId === p.id ? handleDeletePost(p.id) : setConfirmPostId(p.id)}
-                    onBlur={() => setConfirmPostId(null)}
-                    title={confirmPostId === p.id ? 'Tap again to delete' : 'Delete post'}
-                    style={{
-                      background: confirmPostId === p.id ? 'var(--red)' : 'none',
-                      border: 'none', borderRadius: 'var(--radius-xs)', padding: 7,
-                      color: confirmPostId === p.id ? '#fff' : 'var(--text-muted)',
-                      display: 'flex', alignItems: 'center', flexShrink: 0,
-                      transition: 'background 0.15s, color 0.15s',
-                    }}
-                  >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
-                    </svg>
-                  </button>
-                </div>
-                <div className="mypost-card__bar">
-                  <div className="mypost-card__bar-fill" style={{ width: `${pct * 100}%`, background: barColor }}/>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-
         {/* Account settings */}
         <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
           <div className="section-label">Account</div>
           <div className="settings-card">
+            <button className="settings-row" onClick={toggleSeePassword} aria-expanded={pwOpen}>
+              <span className="settings-row__icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                </svg>
+              </span>
+              See Password
+              <svg
+                className={`settings-row__chevron${pwOpen ? ' settings-row__chevron--open' : ''}`}
+                width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              >
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </button>
+            {pwOpen && (
+              <div className="settings-reveal">
+                {shownPw !== null ? (
+                  <>
+                    <span className="settings-reveal__pw">{shownPw}</span>
+                    <CopyButton text={shownPw}/>
+                  </>
+                ) : (
+                  <span className="settings-reveal__hint">
+                    Password isn’t stored on this device. Sign in again and it will show up here.
+                  </span>
+                )}
+              </div>
+            )}
             <button
               className="settings-row"
               onClick={() => { setChangingPw(true); setPwError(''); setPwSuccess(false) }}

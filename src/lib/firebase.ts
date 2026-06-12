@@ -205,6 +205,33 @@ async function getProfilesByIds(userIds: string[]): Promise<Map<string, Profile>
 
 // ── Auth ───────────────────────────────────────────────────────────
 
+// Memori password lokal untuk fitur "See Password" di Profile.
+// Firebase Auth hanya menyimpan hash di server — password TIDAK bisa
+// diambil kembali. Satu-satunya cara menampilkannya adalah mengingatnya
+// di perangkat ini saat login. Disimpan ter-encode base64 (BUKAN
+// terenkripsi) dan dihapus saat sign out / hapus akun.
+const PW_MEMORY_KEY = 'pw-memory'
+
+function rememberPassword(password: string) {
+  try {
+    const bytes = new TextEncoder().encode(password)
+    localStorage.setItem(PW_MEMORY_KEY, btoa(String.fromCharCode(...bytes)))
+  } catch { /* ignore storage errors */ }
+}
+
+export function getRememberedPassword(): string | null {
+  try {
+    const raw = localStorage.getItem(PW_MEMORY_KEY)
+    if (!raw) return null
+    const bytes = Uint8Array.from(atob(raw), (c) => c.charCodeAt(0))
+    return new TextDecoder().decode(bytes)
+  } catch { return null }
+}
+
+function clearRememberedPassword() {
+  try { localStorage.removeItem(PW_MEMORY_KEY) } catch { /* ignore storage errors */ }
+}
+
 export async function signUp(username: string, email: string, password: string) {
   const usernameKey = username.toLowerCase()
   const usernameRef = doc(db, 'usernames', usernameKey)
@@ -233,6 +260,7 @@ export async function signUp(username: string, email: string, password: string) 
       badge_type: 'og',
     })
     await sendEmailVerification(user).catch(() => {})
+    rememberPassword(password)
     return user
   } catch (e) {
     console.error('[signUp] Firestore write failed:', e)
@@ -257,6 +285,7 @@ export async function signIn(identifier: string, password: string) {
     email = legacyEmail ?? `up.${identifier.toLowerCase()}@userpost.app`
   }
   const { user } = await signInWithEmailAndPassword(auth, email, password)
+  rememberPassword(password)
   return user
 }
 
@@ -273,6 +302,7 @@ export async function forgotPassword(identifier: string): Promise<void> {
 }
 
 export async function signOut() {
+  clearRememberedPassword()
   await firebaseSignOut(auth)
 }
 
@@ -844,6 +874,7 @@ export async function changePassword(currentPassword: string, newPassword: strin
   const credential = EmailAuthProvider.credential(user.email, currentPassword)
   await reauthenticateWithCredential(user, credential)
   await updatePassword(user, newPassword)
+  rememberPassword(newPassword)
 }
 
 export async function deleteAccount(password: string) {
@@ -872,6 +903,7 @@ export async function deleteAccount(password: string) {
 
   // Delete Firebase Auth account (must be last)
   await deleteUser(user)
+  clearRememberedPassword()
 }
 
 export { onAuthStateChanged, type User }
