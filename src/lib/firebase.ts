@@ -533,6 +533,12 @@ export function subscribeToConversation(
 ): Unsubscribe {
   const convId = convoId(myId, otherId)
   let version = 0
+  // Profil di-fetch sekali untuk seumur subscription — re-fetch di tiap
+  // snapshot menunda pesan baru muncul di layar
+  const profilesPromise = getProfilesByIds([myId, otherId])
+  // Target reply yang sudah dihapus tidak ada di snapshot; cache hasil
+  // getDoc-nya supaya tidak dibaca ulang setiap snapshot
+  const deletedReplyCache = new Map<string, Message | null>()
   return onSnapshot(
     query(
       collection(db, 'conversations', convId, 'messages'),
@@ -541,17 +547,61 @@ export function subscribeToConversation(
     ),
     async (snap) => {
       const v = ++version
-      const myProfile = await getProfileById(myId)
-      const partnerProfile = await getProfileById(otherId)
-      if (!myProfile || !partnerProfile) return
-      const msgs = await Promise.all(
-        snap.docs.map((d) => {
-          const data = d.data()
-          const from = data.from_id === myId ? myProfile : partnerProfile
-          const to = data.from_id === myId ? partnerProfile : myProfile
-          return hydrateMessage(d.id, { ...data, conversation_id: convId }, from, to)
-        })
-      )
+      const profiles = await profilesPromise
+      const profileFor = (uid: string) => (uid === myId ? profiles.get(myId)! : profiles.get(otherId)!)
+      // serverTimestamps 'estimate': pesan yang baru dikirim (local echo)
+      // langsung punya created_at sementara, jadi urutan tidak loncat saat
+      // timestamp server tiba
+      const byId = new Map<string, Message>()
+      const msgs: Message[] = snap.docs.map((d) => {
+        const data = d.data({ serverTimestamps: 'estimate' })
+        const msg: Message = {
+          id: d.id,
+          from_id: data.from_id,
+          to_id: data.to_id,
+          body: data.body,
+          reply_to_id: data.reply_to_id ?? null,
+          read_at: data.read_at ? tsToISO(data.read_at) : null,
+          deleted_at: null,
+          created_at: tsToISO(data.created_at),
+          from_profile: profileFor(data.from_id),
+          to_profile: profileFor(data.to_id),
+          reply_to: null,
+        }
+        byId.set(d.id, msg)
+        return msg
+      })
+      // Preview reply diambil dari snapshot yang sama — tanpa read ekstra
+      // per pesan; fallback getDoc hanya untuk target yang sudah dihapus
+      await Promise.all(msgs.map(async (m) => {
+        if (!m.reply_to_id) return
+        const local = byId.get(m.reply_to_id)
+        if (local) {
+          m.reply_to = { ...local, reply_to: null }
+          return
+        }
+        if (!deletedReplyCache.has(m.reply_to_id)) {
+          const replySnap = await getDoc(doc(db, 'conversations', convId, 'messages', m.reply_to_id))
+          if (replySnap.exists()) {
+            const rd = replySnap.data({ serverTimestamps: 'estimate' })
+            deletedReplyCache.set(m.reply_to_id, {
+              id: replySnap.id,
+              from_id: rd.from_id,
+              to_id: rd.to_id,
+              body: rd.body,
+              reply_to_id: null,
+              read_at: null,
+              deleted_at: rd.deleted_at ? tsToISO(rd.deleted_at) : null,
+              created_at: tsToISO(rd.created_at),
+              from_profile: profileFor(rd.from_id),
+              to_profile: profileFor(rd.to_id),
+            })
+          } else {
+            deletedReplyCache.set(m.reply_to_id, null)
+          }
+        }
+        m.reply_to = deletedReplyCache.get(m.reply_to_id) ?? null
+      }))
       if (v === version) onMessages(msgs)
     }
   )
@@ -604,6 +654,9 @@ async function hydrateMessage(
     const replySnap = await getDoc(doc(db, 'conversations', convId, 'messages', data.reply_to_id))
     if (replySnap.exists()) {
       const rd = replySnap.data()
+      // Pengirim reply target belum tentu sama dengan pengirim pesan ini —
+      // pilih profil berdasarkan from_id-nya agar nama di preview tidak tertukar
+      const replyFrom = rd.from_id === data.from_id ? fromProfile : toProfile
       reply_to = {
         id: replySnap.id,
         from_id: rd.from_id,
@@ -613,8 +666,8 @@ async function hydrateMessage(
         read_at: null,
         deleted_at: null,
         created_at: tsToISO(rd.created_at),
-        from_profile: fromProfile,
-        to_profile: toProfile,
+        from_profile: replyFrom,
+        to_profile: replyFrom.id === fromProfile.id ? toProfile : fromProfile,
       }
     }
   }
@@ -669,9 +722,11 @@ export async function getConversationList(myId: string): Promise<Message[]> {
         doc(db, 'conversations', convId, 'messages', data.last_message_id)
       )
       if (!msgSnap.exists()) return null
+      // 'estimate': getDoc bisa terlayani dari cache lokal dengan
+      // serverTimestamp pending — tanpa ini created_at kosong sesaat
       return hydrateMessage(
         msgSnap.id,
-        { ...msgSnap.data(), conversation_id: convId },
+        { ...msgSnap.data({ serverTimestamps: 'estimate' }), conversation_id: convId },
         data.last_from_id === myId ? myProfile : partnerProfile,
         data.last_from_id === myId ? partnerProfile : myProfile
       )
