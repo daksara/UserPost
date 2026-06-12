@@ -1152,6 +1152,9 @@ button {
   border-radius: 0 0 26px 26px;
   position: relative;
   overflow: hidden;
+  /* Selaras dengan tema: gradient aksen (senada brand-mark), ikut
+     menyesuaikan otomatis saat dark mode lewat CSS variables */
+  background: linear-gradient(120deg, var(--accent-dark), var(--accent) 48%, #8b5cf6);
 }
 .profile-hero__cover::after {
   content: '';

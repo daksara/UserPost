@@ -244,12 +244,9 @@ export default function ProfilePage({ active = true }: { active?: boolean }) {
       </header>
 
       <div className="profile-body" style={{ overflowY: 'auto' }}>
-        {/* Hero: cover gradient dengan hue personal dari username + avatar */}
+        {/* Hero: cover gradient aksen mengikuti tema (light/dark) */}
         <div className="profile-hero">
-          <div
-            className="profile-hero__cover"
-            style={{ background: `linear-gradient(120deg, hsl(${hue} 62% 50%), hsl(${(hue + 52) % 360} 68% 58%))` }}
-          />
+          <div className="profile-hero__cover"/>
           <div className="profile-hero__avatar">
             <div style={{ position: 'relative' }}>
               <img
