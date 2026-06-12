@@ -94,10 +94,9 @@ function HotIndicator({ commentCount, createdAt }: { commentCount: number; creat
   const rate = commentCount / hoursAlive
   if (commentCount < 3 || rate < 1) return null
   const hot = rate >= 5
-  const color = hot ? 'var(--red)' : '#f97316'
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.72rem', fontWeight: 700, color }}>
-      <svg width="9" height="11" viewBox="0 0 10 12" fill={color} stroke="none">
+    <span className={`hot-pill ${hot ? 'hot-pill--fire' : 'hot-pill--warm'}`} title={`${rate.toFixed(1)} comments per hour`}>
+      <svg width="9" height="11" viewBox="0 0 10 12" fill="currentColor" stroke="none">
         <path d="M5 0C5 0 1 4 1 7.5a4 4 0 1 0 8 0C9 4 5 0 5 0z"/>
       </svg>
       {rate.toFixed(1)}/h
@@ -112,8 +111,8 @@ function ExpiryBar({ expiresAt, createdAt }: { expiresAt: string; createdAt: str
   const hoursLeft = remaining / 3600000
   const color = hoursLeft > 12 ? 'var(--accent)' : hoursLeft > 4 ? '#f97316' : 'var(--red)'
   return (
-    <div style={{ height: 2, background: 'var(--border)', borderRadius: 1, marginTop: 10, overflow: 'hidden' }}>
-      <div style={{ height: '100%', width: `${pct * 100}%`, background: color, borderRadius: 1, transition: 'width 1s ease' }}/>
+    <div className="expiry-bar">
+      <div className="expiry-bar__fill" style={{ width: `${pct * 100}%`, background: color }}/>
     </div>
   )
 }
@@ -428,7 +427,10 @@ function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment,
             {post.profiles.is_verified && <BadgeChip type="official"/>}
             {post.profiles.badge_type && <BadgeChip type={post.profiles.badge_type}/>}
           </button>
-          <span className="post-card__time" style={{ color: expiringSoon ? 'var(--red)' : undefined }}>
+          <span className={`post-card__time${expiringSoon ? ' post-card__time--soon' : ''}`}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+            </svg>
             {expiry ?? 'expired'}
           </span>
         </div>
@@ -446,7 +448,7 @@ function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment,
       {post.link_url && <LinkCard url={post.link_url} />}
       {post.contract_address && <CACard address={post.contract_address} />}
 
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+      <div className="post-card__actions">
         <button className="post-card__comments-btn" onClick={handleToggleComments}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -469,19 +471,14 @@ function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment,
         <div className="post-card__comments">
           {loadingComments && <div style={{ padding: '8px 0', textAlign: 'center' }}><span className="spinner spinner--sm"/></div>}
           {!loadingComments && localComments.map(c => (
-            <div key={c.id} className="comment" style={{ position: 'relative' }}>
-              <span className="comment__username">{c.profiles.username}</span>
-              <span className="comment__body"><MentionText text={c.body} onMentionClick={handleMentionClick} /></span>
+            <div key={c.id} className="comment">
+              <UserAvatar username={c.profiles.username} size={24} photoUrl={c.profiles.photo_url ?? null}/>
+              <div className="comment__bubble">
+                <span className="comment__username">{c.profiles.username}</span>
+                <span className="comment__body"><MentionText text={c.body} onMentionClick={handleMentionClick} /></span>
+              </div>
               {c.user_id === myId && (
-                <button
-                  onClick={() => handleDeleteComment(c.id)}
-                  title="Delete comment"
-                  style={{
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    color: 'var(--text-muted)', padding: '0 4px', fontSize: '0.75rem',
-                    flexShrink: 0, opacity: 0.7,
-                  }}
-                >✕</button>
+                <button className="comment__delete" onClick={() => handleDeleteComment(c.id)} title="Delete comment">✕</button>
               )}
             </div>
           ))}
@@ -528,6 +525,33 @@ function PostCard({ post, myId, myProfile, onDelete, onComment, onDeleteComment,
   )
 }
 
+// Ring progres sisa karakter — angka baru muncul saat mendekati batas
+function CharRing({ used, max }: { used: number; max: number }) {
+  const remaining = max - used
+  const r = 8
+  const c = 2 * Math.PI * r
+  const pct = Math.min(1, used / max)
+  const color = remaining < 50 ? 'var(--red)' : remaining < 100 ? '#f97316' : 'var(--accent)'
+  return (
+    <span className="compose-count">
+      {remaining < 100 && (
+        <span className={`compose-count__num${remaining < 50 ? ' compose-count__num--warn' : ''}`}>
+          {remaining}
+        </span>
+      )}
+      <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden>
+        <circle cx="11" cy="11" r={r} fill="none" stroke="var(--border)" strokeWidth="2.5"/>
+        <circle
+          cx="11" cy="11" r={r} fill="none" stroke={color} strokeWidth="2.5"
+          strokeDasharray={c} strokeDashoffset={c * (1 - pct)} strokeLinecap="round"
+          transform="rotate(-90 11 11)"
+          style={{ transition: 'stroke-dashoffset 0.15s ease, stroke 0.2s ease' }}
+        />
+      </svg>
+    </span>
+  )
+}
+
 function ComposeSheet({ onPost, onClose, quotePost: initialQuote, feedProfiles = [] }: {
   onPost: (body: string, ca?: string, link?: string, quotePost?: QuoteRef) => Promise<void>
   onClose: () => void
@@ -545,7 +569,6 @@ function ComposeSheet({ onPost, onClose, quotePost: initialQuote, feedProfiles =
   const [localQuote, setLocalQuote] = useState<QuoteRef | undefined>(initialQuote)
   const [mentionQuery, setMentionQuery] = useState<string | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const remaining = 500 - text.length
 
   const mentionMatches = mentionQuery !== null
     ? feedProfiles.filter(u => u.username.toLowerCase().startsWith(mentionQuery.toLowerCase())).slice(0, 4)
@@ -682,7 +705,7 @@ function ComposeSheet({ onPost, onClose, quotePost: initialQuote, feedProfiles =
           </div>
         )}
         <div className="compose-footer">
-          <span className={`compose-char${remaining < 50 ? ' compose-char--warn' : ''}`}>{remaining} left</span>
+          <CharRing used={text.length} max={500}/>
           <div className="compose-footer__actions">
             <button className="btn-cancel" onClick={onClose}>Cancel</button>
             <button className="btn-post" onClick={handlePost} disabled={!text.trim() || posting || !!caError || !!linkError}>
@@ -814,7 +837,7 @@ export default function FeedPage({ onDMClick }: { onDMClick: (profile: Profile) 
   return (
     <div className="page">
       <header className="page-header">
-        <h1 className="page-header__title">Feed</h1>
+        <h1 className="page-header__title"><span className="brand-mark"/>Feed</h1>
         <button
           className="icon-btn"
           onClick={cycleTheme}
@@ -836,7 +859,28 @@ export default function FeedPage({ onDMClick }: { onDMClick: (profile: Profile) 
         {loading && [0, 1, 2].map(i => <PostSkeleton key={i}/>)}
         {!loading && posts.length === 0 && (
           <div className="feed__empty">
-            {loadError ? 'Couldn’t load the feed. Check your connection and try again.' : 'No posts yet. Be the first!'}
+            <div className="feed-empty__icon">
+              {loadError ? (
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M1 1l22 22"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/>
+                </svg>
+              ) : (
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                </svg>
+              )}
+            </div>
+            <div className="feed-empty__title">{loadError ? 'Couldn’t load the feed' : 'Nothing here yet'}</div>
+            <div className="feed-empty__sub">
+              {loadError
+                ? 'Check your connection and try again.'
+                : 'Posts disappear after 24 hours. Start the conversation!'}
+            </div>
+            {!loadError && (
+              <button className="btn-post" style={{ marginTop: 10 }} onClick={() => setComposing(true)}>
+                Write the first post
+              </button>
+            )}
           </div>
         )}
         {posts.map(post => (

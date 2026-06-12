@@ -143,9 +143,24 @@ button {
 }
 
 .page-header__title {
-  font-size: 1.05rem;
-  font-weight: 700;
+  font-size: 1.08rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+/* Logo mark kecil di header utama */
+.brand-mark {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  background: linear-gradient(135deg, var(--accent), #8b5cf6);
+  display: inline-block;
+  margin-right: 8px;
+  transform: rotate(45deg);
+  flex-shrink: 0;
 }
 
 .back-btn {
@@ -322,22 +337,58 @@ button {
 
 .feed__loading, .feed__empty {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 48px 16px;
+  gap: 6px;
+  padding: 56px 24px;
   color: var(--text-muted);
   font-size: 0.9rem;
+  text-align: center;
+}
+
+.feed-empty__icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 22px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+.feed-empty__title {
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+.feed-empty__sub {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  max-width: 240px;
+  line-height: 1.5;
 }
 
 /* ── Post Card ──────────────────────────────────────────────────── */
 .post-card {
   background: var(--bg-card);
-  border-radius: var(--radius-md);
-  padding: 14px 14px 10px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 14px 16px 10px;
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 9px;
+}
+/* Desktop: kartu merespons hover dengan halus, tanpa lompatan layout */
+@media (hover: hover) {
+  .post-card { transition: box-shadow 0.2s ease, border-color 0.2s ease; }
+  .post-card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: color-mix(in srgb, var(--accent) 18%, var(--border));
+  }
 }
 
 .post-card__header {
@@ -380,9 +431,14 @@ button {
 .post-card__username:hover { color: var(--accent); }
 
 .post-card__time {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 0.72rem;
   color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
 }
+.post-card__time--soon { color: var(--red); font-weight: 700; }
 
 .post-card__delete {
   background: none;
@@ -404,38 +460,106 @@ button {
   word-break: break-word;
 }
 
-.post-card__comments-btn {
+/* Baris aksi: chip dengan area sentuh lega; -8px supaya ikon chip pertama
+   tetap sejajar dengan tepi teks walau chip punya padding sendiri */
+.post-card__actions {
   display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: -8px;
+}
+
+.post-card__comments-btn,
+.post-card__quote-btn {
+  display: inline-flex;
   align-items: center;
   gap: 5px;
   background: none;
   border: none;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
+  font-weight: 600;
   color: var(--text-muted);
-  padding: 4px 0;
-  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: var(--radius-full);
+  font-variant-numeric: tabular-nums;
 }
-.post-card__comments-btn:hover { color: var(--accent); }
+.post-card__comments-btn:hover,
+.post-card__quote-btn:hover { color: var(--accent); background: var(--accent-soft); }
+
+/* Indikator post ramai: pill hangat di kanan baris aksi */
+.hot-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: var(--radius-full);
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+.hot-pill--warm { color: #f97316; background: color-mix(in srgb, #f97316 12%, transparent); }
+.hot-pill--fire { color: var(--red);  background: color-mix(in srgb, var(--red) 12%, transparent); }
+
+/* Sisa umur post */
+.expiry-bar {
+  height: 3px;
+  background: var(--bg-input);
+  border-radius: 2px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+.expiry-bar__fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 1s ease;
+}
 
 /* ── Comments ───────────────────────────────────────────────────── */
 .post-card__comments {
   border-top: 1px solid var(--border);
-  padding-top: 8px;
+  padding-top: 10px;
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 8px;
 }
 
 .comment {
   display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 4px;
-  font-size: 0.83rem;
+  align-items: flex-start;
+  gap: 8px;
 }
-.comment__username { font-weight: 700; }
-.comment__body { color: var(--text-secondary); flex: 1; word-break: break-word; }
-.comment__time { font-size: 0.7rem; color: var(--text-muted); margin-left: auto; }
+
+.comment__bubble {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-input);
+  border-radius: 4px 14px 14px 14px;
+  padding: 7px 11px;
+  font-size: 0.83rem;
+  line-height: 1.45;
+}
+.comment__username {
+  font-weight: 700;
+  font-size: 0.78rem;
+  margin-right: 5px;
+  color: var(--text-primary);
+}
+.comment__body { color: var(--text-secondary); word-break: break-word; }
+
+.comment__delete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 4px 6px;
+  font-size: 0.75rem;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+  align-self: center;
+  opacity: 0.6;
+}
+.comment__delete:hover { color: var(--red); opacity: 1; }
 
 .comment-input-row {
   display: flex;
@@ -446,7 +570,7 @@ button {
 
 .comment-input {
   flex: 1;
-  padding: 7px 10px;
+  padding: 7px 12px;
   color: var(--text-primary);
   border: 1.5px solid var(--border);
   border-radius: var(--radius-full);
@@ -479,18 +603,18 @@ button {
   right: 16px;
   width: 52px;
   height: 52px;
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
   color: #fff;
   border: none;
   border-radius: 50%;
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 35%, transparent), var(--shadow-sm);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 10;
   transition: background 0.12s, transform 0.12s;
 }
-.fab:hover { background: var(--accent-dark); transform: scale(1.05); }
+.fab:hover { transform: scale(1.05); }
 .fab:active { transform: scale(0.97); }
 
 /* ── Sheet ──────────────────────────────────────────────────────── */
@@ -553,11 +677,19 @@ button {
   justify-content: space-between;
 }
 
-.compose-char {
-  font-size: 0.78rem;
-  color: var(--text-muted);
+/* Sisa karakter: ring progres + angka muncul saat mendekati batas */
+.compose-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
 }
-.compose-char--warn { color: var(--red); }
+.compose-count__num {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.compose-count__num--warn { color: var(--red); font-weight: 700; }
 
 .compose-footer__actions {
   display: flex;
@@ -1002,8 +1134,38 @@ button {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 32px 24px;
+  padding: 0 20px 28px;
   gap: 8px;
+}
+
+/* Hero: cover gradient personal (hue dari username) + avatar menimpa cover */
+.profile-hero {
+  width: calc(100% + 40px);
+  margin: 0 -20px 46px;
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+.profile-hero__cover {
+  width: 100%;
+  height: 104px;
+  border-radius: 0 0 26px 26px;
+  position: relative;
+  overflow: hidden;
+}
+.profile-hero__cover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 82% 18%, rgba(255,255,255,.28), transparent 52%),
+    radial-gradient(circle at 12% 85%, rgba(255,255,255,.14), transparent 42%);
+}
+.profile-hero__avatar {
+  position: absolute;
+  bottom: -42px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .profile-avatar {
@@ -1026,9 +1188,187 @@ button {
 }
 
 .profile-joined {
-  font-size: 0.82rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
   color: var(--text-muted);
-  margin-bottom: 16px;
+}
+
+.profile-bio {
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+  text-align: center;
+  max-width: 300px;
+  line-height: 1.55;
+}
+
+/* Statistik: satu kartu, kolom dipisah garis halus */
+.profile-stats {
+  width: 100%;
+  display: flex;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 13px 0;
+  box-shadow: var(--shadow-sm);
+  margin-top: 10px;
+}
+.stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+.stat + .stat { border-left: 1px solid var(--border); }
+.stat__num {
+  font-weight: 800;
+  font-size: 1.08rem;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.stat__label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+/* Chip link sosial */
+.social-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px;
+  border-radius: var(--radius-full);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-decoration: none;
+  box-shadow: var(--shadow-sm);
+}
+.social-chip svg { color: var(--accent); flex-shrink: 0; }
+.social-chip:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Label seksi + chip jumlah */
+.section-label {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.section-label__count {
+  background: var(--accent-soft);
+  color: var(--accent);
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+  font-size: 0.66rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Kartu post aktif milik sendiri (dengan bar sisa umur) */
+.mypost-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 11px 12px 9px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.mypost-card__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mypost-card__bar {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--bg-input);
+  overflow: hidden;
+}
+.mypost-card__bar-fill { height: 100%; border-radius: 2px; }
+
+/* Daftar pengaturan akun ala settings list */
+.settings-card {
+  width: 100%;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 14px;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.settings-row + .settings-row { border-top: 1px solid var(--border); }
+.settings-row:hover { background: var(--bg-hover); }
+.settings-row__icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.settings-row--danger { color: var(--red); }
+.settings-row--danger .settings-row__icon { background: var(--red-soft); color: var(--red); }
+.settings-row__chevron { margin-left: auto; color: var(--text-muted); flex-shrink: 0; }
+
+/* Picker foto di sheet edit: avatar + lencana kamera */
+.edit-avatar {
+  position: relative;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+.edit-avatar img {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--accent-soft);
+  display: block;
+}
+.edit-avatar__cam {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  border: 2.5px solid var(--bg-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .profile-info-card {
@@ -1233,13 +1573,14 @@ span.badge-bot { padding: 3px 7px; }
 .profile-avatar-img--uploading { animation: avatar-uploading 1.2s ease-in-out infinite; }
 
 .profile-avatar-img {
-  width: 88px;
-  height: 88px;
+  width: 92px;
+  height: 92px;
   border-radius: 50%;
   object-fit: cover;
-  margin-bottom: 8px;
   background: var(--accent-soft);
-  box-shadow: 0 0 0 3px var(--bg-card), 0 0 0 5px var(--border);
+  /* Cincin tebal warna latar memisahkan avatar dari cover di belakangnya */
+  box-shadow: 0 0 0 4px var(--bg), var(--shadow-md);
+  display: block;
 }
 
 /* ── Premium polish: micro-interactions & motion ────────────────── */
@@ -1248,15 +1589,18 @@ span.badge-bot { padding: 3px 7px; }
 /* Feedback tekan universal — snap saat ditekan, spring saat dilepas */
 .icon-btn, .back-btn, .auth-btn, .auth-tab, .btn-post, .btn-cancel,
 .comment-send, .thread-composer__send, .signout-btn, .ca-attach-btn,
-.post-card__delete, .post-card__comments-btn, .post-card__quote-btn, .user-result, .ca-card {
+.post-card__delete, .post-card__comments-btn, .post-card__quote-btn, .user-result, .ca-card,
+.settings-row, .social-chip, .comment__delete, .edit-avatar {
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease,
               box-shadow 0.2s ease, transform 0.2s cubic-bezier(.34,1.56,.64,1);
 }
 .icon-btn:active, .back-btn:active, .auth-tab:active, .btn-cancel:active,
 .signout-btn:active, .ca-attach-btn:active, .post-card__delete:active,
-.post-card__comments-btn:active, .post-card__quote-btn:active, .user-result:active, .ca-card:active {
+.post-card__comments-btn:active, .post-card__quote-btn:active, .user-result:active, .ca-card:active,
+.social-chip:active, .comment__delete:active, .edit-avatar:active {
   transform: scale(0.95);
 }
+.settings-row:active { background: var(--bg-hover); }
 .auth-btn:active:not(:disabled),
 .btn-post:active:not(:disabled) { transform: scale(0.97); }
 .comment-send:active:not(:disabled),

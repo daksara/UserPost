@@ -244,86 +244,112 @@ export default function ProfilePage({ active = true }: { active?: boolean }) {
       </header>
 
       <div className="profile-body" style={{ overflowY: 'auto' }}>
-        {/* Avatar */}
-        <div style={{ position: 'relative', marginBottom: 4 }}>
-          <img
-            src={avatarSrc}
-            alt={profile.username}
-            className={`profile-avatar-img${saving ? ' profile-avatar-img--uploading' : ''}`}
-            onError={(e) => {
-              const img = e.currentTarget
-              img.style.display = 'none'
-              const fallback = img.nextElementSibling as HTMLElement | null
-              if (fallback) fallback.style.display = 'flex'
-            }}
+        {/* Hero: cover gradient dengan hue personal dari username + avatar */}
+        <div className="profile-hero">
+          <div
+            className="profile-hero__cover"
+            style={{ background: `linear-gradient(120deg, hsl(${hue} 62% 50%), hsl(${(hue + 52) % 360} 68% 58%))` }}
           />
-          <div className="profile-avatar" style={{ background: `hsl(${hue},60%,65%)`, display: 'none' }}>
-            {profile.username[0].toUpperCase()}
+          <div className="profile-hero__avatar">
+            <div style={{ position: 'relative' }}>
+              <img
+                src={avatarSrc}
+                alt={profile.username}
+                className={`profile-avatar-img${saving ? ' profile-avatar-img--uploading' : ''}`}
+                onError={(e) => {
+                  const img = e.currentTarget
+                  img.style.display = 'none'
+                  const fallback = img.nextElementSibling as HTMLElement | null
+                  if (fallback) fallback.style.display = 'flex'
+                }}
+              />
+              <div className="profile-avatar" style={{ background: `hsl(${hue},60%,65%)`, display: 'none' }}>
+                {profile.username[0].toUpperCase()}
+              </div>
+              <button
+                onClick={openEdit}
+                title="Edit profile"
+                style={{
+                  position: 'absolute', bottom: 2, right: 2,
+                  width: 28, height: 28, borderRadius: '50%',
+                  background: 'var(--accent)', border: '2.5px solid var(--bg)',
+                  color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer',
+                }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+              </button>
+            </div>
           </div>
-          {/* Edit button overlay */}
-          <button
-            onClick={openEdit}
-            style={{
-              position: 'absolute', bottom: 0, right: 0,
-              width: 28, height: 28, borderRadius: '50%',
-              background: 'var(--accent)', border: '2px solid var(--bg-card)',
-              color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer',
-            }}
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-            </svg>
-          </button>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>{profile.username}</span>
+          <span className="profile-username">{profile.username}</span>
           {profile.is_verified && <BadgeChip type="official"/>}
           {profile.badge_type && <BadgeChip type={profile.badge_type}/>}
         </div>
 
+        <span className="profile-joined">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          Joined {new Date(profile.created_at).toLocaleDateString([], { month: 'short', year: 'numeric' })}
+        </span>
+
         {/* Bio */}
-        {(profile as any).bio && (
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center', maxWidth: 280, lineHeight: 1.5 }}>
-            {(profile as any).bio}
-          </p>
-        )}
+        {(profile as any).bio && <p className="profile-bio">{(profile as any).bio}</p>}
 
         {/* Stats */}
-        <div style={{ display: 'flex', gap: 28, justifyContent: 'center', margin: '6px 0 12px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-            <span style={{ fontWeight: 800, fontSize: '1.05rem' }}>{msgStats?.sent ?? '–'}</span>
-            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Messages Sent</span>
+        <div className="profile-stats">
+          <div className="stat">
+            <span className="stat__num">
+              {myPosts === null
+                ? <span className="post-skeleton__line" style={{ display: 'inline-block', width: 24, height: 14 }}/>
+                : myPosts.length}
+            </span>
+            <span className="stat__label">Active Posts</span>
           </div>
-          <div style={{ width: 1, background: 'var(--border)', alignSelf: 'stretch' }}/>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-            <span style={{ fontWeight: 800, fontSize: '1.05rem' }}>{msgStats?.received ?? '–'}</span>
-            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Messages Received</span>
+          <div className="stat">
+            <span className="stat__num">
+              {msgStats === null
+                ? <span className="post-skeleton__line" style={{ display: 'inline-block', width: 24, height: 14 }}/>
+                : msgStats.sent}
+            </span>
+            <span className="stat__label">Msg Sent</span>
+          </div>
+          <div className="stat">
+            <span className="stat__num">
+              {msgStats === null
+                ? <span className="post-skeleton__line" style={{ display: 'inline-block', width: 24, height: 14 }}/>
+                : msgStats.received}
+            </span>
+            <span className="stat__label">Msg Received</span>
           </div>
         </div>
 
         {/* Social links */}
         {((profile as any).twitter || (profile as any).telegram) && (
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 4 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', margin: '4px 0' }}>
             {(profile as any).twitter && (
               <a
+                className="social-chip"
                 href={`https://twitter.com/${(profile as any).twitter.replace('@','')}`}
                 target="_blank" rel="noopener noreferrer"
-                style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.259 5.631L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/></svg>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.259 5.631L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/></svg>
                 {(profile as any).twitter}
               </a>
             )}
             {(profile as any).telegram && (
               <a
+                className="social-chip"
                 href={`https://t.me/${(profile as any).telegram.replace('@','')}`}
                 target="_blank" rel="noopener noreferrer"
-                style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L8.32 14.28l-2.96-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.828.279z"/></svg>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L8.32 14.28l-2.96-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.828.279z"/></svg>
                 {(profile as any).telegram}
               </a>
             )}
@@ -358,74 +384,102 @@ export default function ProfilePage({ active = true }: { active?: boolean }) {
 
 
         {/* My Active Posts */}
-        <div style={{ width: '100%' }}>
-          <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+          <div className="section-label">
             My Active Posts
+            {myPosts !== null && myPosts.length > 0 && (
+              <span className="section-label__count">{myPosts.length}</span>
+            )}
           </div>
           {myPosts === null && (
             <div style={{ padding: '14px 0', textAlign: 'center' }}><span className="spinner"/></div>
           )}
           {myPosts?.length === 0 && (
-            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', padding: '6px 0' }}>
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', padding: '2px 0 4px' }}>
               No active posts. Posts disappear after 24 hours.
             </p>
           )}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {myPosts?.map(p => (
-              <div key={p.id} style={{
-                background: 'var(--bg-card)', border: '1px solid var(--border)',
-                borderRadius: 'var(--radius-sm)', padding: '10px 12px',
-                boxShadow: 'var(--shadow-sm)', display: 'flex', alignItems: 'center', gap: 10,
-              }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{
-                    fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: 1.4,
-                    overflow: 'hidden', display: '-webkit-box',
-                    WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', wordBreak: 'break-word',
-                  }}>
-                    {p.body}
+          {myPosts?.map(p => {
+            const total = new Date(p.expires_at).getTime() - new Date(p.created_at).getTime()
+            const remainingMs = Math.max(0, new Date(p.expires_at).getTime() - Date.now())
+            const pct = total > 0 ? remainingMs / total : 0
+            const hoursLeft = remainingMs / 3600000
+            const barColor = hoursLeft > 12 ? 'var(--accent)' : hoursLeft > 4 ? '#f97316' : 'var(--red)'
+            return (
+              <div key={p.id} className="mypost-card">
+                <div className="mypost-card__row">
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: 1.4,
+                      overflow: 'hidden', display: '-webkit-box',
+                      WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', wordBreak: 'break-word',
+                    }}>
+                      {p.body}
+                    </div>
+                    <div style={{ display: 'flex', gap: 10, marginTop: 4, fontSize: '0.72rem', color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
+                      <span>{expiresIn(p.expires_at) ?? 'expired'}</span>
+                      <span>{p.comment_count} comments</span>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 10, marginTop: 4, fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                    <span>{expiresIn(p.expires_at) ?? 'expired'}</span>
-                    <span>{p.comment_count} comments</span>
-                  </div>
+                  <button
+                    onClick={() => confirmPostId === p.id ? handleDeletePost(p.id) : setConfirmPostId(p.id)}
+                    onBlur={() => setConfirmPostId(null)}
+                    title={confirmPostId === p.id ? 'Tap again to delete' : 'Delete post'}
+                    style={{
+                      background: confirmPostId === p.id ? 'var(--red)' : 'none',
+                      border: 'none', borderRadius: 'var(--radius-xs)', padding: 7,
+                      color: confirmPostId === p.id ? '#fff' : 'var(--text-muted)',
+                      display: 'flex', alignItems: 'center', flexShrink: 0,
+                      transition: 'background 0.15s, color 0.15s',
+                    }}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+                    </svg>
+                  </button>
                 </div>
-                <button
-                  onClick={() => confirmPostId === p.id ? handleDeletePost(p.id) : setConfirmPostId(p.id)}
-                  onBlur={() => setConfirmPostId(null)}
-                  title={confirmPostId === p.id ? 'Tap again to delete' : 'Delete post'}
-                  style={{
-                    background: confirmPostId === p.id ? 'var(--red)' : 'none',
-                    border: 'none', borderRadius: 'var(--radius-xs)', padding: 7,
-                    color: confirmPostId === p.id ? '#fff' : 'var(--text-muted)',
-                    display: 'flex', alignItems: 'center', flexShrink: 0,
-                    transition: 'background 0.15s, color 0.15s',
-                  }}
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
-                  </svg>
-                </button>
+                <div className="mypost-card__bar">
+                  <div className="mypost-card__bar-fill" style={{ width: `${pct * 100}%`, background: barColor }}/>
+                </div>
               </div>
-            ))}
-          </div>
+            )
+          })}
         </div>
 
-        <button
-          className="signout-btn"
-          onClick={() => { setChangingPw(true); setPwError(''); setPwSuccess(false) }}
-          style={{ color: 'var(--accent)', marginBottom: 0, WebkitTapHighlightColor: 'transparent' }}
-        >
-          Change Password
-        </button>
-        {/* Delete Account button */}
-        <button
-          className="signout-btn"
-          onClick={() => { setDeletingAccount(true); setDeletePassword(''); setDeleteError('') }}
-          style={{ color: 'var(--red)', marginTop: 8, WebkitTapHighlightColor: 'transparent' }}
-        >
-          Delete Account
-        </button>
+        {/* Account settings */}
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+          <div className="section-label">Account</div>
+          <div className="settings-card">
+            <button
+              className="settings-row"
+              onClick={() => { setChangingPw(true); setPwError(''); setPwSuccess(false) }}
+            >
+              <span className="settings-row__icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+              </span>
+              Change Password
+              <svg className="settings-row__chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </button>
+            <button
+              className="settings-row settings-row--danger"
+              onClick={() => { setDeletingAccount(true); setDeletePassword(''); setDeleteError('') }}
+            >
+              <span className="settings-row__icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+                </svg>
+              </span>
+              Delete Account
+              <svg className="settings-row__chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* ── Change Password Sheet ── */}
@@ -511,23 +565,21 @@ export default function ProfilePage({ active = true }: { active?: boolean }) {
               style={{ display: 'none' }}
               onChange={handlePickPhoto}
             />
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-              <img
-                src={photoPreview || photoUrl || getAvatarUrl(profile.username)}
-                alt="preview"
-                style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', background: 'var(--accent-soft)', border: '2px solid var(--border)' }}
-                onError={(e) => { (e.currentTarget as HTMLImageElement).src = getAvatarUrl(profile.username) }}
-              />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                style={{
-                  background: 'var(--accent-soft)', color: 'var(--accent)',
-                  border: '1.5px solid var(--accent)', borderRadius: 'var(--radius-full)',
-                  padding: '6px 16px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer',
-                }}
-              >
-                Choose from Gallery
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+              <button className="edit-avatar" onClick={() => fileInputRef.current?.click()} title="Change photo">
+                <img
+                  src={photoPreview || photoUrl || getAvatarUrl(profile.username)}
+                  alt="preview"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).src = getAvatarUrl(profile.username) }}
+                />
+                <span className="edit-avatar__cam">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                    <circle cx="12" cy="13" r="4"/>
+                  </svg>
+                </span>
               </button>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Tap photo to change</span>
             </div>
 
             <label style={labelStyle}>Bio</label>
