@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Security rules for UserPost.
+// Security rules for Pendar.
 // Deploy with: firebase deploy --only firestore:rules
 service cloud.firestore {
   match /databases/{database}/documents {

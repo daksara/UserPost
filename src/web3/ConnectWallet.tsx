@@ -44,7 +44,8 @@ export function ConnectWallet() {
             <button
               onClick={() => connect({ connector: injectedConnector })}
               disabled={isPending}
-              style={btn}
+              className="pdr-btn pdr-btn--primary"
+              style={{ alignSelf: 'flex-start' }}
             >
               {isPending ? 'Menyambung…' : 'Connect Wallet'}
             </button>
@@ -66,7 +67,7 @@ export function ConnectWallet() {
           <span style={{ width: 8, height: 8, borderRadius: 4, background: '#22c55e' }} />
           Tersambung
         </span>
-        <button onClick={() => disconnect()} style={{ ...btn, ...btnGhost }}>
+        <button onClick={() => disconnect()} className="pdr-btn pdr-btn--ghost" style={{ padding: '6px 12px', fontSize: '0.82rem' }}>
           Disconnect
         </button>
       </div>
@@ -108,13 +109,3 @@ const box: React.CSSProperties = {
   borderRadius: 12, padding: 16,
 }
 
-const btn: React.CSSProperties = {
-  background: 'var(--accent)', color: '#fff', border: 'none',
-  borderRadius: 10, padding: '10px 16px', fontSize: '0.9rem',
-  fontWeight: 700, cursor: 'pointer',
-}
-
-const btnGhost: React.CSSProperties = {
-  background: 'transparent', color: 'var(--text-muted)',
-  border: '1px solid var(--border)', padding: '6px 12px', fontSize: '0.82rem',
-}

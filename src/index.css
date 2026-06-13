@@ -5,21 +5,21 @@
   --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'SF Mono', 'Fira Code', monospace;
 
-  --bg:           #f4f4f8;
+  --bg:           #f7f6f3;
   --bg-card:      #ffffff;
-  --bg-input:     #f0f0f5;
-  --bg-hover:     #ebebf2;
+  --bg-input:     #efece6;
+  --bg-hover:     #e9e6df;
 
-  --text-primary:   #0f0f14;
-  --text-secondary: #4a4a60;
-  --text-muted:     #9090a8;
+  --text-primary:   #15140f;
+  --text-secondary: #4c4940;
+  --text-muted:     #8f8b80;
 
-  --accent:       #5b5ef4;
-  --accent-soft:  #eeeeff;
-  --accent-dark:  #4547d0;
-  --border:       #e2e2ec;
-  --border-focus: #5b5ef4;
-  --green:        #22c55e;
+  --accent:       #c9870f;
+  --accent-soft:  #fbf0d8;
+  --accent-dark:  #a06c08;
+  --border:       #e7e3da;
+  --border-focus: #c9870f;
+  --green:        #1f9d57;
   --red:          #ef4444;
   --red-soft:     #fff0f0;
 
@@ -38,21 +38,21 @@
 
 /* ── Dark mode ──────────────────────────────────────────────────── */
 [data-theme="dark"] {
-  --bg:           #16161c;
-  --bg-card:      #1f1f28;
-  --bg-input:     #262631;
-  --bg-hover:     #2c2c38;
+  --bg:           #0e0e11;
+  --bg-card:      #17171c;
+  --bg-input:     #1e1e25;
+  --bg-hover:     #26262f;
 
-  --text-primary:   #f0f0f5;
-  --text-secondary: #b4b4c6;
-  --text-muted:     #74748a;
+  --text-primary:   #f4f1ea;
+  --text-secondary: #c4c0b5;
+  --text-muted:     #86837a;
 
-  --accent:       #6e70ff;
-  --accent-soft:  #23233e;
-  --accent-dark:  #5b5ef4;
-  --border:       #2e2e3a;
-  --border-focus: #6e70ff;
-  --green:        #22c55e;
+  --accent:       #f0a93b;
+  --accent-soft:  #2a2113;
+  --accent-dark:  #d9941f;
+  --border:       #2a2a32;
+  --border-focus: #f0a93b;
+  --green:        #2ecd7a;
   --red:          #f56565;
   --red-soft:     #2c1a1f;
 
@@ -1304,4 +1304,124 @@ span.badge-bot { padding: 3px 7px; }
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ── Pendar UI premium: tombol, kartu, input interaktif ─────────── */
+
+.pdr-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  border: 1px solid transparent; border-radius: var(--radius-sm);
+  padding: 11px 17px; font-size: 0.9rem; font-weight: 700;
+  font-family: var(--font); cursor: pointer; line-height: 1;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .14s cubic-bezier(.2,.8,.2,1), box-shadow .22s ease,
+              background-color .2s ease, border-color .2s ease, color .2s ease, opacity .2s ease, filter .2s ease;
+}
+.pdr-btn:disabled { opacity: .45; cursor: default; }
+.pdr-btn:active:not(:disabled) { transform: scale(.96); }
+
+/* Tombol utama — amber glow */
+.pdr-btn--primary {
+  background: var(--accent); color: #1a1206;
+  box-shadow: 0 6px 18px -8px var(--accent);
+}
+.pdr-btn--primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+  box-shadow: 0 0 0 1px var(--accent), 0 12px 28px -8px var(--accent);
+}
+.pdr-btn--primary:active:not(:disabled) { transform: scale(.97); }
+
+.pdr-btn--ghost {
+  background: transparent; color: var(--text-secondary); border-color: var(--border);
+}
+.pdr-btn--ghost:hover:not(:disabled) {
+  border-color: var(--accent); color: var(--accent); background: var(--accent-soft);
+}
+
+/* Tombol ikon (mis. hapus) */
+.pdr-icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: var(--radius-xs);
+  background: transparent; color: var(--text-muted); border: 1px solid var(--border);
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: transform .14s ease, color .2s ease, border-color .2s ease, background-color .2s ease;
+}
+.pdr-icon-btn:hover { color: var(--red); border-color: var(--red); background: var(--red-soft); }
+.pdr-icon-btn:active { transform: scale(.9); }
+
+.pdr-link {
+  background: none; border: none; color: var(--accent); font-weight: 700;
+  font-size: .85rem; cursor: pointer; padding: 0; font-family: var(--font);
+  display: inline-flex; align-items: center; gap: 5px;
+  transition: opacity .15s ease, gap .15s ease;
+}
+.pdr-link:hover { opacity: .75; }
+.pdr-link--arrow:hover { gap: 8px; }
+
+/* Kartu dengan lift halus saat hover */
+.pdr-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 16px;
+  transition: transform .2s ease, box-shadow .25s ease, border-color .2s ease;
+}
+.pdr-card--hover:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  box-shadow: var(--shadow-md);
+}
+
+/* Pill navigasi */
+.pdr-nav-btn {
+  border: none; cursor: pointer; border-radius: var(--radius-xs);
+  padding: 7px 14px; font-size: .88rem; font-weight: 700; font-family: var(--font);
+  background: transparent; color: var(--text-muted);
+  transition: background-color .2s ease, color .2s ease, transform .12s ease;
+}
+.pdr-nav-btn:hover { color: var(--text-primary); }
+.pdr-nav-btn:active { transform: scale(.94); }
+.pdr-nav-btn--active { background: var(--accent-soft); color: var(--accent); }
+
+/* Input premium dengan focus ring amber */
+.pdr-input {
+  background: var(--bg-input); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 11px 13px; font-size: .9rem;
+  color: var(--text-primary); outline: none; width: 100%; font-family: var(--font);
+  transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease;
+}
+.pdr-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent);
+}
+.pdr-input::placeholder { color: var(--text-muted); }
+
+/* Checkbox beraksen amber */
+.pdr-check { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+
+/* Progress bar */
+.pdr-progress { flex: 1; height: 6px; border-radius: 3px; background: var(--bg-input); overflow: hidden; }
+.pdr-progress__fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width .35s cubic-bezier(.2,.8,.2,1); }
+
+/* Badge status selesai */
+.pdr-done {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: .72rem; font-weight: 700; color: var(--green);
+  background: color-mix(in srgb, var(--green) 14%, transparent);
+  padding: 2px 8px; border-radius: var(--radius-full);
+}
+
+/* Logo berpendar lembut */
+@keyframes pdrGlow { 0%,100% { opacity:.5 } 50% { opacity:1 } }
+
+/* Animasi muncul untuk kartu/list */
+@keyframes pdrRise { from { opacity:0; transform: translateY(10px) } to { opacity:1; transform: translateY(0) } }
+.pdr-rise { animation: pdrRise .4s cubic-bezier(.2,.8,.2,1) both; }
+
+/* Feedback tekan halus untuk tombol lain (mis. daftar lesson) */
+button:not(.pdr-btn):not(.pdr-icon-btn):not(.pdr-nav-btn):not(.pdr-link) {
+  transition: transform .12s cubic-bezier(.2,.8,.2,1), border-color .2s ease, background-color .2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+button:not(.pdr-btn):not(.pdr-icon-btn):not(.pdr-nav-btn):not(.pdr-link):active:not(:disabled) {
+  transform: scale(.97);
 }
