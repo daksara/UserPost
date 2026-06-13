@@ -5,6 +5,7 @@
 // Tugas bisa dicentang, progres & status tersimpan per user.
 import { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
+import { useT } from '../i18n'
 import { parseAirdrop } from '../lib/airdropParser'
 import {
   signIn, signUpEmail, signOut,
@@ -23,13 +24,14 @@ const IconExternal = () => <svg {...ic} width={14} height={14}><path d="M18 13v6
 
 export default function AirdropPage({ active }: { active: boolean }) {
   const { user, loading } = useAuth()
-  if (loading) return <div style={{ padding: 24, color: 'var(--text-muted)' }}>Memuat…</div>
+  if (loading) return <div style={{ padding: 24, color: 'var(--text-muted)' }}>…</div>
   if (!user) return <AuthGate />
   return <Tracker userId={user.uid} active={active} />
 }
 
 // ── Login / Daftar ───────────────────────────────────────────────────
 function AuthGate() {
+  const t = useT()
   const [mode, setMode] = useState<'in' | 'up'>('in')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -43,31 +45,31 @@ function AuthGate() {
       if (mode === 'in') await signIn(email, password)
       else await signUpEmail(email, password)
     } catch (err: any) {
-      setError(err?.message?.replace('Firebase: ', '') ?? 'Gagal. Coba lagi.')
+      setError(err?.message?.replace('Firebase: ', '') ?? t('Gagal. Coba lagi.', 'Failed. Try again.'))
     } finally { setBusy(false) }
   }
 
   return (
     <div className="pdr-rise" style={{ maxWidth: 380, margin: '40px auto 0', padding: 24 }}>
       <h2 style={{ margin: '0 0 4px', fontSize: '1.25rem', letterSpacing: '-0.01em' }}>
-        {mode === 'in' ? 'Masuk' : 'Daftar'} untuk simpan airdrop
+        {mode === 'in' ? t('Masuk untuk simpan airdrop', 'Sign in to save airdrops') : t('Daftar untuk simpan airdrop', 'Sign up to save airdrops')}
       </h2>
       <p style={{ margin: '0 0 18px', fontSize: '0.88rem', color: 'var(--text-muted)' }}>
-        Catatan airdrop-mu tersimpan di akunmu & sinkron antar perangkat.
+        {t('Catatan airdrop-mu tersimpan di akunmu & sinkron antar perangkat.', 'Your airdrop notes are saved to your account & synced across devices.')}
       </p>
       <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <input className="pdr-input" type="email" placeholder="Email" value={email} required
           onChange={(e) => setEmail(e.target.value)} />
-        <input className="pdr-input" type="password" placeholder="Password (min 6 karakter)" value={password} required
+        <input className="pdr-input" type="password" placeholder={t('Password (min 6 karakter)', 'Password (min 6 chars)')} value={password} required
           onChange={(e) => setPassword(e.target.value)} />
         {error && <p style={{ margin: 0, color: 'var(--red)', fontSize: '0.82rem' }}>{error}</p>}
         <button type="submit" disabled={busy} className="pdr-btn pdr-btn--primary" style={{ marginTop: 4 }}>
-          {busy ? 'Memproses…' : mode === 'in' ? 'Masuk' : 'Daftar'}
+          {busy ? '…' : mode === 'in' ? t('Masuk', 'Sign in') : t('Daftar', 'Sign up')}
         </button>
       </form>
       <button onClick={() => { setMode(mode === 'in' ? 'up' : 'in'); setError('') }}
         className="pdr-link" style={{ marginTop: 14 }}>
-        {mode === 'in' ? 'Belum punya akun? Daftar' : 'Sudah punya akun? Masuk'}
+        {mode === 'in' ? t('Belum punya akun? Daftar', "No account? Sign up") : t('Sudah punya akun? Masuk', 'Have an account? Sign in')}
       </button>
     </div>
   )
@@ -75,6 +77,7 @@ function AuthGate() {
 
 // ── Tracker utama ────────────────────────────────────────────────────
 function Tracker({ userId, active }: { userId: string; active: boolean }) {
+  const t = useT()
   const [airdrops, setAirdrops] = useState<Airdrop[]>([])
   const [err, setErr] = useState('')
 
@@ -88,7 +91,7 @@ function Tracker({ userId, active }: { userId: string; active: boolean }) {
     <div style={{ maxWidth: 720, margin: '0 auto', padding: 20, display: 'flex', flexDirection: 'column', gap: 18 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ margin: 0, fontSize: '1.3rem', letterSpacing: '-0.02em' }}>Airdrop Tracker</h2>
-        <button onClick={() => signOut()} className="pdr-link">Keluar</button>
+        <button onClick={() => signOut()} className="pdr-link">{t('Keluar', 'Sign out')}</button>
       </div>
 
       <Importer userId={userId} />
@@ -97,7 +100,7 @@ function Tracker({ userId, active }: { userId: string; active: boolean }) {
 
       {airdrops.length === 0 ? (
         <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center', padding: '24px 0' }}>
-          Belum ada airdrop. Tempel teks dari grup di atas untuk mulai melacak.
+          {t('Belum ada airdrop. Tempel teks dari grup di atas untuk mulai melacak.', 'No airdrops yet. Paste text from a group above to start tracking.')}
         </p>
       ) : (
         airdrops.map((a, i) => <AirdropCard key={a.id} airdrop={a} index={i} />)
@@ -108,6 +111,7 @@ function Tracker({ userId, active }: { userId: string; active: boolean }) {
 
 // ── Import: paste → parse → preview editable → simpan ─────────────────
 function Importer({ userId }: { userId: string }) {
+  const t = useT()
   const [raw, setRaw] = useState('')
   const [parsed, setParsed] = useState<ReturnType<typeof parseAirdrop> | null>(null)
   const [saving, setSaving] = useState(false)
@@ -131,7 +135,7 @@ function Importer({ userId }: { userId: string }) {
 
   return (
     <div className="pdr-card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <label style={{ fontSize: '0.92rem', fontWeight: 700 }}>Tempel teks airdrop</label>
+      <label style={{ fontSize: '0.92rem', fontWeight: 700 }}>{t('Tempel teks airdrop', 'Paste airdrop text')}</label>
       <textarea
         className="pdr-input"
         value={raw}
@@ -142,23 +146,23 @@ function Importer({ userId }: { userId: string }) {
       />
       {!parsed ? (
         <button onClick={handleParse} disabled={!raw.trim()} className="pdr-btn pdr-btn--primary" style={{ alignSelf: 'flex-start' }}>
-          <IconSparkle /> Rapikan otomatis
+          <IconSparkle /> {t('Rapikan otomatis', 'Auto-tidy')}
         </button>
       ) : (
         <div className="pdr-rise" style={{ display: 'flex', flexDirection: 'column', gap: 12, borderTop: '1px solid var(--border)', paddingTop: 14 }}>
-          <Field label="Nama" value={parsed.name} onChange={(v) => setParsed({ ...parsed, name: v })} />
+          <Field label={t('Nama', 'Name')} value={parsed.name} onChange={(v) => setParsed({ ...parsed, name: v })} />
           <Field label="Reward" value={parsed.reward} onChange={(v) => setParsed({ ...parsed, reward: v })} />
-          <Field label="Link daftar" value={parsed.registerUrl} onChange={(v) => setParsed({ ...parsed, registerUrl: v })} />
+          <Field label={t('Link daftar', 'Register link')} value={parsed.registerUrl} onChange={(v) => setParsed({ ...parsed, registerUrl: v })} />
           <div>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Tugas ({parsed.tasks.length})</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('Tugas', 'Tasks')} ({parsed.tasks.length})</span>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
-              {parsed.tasks.map((t, i) => (
+              {parsed.tasks.map((task, i) => (
                 <div key={i} style={{ display: 'flex', gap: 6 }}>
                   <input
-                    className="pdr-input" value={t}
+                    className="pdr-input" value={task}
                     onChange={(e) => { const next = [...parsed.tasks]; next[i] = e.target.value; setParsed({ ...parsed, tasks: next }) }}
                   />
-                  <button className="pdr-icon-btn" aria-label="Hapus tugas"
+                  <button className="pdr-icon-btn" aria-label={t('Hapus tugas', 'Remove task')}
                     onClick={() => setParsed({ ...parsed, tasks: parsed.tasks.filter((_, j) => j !== i) })}>
                     <IconClose />
                   </button>
@@ -166,15 +170,15 @@ function Importer({ userId }: { userId: string }) {
               ))}
               <button className="pdr-link" style={{ alignSelf: 'flex-start', marginTop: 2 }}
                 onClick={() => setParsed({ ...parsed, tasks: [...parsed.tasks, ''] })}>
-                <IconPlus /> Tambah tugas
+                <IconPlus /> {t('Tambah tugas', 'Add task')}
               </button>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={handleSave} disabled={saving || !parsed.name.trim()} className="pdr-btn pdr-btn--primary">
-              {saving ? 'Menyimpan…' : 'Simpan ke tracker'}
+              {saving ? t('Menyimpan…', 'Saving…') : t('Simpan ke tracker', 'Save to tracker')}
             </button>
-            <button onClick={() => setParsed(null)} className="pdr-btn pdr-btn--ghost">Batal</button>
+            <button onClick={() => setParsed(null)} className="pdr-btn pdr-btn--ghost">{t('Batal', 'Cancel')}</button>
           </div>
         </div>
       )}
@@ -193,12 +197,13 @@ function Field({ label, value, onChange }: { label: string; value: string; onCha
 
 // ── Kartu airdrop tersimpan ───────────────────────────────────────────
 function AirdropCard({ airdrop, index }: { airdrop: Airdrop; index: number }) {
-  const done = airdrop.tasks.filter((t) => t.done).length
+  const t = useT()
+  const done = airdrop.tasks.filter((task) => task.done).length
   const total = airdrop.tasks.length
   const pct = total ? Math.round((done / total) * 100) : 0
 
   const toggle = async (idx: number) => {
-    const next: AirdropTask[] = airdrop.tasks.map((t, i) => i === idx ? { ...t, done: !t.done } : t)
+    const next: AirdropTask[] = airdrop.tasks.map((task, i) => i === idx ? { ...task, done: !task.done } : task)
     await updateAirdropTasks(airdrop.id, next)
   }
 
@@ -208,20 +213,20 @@ function AirdropCard({ airdrop, index }: { airdrop: Airdrop; index: number }) {
         <div>
           <h3 style={{ margin: 0, fontSize: '1.05rem', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
             {airdrop.name}
-            {airdrop.status === 'done' && <span className="pdr-done"><IconCheck /> selesai</span>}
+            {airdrop.status === 'done' && <span className="pdr-done"><IconCheck /> {t('selesai', 'done')}</span>}
           </h3>
           {airdrop.reward && (
             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: 2 }}>Reward: {airdrop.reward}</div>
           )}
         </div>
-        <button className="pdr-icon-btn" aria-label="Hapus airdrop" onClick={() => deleteAirdrop(airdrop.id)}>
+        <button className="pdr-icon-btn" aria-label={t('Hapus airdrop', 'Delete airdrop')} onClick={() => deleteAirdrop(airdrop.id)}>
           <IconTrash />
         </button>
       </div>
 
       {airdrop.register_url && (
         <a href={airdrop.register_url} target="_blank" rel="noreferrer" className="pdr-link pdr-link--arrow" style={{ wordBreak: 'break-all' }}>
-          <IconExternal /> Buka link daftar
+          <IconExternal /> {t('Buka link daftar', 'Open register link')}
         </a>
       )}
 
@@ -232,11 +237,11 @@ function AirdropCard({ airdrop, index }: { airdrop: Airdrop; index: number }) {
             <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{done}/{total}</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {airdrop.tasks.map((t, i) => (
+            {airdrop.tasks.map((task, i) => (
               <label key={i} style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer', fontSize: '0.9rem' }}>
-                <input className="pdr-check" type="checkbox" checked={t.done} onChange={() => toggle(i)} />
-                <span style={{ textDecoration: t.done ? 'line-through' : 'none', color: t.done ? 'var(--text-muted)' : 'var(--text-primary)', transition: 'color .2s ease' }}>
-                  {t.text}
+                <input className="pdr-check" type="checkbox" checked={task.done} onChange={() => toggle(i)} />
+                <span style={{ textDecoration: task.done ? 'line-through' : 'none', color: task.done ? 'var(--text-muted)' : 'var(--text-primary)', transition: 'color .2s ease' }}>
+                  {task.text}
                 </span>
               </label>
             ))}

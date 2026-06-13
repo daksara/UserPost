@@ -1,132 +1,110 @@
 # Pendar
 
-Platform belajar web3 dengan langsung praktik on-chain. Tiap lesson
-mengajarkan satu skill (connect wallet, baca data, kirim transaksi, dll)
-lewat aksi nyata di testnet — bukan sekadar teori. Dibangun dengan
-React + Vite + wagmi + viem.
+**Belajar Web3 sambil praktik.** Platform belajar interaktif (dwibahasa ID/EN)
+di mana tiap lesson mengajarkan satu skill web3 dengan **melakukannya langsung
+on-chain di browser** — bukan teori. Selesai kursus, kamu punya skill, portfolio,
+dan **sertifikat NFT on-chain**.
 
-> Catatan: repo ini sebelumnya bernama "UserPost" (social feed). Kode app
-> sosial lama masih ada (`src/App.tsx`, `src/pages/{Feed,Messages,Profile}Page.tsx`,
-> `src/lib/firebase.ts`) untuk rujukan; entry point sekarang `src/LearnApp.tsx`.
+> Repo ini sebelumnya bernama "UserPost" (social feed). Kode app sosial lama
+> masih ada untuk rujukan (`src/App.tsx`, `src/pages/{Feed,Messages,Profile}Page.tsx`,
+> `src/lib/firebase.ts`); entry point sekarang `src/LearnApp.tsx`.
+
+## Kurikulum
+
+| Lesson | Skill | Widget |
+|---|---|---|
+| 0 · Connect Wallet | connect, baca address/saldo, switch network | `web3/ConnectWallet.tsx` |
+| 1 · Read On-Chain Data | `useReadContracts` (ERC-20) + `useBlockNumber` | `web3/ReadContract.tsx` |
+| 2 · Send a Transaction | faucet + `useSendTransaction` + tunggu receipt | `web3/SendTransaction.tsx` |
+| 3 · Token-Gated Content | buka konten berdasar kepemilikan on-chain | `web3/TokenGate.tsx` |
+| 4 · Mint NFT Certificate | `useWriteContract` ke ERC-721 milik sendiri | `web3/MintNFT.tsx` |
+
+Plus **Airdrop Tracker**: tempel teks airdrop dari grup → diparsing otomatis
+jadi tracker tugas terstruktur (butuh login, tersimpan di Firebase).
 
 ## Stack
 - **Frontend**: React 18 + TypeScript + Vite
-- **Web3**: wagmi v3 + viem (target chain: Base Sepolia testnet)
-- **Backend (warisan app lama)**: Firebase (Firestore + Auth + Storage)
-- **Hosting**: Vercel or Firebase Hosting
+- **Web3**: wagmi v3 + viem — target chain **Base Sepolia** (testnet)
+- **i18n**: layer ringan buatan sendiri (`src/i18n.tsx`), ID/EN
+- **Backend** (untuk Airdrop Tracker & app sosial lama): Firebase
+- **Hosting**: Vercel
 
 ---
 
-## Setup
+## Menjalankan lokal
 
-### 1. Create a Firebase project
-1. Go to [console.firebase.google.com](https://console.firebase.google.com) → Add project
-2. Enable **Authentication → Email/Password**
-3. Enable **Firestore Database** and **Storage**
-4. Add a **Web app** (Project Settings → Your apps) and copy its config
-
-### 2. Configure env
 ```bash
-cp .env.example .env
-# Fill in the VITE_FIREBASE_* values from your web app config
-```
-
-### 3. Deploy security rules and indexes
-Security rules live in `firestore.rules` and `storage.rules` and **must** be
-deployed — without them nothing enforces ownership or badge permissions.
-
-**Option A — from the browser (no CLI):** Firebase Console → Firestore
-Database → Rules → paste the contents of `firestore.rules` → Publish. Repeat
-for Storage → Rules with `storage.rules`. Enable the TTL policy under
-Firestore → TTL (collection `posts`, field `expires_at`).
-
-**Option B — GitHub Actions:** add the `FIREBASE_SERVICE_ACCOUNT` repository
-secret (JSON key from Project settings → Service accounts → Generate new
-private key); the "Deploy Firebase rules" workflow then deploys automatically
-whenever rule files change on `main`, or on demand from the Actions tab.
-
-**Option C — local CLI:**
-```bash
-npm install -g firebase-tools
-firebase login
-firebase use <your-project-id>
-firebase deploy --only firestore,storage
-```
-
-`firestore.indexes.json` includes the composite indexes the feed and message
-queries need, plus a **TTL policy** on `posts.expires_at` so expired posts are
-deleted automatically by Firestore (the client also filters them out while
-they wait for garbage collection).
-
-### 4. Install and run
-```bash
+cp .env.example .env     # isi nilainya (lihat di bawah)
 npm install
 npm run dev
 ```
 
-### 5. Quality checks
-```bash
-npm run lint   # ESLint
-npm test       # Vitest unit tests
-npm run build  # typecheck + production build
-```
-CI (GitHub Actions) runs all three on every push and pull request.
+Lesson web3 (0–3) jalan tanpa konfigurasi apa pun selain wallet
+([MetaMask](https://metamask.io/download/)) di jaringan Base Sepolia.
 
-### 6. Deploy to Vercel
-```bash
-npm install -g vercel
-vercel
-# Add the VITE_FIREBASE_* variables as environment variables
-```
+### Environment variables (`.env`)
+- `VITE_FIREBASE_*` — wajib untuk **Airdrop Tracker** (login & simpan data).
+  Buat project di [Firebase Console](https://console.firebase.google.com) →
+  Authentication (Email/Password) + Firestore → copy config web app.
+- `VITE_CERT_NFT_ADDRESS` — alamat kontrak sertifikat untuk **Lesson 4**
+  (lihat panduan deploy di bawah). Kosongkan kalau belum deploy.
+
+### Firestore rules (untuk Airdrop Tracker)
+Deploy `firestore.rules` (minimal blok `match /airdrops/{...}`) — Firebase
+Console → Firestore → Rules → paste → Publish. Tanpa ini, simpan airdrop ditolak.
 
 ---
 
-## Features
-- ✅ Auth (email + password, username as public identity, email verification)
-- ✅ Feed with 24-hour auto-expiring posts
-- ✅ Contract address / link attachment with allowlisted domains
-- ✅ Comments + likes with rule-enforced counters
-- ✅ Direct messages with replies, read receipts, soft delete
-- ✅ Realtime updates (feed, messages)
-- ✅ Badge system (verified accounts can grant badges)
-- ✅ Mobile-first UI, light/dark theme
+## Deploy kontrak Sertifikat (Lesson 4)
 
-## Data model
+Sertifikatnya kontrak **milikmu sendiri**, dengan gambar & metadata 100%
+on-chain (SVG di-generate di `tokenURI`). Sumber lengkap ada di dalam Lesson 4.
 
-| Collection | Purpose |
-|---|---|
-| `profiles/{uid}` | Public profile (username, bio, badge, avatar URL) |
-| `usernames/{username}` | Username → uid index for uniqueness checks (`{ uid }` only — no email, it is publicly readable) |
-| `posts/{postId}` | Posts with `expires_at` (24h TTL) and denormalized `like_count` / `comment_count` |
-| `posts/{postId}/comments/{commentId}` | Comments |
-| `users/{uid}/liked_posts/{postId}` | Per-user like marks |
-| `users/{uid}/inbox/{partnerUid}` | Latest-message pointer per conversation (unread badge) |
-| `conversations/{uidA_uidB}/messages/{msgId}` | Direct messages (conversation id = sorted uid pair) |
+1. Buka [remix.ethereum.org](https://remix.ethereum.org) → buat `PendarCert.sol`
+   → paste kontrak dari Lesson 4.
+2. **Solidity Compiler** → versi `0.8.20`+ → Compile (Remix auto-resolve import OpenZeppelin).
+3. **Deploy & Run** → Environment **Injected Provider – MetaMask** → pastikan
+   MetaMask di **Base Sepolia** dengan ETH faucet untuk gas.
+4. Deploy `PendarCert` → konfirmasi → copy alamat kontrak.
+5. Set `VITE_CERT_NFT_ADDRESS=<alamat>` di `.env` (atau Vercel → Settings →
+   Environment Variables) → redeploy. Tombol mint di Lesson 4 langsung aktif.
 
-## Project structure
+> Faucet Base Sepolia: <https://www.alchemy.com/faucets/base-sepolia>
+
+---
+
+## Quality checks
+```bash
+npm run lint   # ESLint
+npm test       # Vitest (termasuk test parser airdrop)
+npm run build  # typecheck + production build
+```
+CI (GitHub Actions) menjalankan ketiganya di tiap push & PR.
+
+## Deploy ke Vercel
+```bash
+npm install -g vercel
+vercel
+# Tambahkan VITE_FIREBASE_* dan (opsional) VITE_CERT_NFT_ADDRESS sebagai env vars
+```
+
+## Struktur proyek (Pendar)
 ```
 src/
-  lib/
-    firebase.ts        # Firebase client + all DB helpers
-    utils.ts           # Pure helpers (tested in utils.test.ts)
-  hooks/useAuth.tsx    # Auth context
-  components/          # Avatar, Badge, ErrorBoundary
+  LearnApp.tsx           # Entry point: shell + nav Belajar/Airdrop + toggle ID/EN
+  i18n.tsx               # LangProvider + useT (dwibahasa)
+  components/Logo.tsx    # Logo Pendar (mark berpendar)
   pages/
-    AuthPage.tsx       # Sign in / sign up / reset password
-    FeedPage.tsx       # Main feed + compose
-    MessagesPage.tsx   # DMs + thread view
-    ProfilePage.tsx    # Profile, settings, account deletion
-  App.tsx              # Root + tab navigation (hash-routed)
-firestore.rules        # Firestore security rules
-firestore.indexes.json # Composite indexes + TTL policy
-storage.rules          # Storage security rules
+    LearnPage.tsx        # Hero + daftar lesson + isi lesson + "Setelah lulus"
+    AirdropPage.tsx      # Airdrop tracker (login, paste→parse, checklist)
+  web3/
+    config.ts            # wagmi config (Base Sepolia, injected)
+    Web3Provider.tsx     # WagmiProvider + React Query
+    ConnectWallet.tsx    # Lesson 0
+    ReadContract.tsx     # Lesson 1
+    SendTransaction.tsx  # Lesson 2
+    TokenGate.tsx        # Lesson 3
+    MintNFT.tsx          # Lesson 4
+  lib/airdropParser.ts   # Parser teks airdrop (+ test)
+firestore.rules          # Rules (termasuk /airdrops)
 ```
-
-## Notes
-- **Sign-in** accepts email or username. New accounts reset passwords with
-  their email; the username index no longer stores emails (accounts that
-  still have one keep working until migrated).
-- **Badges**: only accounts with `is_verified: true` can grant/revoke badges —
-  enforced by Firestore rules, not just the UI.
-- Accounts created before email was required use a legacy synthetic email
-  (`up.<username>@userpost.app`) and skip email verification.
