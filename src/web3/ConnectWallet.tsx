@@ -27,18 +27,43 @@ export function ConnectWallet() {
   // Connector pertama = injected() yang kita daftarkan di config (MetaMask, dll).
   const injectedConnector = connectors[0]
   const hasWallet = typeof window !== 'undefined' && 'ethereum' in window
+  // Di browser HP biasa, provider wallet tidak disuntik — wallet adalah app
+  // terpisah. Solusinya: buka situs di browser dalam app MetaMask (deep link).
+  const isMobile = typeof navigator !== 'undefined' && /android|iphone|ipad|ipod/i.test(navigator.userAgent)
+  const mmDeepLink = typeof window !== 'undefined'
+    ? `https://metamask.app.link/dapp/${window.location.host}${window.location.pathname}`
+    : '#'
 
   if (!isConnected) {
     return (
       <div style={box}>
         {!hasWallet ? (
-          <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-            Belum ada wallet terdeteksi. Pasang{' '}
-            <a href="https://metamask.io/download/" target="_blank" rel="noreferrer"
-               style={{ color: 'var(--accent)', fontWeight: 600 }}>
-              MetaMask
-            </a>{' '}dulu, lalu refresh halaman ini.
-          </p>
+          isMobile ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                Di browser HP, wallet tidak bisa terdeteksi langsung — MetaMask adalah
+                app terpisah. Buka situs ini lewat <strong>browser di dalam app MetaMask</strong>,
+                atau tap tombol di bawah.
+              </p>
+              <a href={mmDeepLink} className="pdr-btn pdr-btn--primary"
+                 style={{ alignSelf: 'flex-start', textDecoration: 'none' }}>
+                Buka di MetaMask
+              </a>
+              <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                Belum punya?{' '}
+                <a href="https://metamask.io/download/" target="_blank" rel="noreferrer"
+                   style={{ color: 'var(--accent)', fontWeight: 600 }}>Install MetaMask</a> dulu.
+              </p>
+            </div>
+          ) : (
+            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+              Belum ada wallet terdeteksi. Pasang{' '}
+              <a href="https://metamask.io/download/" target="_blank" rel="noreferrer"
+                 style={{ color: 'var(--accent)', fontWeight: 600 }}>
+                extension MetaMask
+              </a>{' '}di browser ini, lalu refresh halaman.
+            </p>
+          )
         ) : (
           <>
             <button
