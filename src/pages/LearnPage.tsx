@@ -112,7 +112,48 @@ export default function LearnPage() {
             : null}
         </main>
       </div>
+      <Outcomes />
     </div>
+  )
+}
+
+function Outcomes() {
+  const t = useT()
+  const items: { title: string; desc: string }[] = [
+    {
+      title: t('Skill yang dibayar', 'In-demand skills'),
+      desc: t('Connect wallet, baca & tulis on-chain, token-gating, deploy kontrak — stack wagmi + viem yang dipakai di lowongan nyata.', 'Connect wallet, on-chain read & write, token-gating, contract deploy — the wagmi + viem stack used in real jobs.'),
+    },
+    {
+      title: t('Portfolio nyata', 'A real portfolio'),
+      desc: t('Kamu membangun dApp utuh lima alur — bukti konkret yang bisa ditunjukkan ke employer atau klien.', 'You build a full five-flow dApp — concrete proof you can show employers or clients.'),
+    },
+    {
+      title: t('Sertifikat on-chain', 'On-chain certificate'),
+      desc: t('NFT sertifikat permanen di blockchain yang bisa diverifikasi siapa pun.', 'A permanent NFT certificate on the blockchain anyone can verify.'),
+    },
+    {
+      title: t('Arah karier', 'A career path'),
+      desc: t('Paket skill Frontend Web3 Developer (remote, sering dibayar USDC) — plus fondasi untuk jadi founder.', 'The Frontend Web3 Developer skill set (remote, often paid in USDC) — plus a foundation to become a founder.'),
+    },
+  ]
+  return (
+    <section style={{ marginTop: 40 }}>
+      <h2 style={{ margin: '0 0 4px', fontSize: '1.3rem', letterSpacing: '-0.02em', textAlign: 'center' }}>
+        {t('Setelah lulus', 'After you finish')}
+      </h2>
+      <p style={{ margin: '0 auto 20px', maxWidth: 460, textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.92rem', lineHeight: 1.5 }}>
+        {t('Bukan sekadar tahu — kamu punya bukti dan arah.', 'Not just knowledge — you walk away with proof and direction.')}
+      </p>
+      <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+        {items.map((it) => (
+          <div key={it.title} className="pdr-card pdr-card--hover">
+            <h3 style={{ margin: '0 0 6px', fontSize: '0.98rem', color: 'var(--accent)' }}>{it.title}</h3>
+            <p style={{ margin: 0, fontSize: '0.86rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{it.desc}</p>
+          </div>
+        ))}
+      </div>
+    </section>
   )
 }
 
