@@ -1,6 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="100" fill="#5b5ef4"/>
-  <path d="M120 160h272v32H120zM120 240h272v32H120zM120 320h168v32H120z" fill="#fff"/>
-  <circle cx="392" cy="352" r="64" fill="#fff"/>
-  <path d="M370 352l16 16 32-32" stroke="#5b5ef4" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6e70ff"/>
+      <stop offset="1" stop-color="#4547d0"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="117" fill="url(#g)"/>
+  <g stroke="#fff" stroke-width="32" stroke-linecap="round">
+    <line x1="256" y1="165" x2="256" y2="80"/>
+    <line x1="256" y1="347" x2="256" y2="432"/>
+    <line x1="165" y1="256" x2="80" y2="256"/>
+    <line x1="347" y1="256" x2="432" y2="256"/>
+  </g>
+  <g stroke="#fff" stroke-width="24" stroke-linecap="round" opacity="0.6">
+    <line x1="315" y1="197" x2="362" y2="150"/>
+    <line x1="197" y1="197" x2="150" y2="150"/>
+    <line x1="197" y1="315" x2="150" y2="362"/>
+    <line x1="315" y1="315" x2="362" y2="362"/>
+  </g>
+  <circle cx="256" cy="256" r="59" fill="#fff"/>
 </svg>
