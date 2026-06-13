@@ -1,10 +1,18 @@
-# UserPost
+# Pendar
 
-Social feed where posts disappear in 24 hours. Built with React + Vite + Firebase.
+Platform belajar web3 dengan langsung praktik on-chain. Tiap lesson
+mengajarkan satu skill (connect wallet, baca data, kirim transaksi, dll)
+lewat aksi nyata di testnet — bukan sekadar teori. Dibangun dengan
+React + Vite + wagmi + viem.
+
+> Catatan: repo ini sebelumnya bernama "UserPost" (social feed). Kode app
+> sosial lama masih ada (`src/App.tsx`, `src/pages/{Feed,Messages,Profile}Page.tsx`,
+> `src/lib/firebase.ts`) untuk rujukan; entry point sekarang `src/LearnApp.tsx`.
 
 ## Stack
 - **Frontend**: React 18 + TypeScript + Vite
-- **Backend**: Firebase (Firestore + Auth + Storage)
+- **Web3**: wagmi v3 + viem (target chain: Base Sepolia testnet)
+- **Backend (warisan app lama)**: Firebase (Firestore + Auth + Storage)
 - **Hosting**: Vercel or Firebase Hosting
 
 ---
