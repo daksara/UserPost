@@ -20,9 +20,9 @@ export default defineConfig({
         ],
       },
       manifest: {
-        name: 'Onramp — Belajar Web3',
-        short_name: 'Onramp',
-        description: 'Onramp — belajar web3 dengan langsung praktik on-chain',
+        name: 'Pendar — Belajar Web3',
+        short_name: 'Pendar',
+        description: 'Pendar — belajar web3 dengan langsung praktik on-chain',
         theme_color: '#5b5ef4',
         background_color: '#f4f4f8',
         display: 'standalone',

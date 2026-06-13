@@ -1,4 +1,4 @@
-# Onramp
+# Pendar
 
 Platform belajar web3 dengan langsung praktik on-chain. Tiap lesson
 mengajarkan satu skill (connect wallet, baca data, kirim transaksi, dll)
