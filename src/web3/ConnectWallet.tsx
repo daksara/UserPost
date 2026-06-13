@@ -12,6 +12,7 @@
 import { useAccount, useConnect, useDisconnect, useBalance, useChainId, useSwitchChain } from 'wagmi'
 import { baseSepolia } from 'wagmi/chains'
 import { formatUnits } from 'viem'
+import { useT } from '../i18n'
 
 // Memendekkan address panjang (0x1234…abcd) — konvensi UI di semua dApp.
 function shortAddress(addr: string): string {
@@ -19,6 +20,7 @@ function shortAddress(addr: string): string {
 }
 
 export function ConnectWallet() {
+  const t = useT()
   const { address, isConnected, chain } = useAccount()
   const { connect, connectors, isPending, error } = useConnect()
   const { disconnect } = useDisconnect()
@@ -47,27 +49,28 @@ export function ConnectWallet() {
           isMobile ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                Di browser HP, wallet tidak bisa terdeteksi langsung — MetaMask adalah
-                app terpisah. Buka situs ini lewat <strong>browser di dalam app MetaMask</strong>,
-                atau tap tombol di bawah.
+                {t(
+                  'Di browser HP, wallet tidak bisa terdeteksi langsung — MetaMask adalah app terpisah. Buka situs ini lewat browser di dalam app MetaMask, atau tap tombol di bawah.',
+                  "On a mobile browser, the wallet can't be detected directly — MetaMask is a separate app. Open this site in MetaMask's in-app browser, or tap the button below.",
+                )}
               </p>
               <a href={mmDeepLink} className="pdr-btn pdr-btn--primary"
                  style={{ alignSelf: 'flex-start', textDecoration: 'none' }}>
-                Buka di MetaMask
+                {t('Buka di MetaMask', 'Open in MetaMask')}
               </a>
               <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                Belum punya?{' '}
+                {t('Belum punya? ', "Don't have it? ")}
                 <a href="https://metamask.io/download/" target="_blank" rel="noreferrer"
-                   style={{ color: 'var(--accent)', fontWeight: 600 }}>Install MetaMask</a> dulu.
+                   style={{ color: 'var(--accent)', fontWeight: 600 }}>{t('Install MetaMask dulu.', 'Install MetaMask first.')}</a>
               </p>
             </div>
           ) : (
             <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-              Belum ada wallet terdeteksi. Pasang{' '}
+              {t('Belum ada wallet terdeteksi. Pasang ', 'No wallet detected. Install the ')}
               <a href="https://metamask.io/download/" target="_blank" rel="noreferrer"
                  style={{ color: 'var(--accent)', fontWeight: 600 }}>
-                extension MetaMask
-              </a>{' '}di browser ini, lalu refresh halaman.
+                {t('extension MetaMask', 'MetaMask extension')}
+              </a>{t(' di browser ini, lalu refresh halaman.', ' in this browser, then refresh.')}
             </p>
           )
         ) : (
@@ -78,7 +81,7 @@ export function ConnectWallet() {
               className="pdr-btn pdr-btn--primary"
               style={{ alignSelf: 'flex-start' }}
             >
-              {isPending ? 'Menyambung…' : 'Connect Wallet'}
+              {isPending ? t('Menyambung…', 'Connecting…') : 'Connect Wallet'}
             </button>
             {error && (
               <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: 'var(--red)' }}>
@@ -96,7 +99,7 @@ export function ConnectWallet() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 700, color: '#22c55e' }}>
           <span style={{ width: 8, height: 8, borderRadius: 4, background: '#22c55e' }} />
-          Tersambung
+          {t('Tersambung', 'Connected')}
         </span>
         <button onClick={() => disconnect()} className="pdr-btn pdr-btn--ghost" style={{ padding: '6px 12px', fontSize: '0.82rem' }}>
           Disconnect
@@ -105,7 +108,7 @@ export function ConnectWallet() {
       <Row label="Address" value={address ? shortAddress(address) : '—'} mono />
       <Row label="Network" value={chain?.name ?? (onBaseSepolia ? 'Base Sepolia' : `Chain ${chainId}`)} />
       <Row
-        label="Saldo"
+        label={t('Saldo', 'Balance')}
         value={
           // On-chain, saldo selalu integer "wei" (bigint). formatUnits membaginya
           // dengan 10^decimals untuk jadi angka yang manusiawi (mis. 1.5 ETH).
@@ -124,8 +127,10 @@ export function ConnectWallet() {
           border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',
         }}>
           <span style={{ fontSize: '0.85rem', color: 'var(--accent)', fontWeight: 600, lineHeight: 1.4 }}>
-            Wallet-mu belum di jaringan <strong>Base Sepolia</strong>. Pindah dulu
-            agar saldo &amp; lesson berjalan benar.
+            {t(
+              'Wallet-mu belum di jaringan Base Sepolia. Pindah dulu agar saldo & lesson berjalan benar.',
+              "Your wallet isn't on Base Sepolia yet. Switch so the balance & lessons work correctly.",
+            )}
           </span>
           <button
             onClick={() => switchChain({ chainId: baseSepolia.id })}
@@ -133,7 +138,7 @@ export function ConnectWallet() {
             className="pdr-btn pdr-btn--primary"
             style={{ alignSelf: 'flex-start' }}
           >
-            {switching ? 'Memindahkan…' : 'Pindah ke Base Sepolia'}
+            {switching ? t('Memindahkan…', 'Switching…') : t('Pindah ke Base Sepolia', 'Switch to Base Sepolia')}
           </button>
         </div>
       )}

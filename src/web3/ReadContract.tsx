@@ -12,6 +12,7 @@
 import { useReadContracts, useBlockNumber } from 'wagmi'
 import { baseSepolia } from 'wagmi/chains'
 import { formatUnits } from 'viem'
+import { useT } from '../i18n'
 
 // WETH adalah "predeploy" standar di chain OP-stack (termasuk Base) — selalu
 // ada di alamat ini. Cocok jadi contoh kontrak ERC-20 yang pasti tersedia.
@@ -31,6 +32,7 @@ function short(addr: string) {
 }
 
 export function ReadContract() {
+  const t = useT()
   // Satu hook, banyak panggilan read sekaligus (lebih efisien dari 4 hook).
   const base = { address: WETH_ADDRESS, abi: erc20Abi, chainId: baseSepolia.id } as const
   const { data, isLoading, error, refetch, isRefetching } = useReadContracts({
@@ -54,24 +56,24 @@ export function ReadContract() {
     <div style={box}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
         <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-          Blok terbaru: <strong style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
+          {t('Blok terbaru: ', 'Latest block: ')}<strong style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
             {blockNumber ? blockNumber.toString() : '…'}
           </strong>
         </span>
         <button onClick={() => refetch()} disabled={isRefetching} className="pdr-btn pdr-btn--ghost"
           style={{ padding: '6px 12px', fontSize: '0.82rem' }}>
-          {isRefetching ? 'Membaca…' : 'Baca ulang'}
+          {isRefetching ? t('Membaca…', 'Reading…') : t('Baca ulang', 'Read again')}
         </button>
       </div>
 
-      <Row label="Kontrak" value={short(WETH_ADDRESS)} mono />
+      <Row label={t('Kontrak', 'Contract')} value={short(WETH_ADDRESS)} mono />
 
       {error ? (
         <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--red)' }}>
-          Gagal membaca: {error.message}
+          {t('Gagal membaca: ', 'Read failed: ')}{error.message}
         </p>
       ) : isLoading ? (
-        <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>Membaca dari blockchain…</p>
+        <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>{t('Membaca dari blockchain…', 'Reading from the blockchain…')}</p>
       ) : (
         <>
           <Row label="name()" value={name ?? '—'} />
