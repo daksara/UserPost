@@ -871,3 +871,91 @@ export async function deleteAccount(password: string) {
 }
 
 export { onAuthStateChanged, type User }
+
+// ── Auth minimal (Pendar) ─────────────────────────────────────────
+// Situs belajar tidak butuh username/profil sosial — cukup email+password
+// untuk menyimpan data airdrop milik user. (Login pakai signIn() yang sudah
+// menangani email.)
+export async function signUpEmail(email: string, password: string) {
+  const { user } = await createUserWithEmailAndPassword(auth, email.toLowerCase(), password)
+  return user
+}
+
+// ── Airdrop tracker ───────────────────────────────────────────────
+
+export interface AirdropTask {
+  text: string
+  done: boolean
+}
+
+export interface Airdrop {
+  id: string
+  user_id: string
+  name: string
+  reward: string | null
+  register_url: string | null
+  raw: string | null
+  tasks: AirdropTask[]
+  status: 'active' | 'done'
+  created_at: string
+}
+
+function docToAirdrop(id: string, d: Record<string, any>): Airdrop {
+  return {
+    id,
+    user_id: d.user_id,
+    name: d.name,
+    reward: d.reward ?? null,
+    register_url: d.register_url ?? null,
+    raw: d.raw ?? null,
+    tasks: Array.isArray(d.tasks)
+      ? d.tasks.map((t: any) => ({ text: String(t.text ?? ''), done: !!t.done }))
+      : [],
+    status: d.status === 'done' ? 'done' : 'active',
+    created_at: tsToISO(d.created_at),
+  }
+}
+
+export async function createAirdrop(
+  userId: string,
+  data: { name: string; reward?: string; registerUrl?: string; raw?: string; tasks: string[] }
+): Promise<void> {
+  await addDoc(collection(db, 'airdrops'), {
+    user_id: userId,
+    name: data.name,
+    reward: data.reward || null,
+    register_url: data.registerUrl || null,
+    raw: data.raw || null,
+    tasks: data.tasks.map((text) => ({ text, done: false })),
+    status: 'active',
+    created_at: serverTimestamp(),
+  })
+}
+
+// Equality-only query (where user_id ==) lalu sort di klien — sengaja tanpa
+// orderBy agar tidak butuh composite index baru, sama seperti getMyActivePosts.
+export function subscribeToAirdrops(
+  userId: string,
+  onData: (rows: Airdrop[]) => void,
+  onError?: (e: Error) => void
+): Unsubscribe {
+  return onSnapshot(
+    query(collection(db, 'airdrops'), where('user_id', '==', userId)),
+    (snap) => {
+      const rows = snap.docs.map((d) => docToAirdrop(d.id, d.data()))
+      rows.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      onData(rows)
+    },
+    (err) => onError?.(err as Error)
+  )
+}
+
+export async function updateAirdropTasks(id: string, tasks: AirdropTask[]): Promise<void> {
+  // Status otomatis 'done' kalau semua tugas tercentang.
+  const allDone = tasks.length > 0 && tasks.every((t) => t.done)
+  await updateDoc(doc(db, 'airdrops', id), { tasks, status: allDone ? 'done' : 'active' })
+}
+
+export async function deleteAirdrop(id: string): Promise<void> {
+  await deleteDoc(doc(db, 'airdrops', id))
+}

@@ -27,17 +27,7 @@ export default function LearnPage() {
   const active = LESSONS.find((l) => l.id === activeId)!
 
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--bg)', color: 'var(--text-primary)' }}>
-      <header style={{
-        borderBottom: '1px solid var(--border)', padding: '16px 20px',
-        display: 'flex', alignItems: 'center', gap: 10,
-      }}>
-        <span style={{ width: 10, height: 10, borderRadius: 5, background: 'var(--accent)' }} />
-        <strong style={{ fontSize: '1.05rem' }}>Pendar</strong>
-        <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>· Belajar Web3</span>
-      </header>
-
-      <div style={{ maxWidth: 920, margin: '0 auto', padding: 20, display: 'grid', gap: 20, gridTemplateColumns: '1fr' }}>
+    <div style={{ maxWidth: 920, margin: '0 auto', padding: 20, display: 'grid', gap: 20, gridTemplateColumns: '1fr' }}>
         {/* Daftar lesson */}
         <nav style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {LESSONS.map((l) => (
@@ -87,7 +77,6 @@ export default function LearnPage() {
             <p style={{ color: 'var(--text-muted)' }}>Lesson ini segera hadir.</p>
           )}
         </main>
-      </div>
     </div>
   )
 }

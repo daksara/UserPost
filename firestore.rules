@@ -146,6 +146,27 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ── Airdrop tracker (Pendar) ─────────────────────────────────
+    // Catatan airdrop privat milik tiap user. Hanya pemilik yang bisa
+    // baca/tulis. Query selalu difilter where('user_id','==',uid).
+    match /airdrops/{airdropId} {
+      allow read: if signedIn() && resource.data.user_id == request.auth.uid;
+
+      allow create: if signedIn()
+        && request.resource.data.user_id == request.auth.uid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 200
+        && request.resource.data.tasks is list;
+
+      // Pemilik boleh ubah, tapi user_id tidak boleh dipindahtangankan.
+      allow update: if signedIn()
+        && resource.data.user_id == request.auth.uid
+        && request.resource.data.user_id == request.auth.uid;
+
+      allow delete: if signedIn() && resource.data.user_id == request.auth.uid;
+    }
+
     // Deny everything not matched above
     match /{document=**} {
       allow read, write: if false;
