@@ -9,7 +9,8 @@
 //   useBalance     — membaca saldo address langsung dari blockchain.
 //
 // Tidak ada "magic". Semua data datang dari wallet & RPC lewat hook ini.
-import { useAccount, useConnect, useDisconnect, useBalance } from 'wagmi'
+import { useAccount, useConnect, useDisconnect, useBalance, useChainId, useSwitchChain } from 'wagmi'
+import { baseSepolia } from 'wagmi/chains'
 import { formatUnits } from 'viem'
 
 // Memendekkan address panjang (0x1234…abcd) — konvensi UI di semua dApp.
@@ -21,6 +22,11 @@ export function ConnectWallet() {
   const { address, isConnected, chain } = useAccount()
   const { connect, connectors, isPending, error } = useConnect()
   const { disconnect } = useDisconnect()
+  // Chain yang sedang aktif di wallet. Kalau bukan Base Sepolia, data
+  // on-chain (saldo/network) tidak relevan untuk lesson ini.
+  const chainId = useChainId()
+  const { switchChain, isPending: switching } = useSwitchChain()
+  const onBaseSepolia = chainId === baseSepolia.id
   // Saldo otomatis di-refetch oleh wagmi saat address berubah.
   const { data: balance } = useBalance({ address })
 
@@ -97,7 +103,7 @@ export function ConnectWallet() {
         </button>
       </div>
       <Row label="Address" value={address ? shortAddress(address) : '—'} mono />
-      <Row label="Network" value={chain?.name ?? 'Unknown'} />
+      <Row label="Network" value={chain?.name ?? (onBaseSepolia ? 'Base Sepolia' : `Chain ${chainId}`)} />
       <Row
         label="Saldo"
         value={
@@ -109,6 +115,28 @@ export function ConnectWallet() {
         }
         mono
       />
+
+      {!onBaseSepolia && (
+        <div style={{
+          display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4,
+          padding: 12, borderRadius: 'var(--radius-sm)',
+          background: 'var(--accent-soft)',
+          border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',
+        }}>
+          <span style={{ fontSize: '0.85rem', color: 'var(--accent)', fontWeight: 600, lineHeight: 1.4 }}>
+            Wallet-mu belum di jaringan <strong>Base Sepolia</strong>. Pindah dulu
+            agar saldo &amp; lesson berjalan benar.
+          </span>
+          <button
+            onClick={() => switchChain({ chainId: baseSepolia.id })}
+            disabled={switching}
+            className="pdr-btn pdr-btn--primary"
+            style={{ alignSelf: 'flex-start' }}
+          >
+            {switching ? 'Memindahkan…' : 'Pindah ke Base Sepolia'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }
