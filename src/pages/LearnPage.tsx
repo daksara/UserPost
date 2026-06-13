@@ -33,7 +33,8 @@ export default function LearnPage() {
         display: 'flex', alignItems: 'center', gap: 10,
       }}>
         <span style={{ width: 10, height: 10, borderRadius: 5, background: 'var(--accent)' }} />
-        <strong style={{ fontSize: '1.05rem' }}>Belajar Web3</strong>
+        <strong style={{ fontSize: '1.05rem' }}>Onramp</strong>
+        <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>· Belajar Web3</span>
       </header>
 
       <div style={{ maxWidth: 920, margin: '0 auto', padding: 20, display: 'grid', gap: 20, gridTemplateColumns: '1fr' }}>

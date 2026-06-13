@@ -20,9 +20,9 @@ export default defineConfig({
         ],
       },
       manifest: {
-        name: 'UserPost',
-        short_name: 'UserPost',
-        description: 'UserPost — share and discover',
+        name: 'Onramp — Belajar Web3',
+        short_name: 'Onramp',
+        description: 'Onramp — belajar web3 dengan langsung praktik on-chain',
         theme_color: '#5b5ef4',
         background_color: '#f4f4f8',
         display: 'standalone',
