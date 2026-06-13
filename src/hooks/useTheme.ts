@@ -10,13 +10,14 @@ const STORAGE_KEY = 'userpost-theme'
 
 // Warna address bar mobile per tema (sinkron dengan --bg di index.css)
 const THEME_COLORS: Record<Theme, string> = {
-  light: '#f4f4f8',
-  dark: '#16161c',
+  light: '#f7f6f3',
+  dark: '#0e0e11',
 }
 
 export function getStoredTheme(): Theme {
   const saved = localStorage.getItem(STORAGE_KEY) as Theme | null
-  return saved && THEMES.includes(saved) ? saved : 'light'
+  // Default dark — tampilan premium "amber glow" Pendar paling kuat di gelap
+  return saved && THEMES.includes(saved) ? saved : 'dark'
 }
 
 export function applyTheme(theme: Theme) {

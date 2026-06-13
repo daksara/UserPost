@@ -23,8 +23,8 @@ export default defineConfig({
         name: 'Pendar — Belajar Web3',
         short_name: 'Pendar',
         description: 'Pendar — belajar web3 dengan langsung praktik on-chain',
-        theme_color: '#5b5ef4',
-        background_color: '#f4f4f8',
+        theme_color: '#f0a93b',
+        background_color: '#0e0e11',
         display: 'standalone',
         start_url: '/',
         icons: [

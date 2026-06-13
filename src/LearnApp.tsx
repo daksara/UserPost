@@ -44,15 +44,7 @@ function Shell() {
 
 function NavBtn({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
-    <button
-      onClick={onClick}
-      style={{
-        border: 'none', cursor: 'pointer', borderRadius: 8, padding: '6px 12px',
-        fontSize: '0.88rem', fontWeight: 700,
-        background: active ? 'var(--accent-soft)' : 'transparent',
-        color: active ? 'var(--accent-dark)' : 'var(--text-muted)',
-      }}
-    >
+    <button onClick={onClick} className={`pdr-nav-btn${active ? ' pdr-nav-btn--active' : ''}`}>
       {label}
     </button>
   )

@@ -46,7 +46,7 @@ export default function LearnPage() {
               <span style={{
                 flexShrink: 0, width: 26, height: 26, borderRadius: 13,
                 background: l.id === activeId ? 'var(--accent)' : 'var(--bg-input)',
-                color: l.id === activeId ? '#fff' : 'var(--text-muted)',
+                color: l.id === activeId ? '#1a1206' : 'var(--text-muted)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: '0.8rem', fontWeight: 700,
               }}>
@@ -63,7 +63,7 @@ export default function LearnPage() {
         </nav>
 
         {/* Konten lesson aktif */}
-        <main style={{
+        <main key={active.id} className="pdr-rise" style={{
           background: 'var(--bg-card)', border: '1px solid var(--border)',
           borderRadius: 16, padding: 20,
         }}>
@@ -98,12 +98,13 @@ function Lesson0() {
       </p>
       <ConnectWallet />
       {isConnected && (
-        <p style={{
-          margin: 0, padding: '10px 14px', borderRadius: 10,
-          background: 'var(--accent-soft)', color: 'var(--accent-dark)',
-          fontSize: '0.9rem', fontWeight: 600,
+        <p className="pdr-rise" style={{
+          margin: 0, padding: '12px 15px', borderRadius: 'var(--radius-sm)',
+          background: 'var(--accent-soft)', color: 'var(--accent)',
+          fontSize: '0.9rem', fontWeight: 600, lineHeight: 1.5,
+          border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',
         }}>
-          🎉 Selesai! Kamu baru saja menguasai skill web3 paling fundamental.
+          Selesai. Kamu baru saja menguasai skill web3 paling fundamental.
           Saldomu 0? Wajar — itu testnet kosong. Lesson berikutnya kita ambil
           token gratis dari faucet lalu kirim transaksi pertamamu.
         </p>
