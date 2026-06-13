@@ -3,8 +3,9 @@
 // Shell situs "Belajar Web3". Tiap lesson mengajarkan satu skill on-chain
 // dengan cara MELAKUKANNYA langsung di browser — bukan sekadar membaca teori.
 // Lesson 0 sudah hidup; sisanya placeholder yang akan kita isi satu per satu.
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useAccount } from 'wagmi'
+import { Logo } from '../components/Logo'
 import { ConnectWallet } from '../web3/ConnectWallet'
 import { ReadContract } from '../web3/ReadContract'
 import { SendTransaction } from '../web3/SendTransaction'
@@ -29,9 +30,17 @@ const LESSONS: Lesson[] = [
 export default function LearnPage() {
   const [activeId, setActiveId] = useState(0)
   const active = LESSONS.find((l) => l.id === activeId)!
+  const lessonsRef = useRef<HTMLDivElement>(null)
+
+  const startLearning = () => {
+    setActiveId(0)
+    lessonsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   return (
-    <div style={{ maxWidth: 920, margin: '0 auto', padding: 20, display: 'grid', gap: 20, gridTemplateColumns: '1fr' }}>
+    <div style={{ maxWidth: 920, margin: '0 auto', padding: 20 }}>
+      <Hero onStart={startLearning} />
+      <div ref={lessonsRef} style={{ display: 'grid', gap: 20, gridTemplateColumns: '1fr', marginTop: 28, scrollMarginTop: 70 }}>
         {/* Daftar lesson */}
         <nav style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {LESSONS.map((l) => (
@@ -84,7 +93,44 @@ export default function LearnPage() {
             : active.id === 4 ? <Lesson4 />
             : <p style={{ color: 'var(--text-muted)' }}>Lesson ini segera hadir.</p>}
         </main>
+      </div>
     </div>
+  )
+}
+
+function Hero({ onStart }: { onStart: () => void }) {
+  const pills = ['Connect', 'Read', 'Transact', 'Token-gate', 'Mint']
+  return (
+    <section style={{ position: 'relative', textAlign: 'center', padding: '44px 16px 8px', overflow: 'hidden' }}>
+      {/* Cahaya amber berpendar di belakang logo */}
+      <div aria-hidden style={{
+        position: 'absolute', top: -60, left: '50%', transform: 'translateX(-50%)',
+        width: 340, height: 340, pointerEvents: 'none',
+        background: 'radial-gradient(circle, color-mix(in srgb, var(--accent) 38%, transparent), transparent 68%)',
+        filter: 'blur(24px)', animation: 'pdrGlow 3.5s ease-in-out infinite',
+      }} />
+      <div style={{ position: 'relative' }}>
+        <div className="pdr-rise" style={{ display: 'inline-flex', marginBottom: 18 }}><Logo size={66} /></div>
+        <h1 style={{ margin: '0 0 12px', fontSize: 'clamp(1.85rem, 6vw, 2.6rem)', letterSpacing: '-0.03em', lineHeight: 1.1 }}>
+          Kuasai Web3 <span style={{ color: 'var(--accent)' }}>sambil praktik</span>
+        </h1>
+        <p style={{ margin: '0 auto 22px', maxWidth: 460, color: 'var(--text-secondary)', fontSize: '1rem', lineHeight: 1.6 }}>
+          Lima lesson interaktif — dari connect wallet sampai mint NFT — semua
+          dikerjakan langsung on-chain di browser. Bukan teori.
+        </p>
+        <button className="pdr-btn pdr-btn--primary" onClick={onStart} style={{ fontSize: '0.95rem', padding: '12px 24px' }}>
+          Mulai belajar
+        </button>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginTop: 24 }}>
+          {pills.map((t) => (
+            <span key={t} style={{
+              fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-muted)',
+              border: '1px solid var(--border)', borderRadius: 'var(--radius-full)', padding: '5px 13px',
+            }}>{t}</span>
+          ))}
+        </div>
+      </div>
+    </section>
   )
 }
 
@@ -190,26 +236,54 @@ function Lesson4() {
         write ke fungsi spesifik kontrak (<code>mint</code>).
       </p>
       <p style={{ margin: 0, lineHeight: 1.6, fontSize: '0.95rem' }}>
-        Sertifikatnya kontrak <strong>milikmu sendiri</strong>. Deploy ERC-721
-        ringkas di bawah (pakai <a href="https://remix.ethereum.org" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', fontWeight: 600 }}>Remix</a> →
-        jaringan Base Sepolia), lalu set alamatnya di <code>.env</code> sebagai{' '}
-        <code>VITE_CERT_NFT_ADDRESS</code> dan deploy ulang situs.
+        Sertifikatnya kontrak <strong>milikmu sendiri</strong>, dengan{' '}
+        <strong>gambar &amp; metadata 100% on-chain</strong> (SVG di-generate di
+        dalam kontrak) — jadi tampil cantik di wallet/explorer tanpa server.
+        Deploy via <a href="https://remix.ethereum.org" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', fontWeight: 600 }}>Remix</a> →
+        jaringan Base Sepolia, lalu set <code>VITE_CERT_NFT_ADDRESS</code> di{' '}
+        <code>.env</code> dan deploy ulang situs.
       </p>
       <pre style={{
         margin: 0, padding: 14, borderRadius: 'var(--radius-sm)',
         background: 'var(--bg-input)', border: '1px solid var(--border)',
-        fontFamily: 'var(--font-mono)', fontSize: '0.74rem', lineHeight: 1.5,
+        fontFamily: 'var(--font-mono)', fontSize: '0.72rem', lineHeight: 1.5,
         overflowX: 'auto', color: 'var(--text-secondary)',
       }}>{`// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts/utils/Base64.sol";
 
 contract PendarCert is ERC721 {
+    using Strings for uint256;
     uint256 public nextId;
     constructor() ERC721("Pendar Certificate", "PNDR") {}
+
     function mint() external {
         _safeMint(msg.sender, nextId);
         nextId++;
+    }
+
+    function tokenURI(uint256 id) public view override returns (string memory) {
+        require(_ownerOf(id) != address(0), "no token");
+        string memory svg = string(abi.encodePacked(
+          '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400">',
+          '<rect width="600" height="400" fill="#0e0e11"/>',
+          '<g stroke="#f0a93b" stroke-width="6" stroke-linecap="round">',
+          '<line x1="300" y1="118" x2="300" y2="82"/><line x1="300" y1="182" x2="300" y2="218"/>',
+          '<line x1="268" y1="150" x2="232" y2="150"/><line x1="332" y1="150" x2="368" y2="150"/></g>',
+          '<circle cx="300" cy="150" r="15" fill="#f0a93b"/>',
+          '<text x="300" y="280" fill="#f4f1ea" font-size="30" font-family="sans-serif"',
+          ' text-anchor="middle" font-weight="bold">Pendar Certificate</text>',
+          '<text x="300" y="318" fill="#86837a" font-size="18" font-family="sans-serif"',
+          ' text-anchor="middle">Belajar Web3 &#8226; #', id.toString(), '</text></svg>'
+        ));
+        string memory json = Base64.encode(bytes(abi.encodePacked(
+          '{"name":"Pendar Certificate #', id.toString(),
+          '","description":"Bukti menamatkan Belajar Web3 di Pendar.",',
+          '"image":"data:image/svg+xml;base64,', Base64.encode(bytes(svg)), '"}'
+        )));
+        return string(abi.encodePacked("data:application/json;base64,", json));
     }
 }`}</pre>
       <MintNFT />
