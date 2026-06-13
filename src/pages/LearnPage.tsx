@@ -6,6 +6,7 @@
 import { useState } from 'react'
 import { useAccount } from 'wagmi'
 import { ConnectWallet } from '../web3/ConnectWallet'
+import { ReadContract } from '../web3/ReadContract'
 
 interface Lesson {
   id: number
@@ -16,7 +17,7 @@ interface Lesson {
 
 const LESSONS: Lesson[] = [
   { id: 0, title: 'Connect Wallet', blurb: 'Sambungkan MetaMask & baca address + saldo dari blockchain.', ready: true },
-  { id: 1, title: 'Baca Data On-Chain', blurb: 'Panggil fungsi read sebuah smart contract dengan viem.', ready: false },
+  { id: 1, title: 'Baca Data On-Chain', blurb: 'Panggil fungsi read sebuah smart contract dengan viem.', ready: true },
   { id: 2, title: 'Kirim Transaksi', blurb: 'Tanda tangani & kirim transaksi pertamamu di testnet.', ready: false },
   { id: 3, title: 'Token-Gated Content', blurb: 'Buka konten hanya untuk pemegang token tertentu.', ready: false },
   { id: 4, title: 'Mint Sertifikat NFT', blurb: 'Cetak NFT sebagai bukti kamu menyelesaikan kursus.', ready: false },
@@ -73,9 +74,9 @@ export default function LearnPage() {
           <p style={{ margin: '0 0 16px', color: 'var(--text-muted)', fontSize: '0.92rem' }}>
             {active.blurb}
           </p>
-          {active.id === 0 ? <Lesson0 /> : (
-            <p style={{ color: 'var(--text-muted)' }}>Lesson ini segera hadir.</p>
-          )}
+          {active.id === 0 ? <Lesson0 />
+            : active.id === 1 ? <Lesson1 />
+            : <p style={{ color: 'var(--text-muted)' }}>Lesson ini segera hadir.</p>}
         </main>
     </div>
   )
@@ -109,6 +110,31 @@ function Lesson0() {
           token gratis dari faucet lalu kirim transaksi pertamamu.
         </p>
       )}
+    </div>
+  )
+}
+
+function Lesson1() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <p style={{ margin: 0, lineHeight: 1.6, fontSize: '0.95rem' }}>
+        Membaca data dari blockchain itu <strong>gratis</strong> — tanpa gas,
+        tanpa tanda tangan, bahkan tanpa wallet tersambung. Cukup bertanya ke
+        node lewat RPC. Fungsi seperti ini disebut <em>read</em> (view/pure).
+      </p>
+      <p style={{ margin: 0, lineHeight: 1.6, fontSize: '0.95rem' }}>
+        Di bawah, kita panggil 4 fungsi read standar <strong>ERC-20</strong> —
+        <code> name()</code>, <code>symbol()</code>, <code>decimals()</code>,
+        <code> totalSupply()</code> — pada kontrak <strong>WETH</strong> di Base
+        Sepolia, plus nomor blok terbaru yang ter-update real-time. Semua datang
+        langsung dari chain.
+      </p>
+      <ReadContract />
+      <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+        Perhatikan: <code>totalSupply()</code> aslinya angka raksasa (wei). Kita
+        bagi dengan <code>10^decimals</code> pakai <code>formatUnits</code> agar
+        terbaca manusia — pola yang sama persis dengan saldo di Lesson 0.
+      </p>
     </div>
   )
 }
