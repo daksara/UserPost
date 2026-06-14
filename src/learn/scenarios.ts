@@ -331,3 +331,11 @@ OUTPUT (respond in ${langName(lang)}, plain text)
 - The 2 to 3 most important things to improve.
 - One example of a stronger reply the trainee could have sent.`
 }
+
+/** Pesan pemicu (disembunyikan dari tampilan) agar AI-klien membuka percakapan lebih dulu. */
+export function buildClientKickoff(scenario: Scenario, lang: Language): string {
+  const skill = scenario.skill[lang]
+  return lang === 'en'
+    ? `Client practice - ${skill}. Start as the client per the scenario and send your first message to me.`
+    : `Latihan klien - ${skill}. Mulai sebagai klien sesuai skenario dan kirim pesan pertamamu ke aku.`
+}

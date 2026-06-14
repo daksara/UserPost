@@ -9,6 +9,7 @@ import { Composer } from './components/Composer'
 import { Logo } from './components/Logo'
 import { BASE_SYSTEM_PROMPT, TEMPLATES } from './ai/templates'
 import { buildLessonStarter, buildLessonSystem, findLesson } from './learn/curriculum'
+import { buildClientKickoff, buildClientSystem, findScenario } from './learn/scenarios'
 import { I18nContext, useI18n } from './i18n/i18n'
 import { createT } from './i18n/translations'
 import { useSettings } from './hooks/useSettings'
@@ -47,6 +48,7 @@ export default function App() {
   // aktif & siap (lihat efek auto-kickoff di bawah).
   const [pendingKickoff, setPendingKickoff] = useState<string | null>(null)
 
+  const scenario = useMemo(() => findScenario(active.scenarioId ?? '') ?? null, [active.scenarioId])
   const lesson = useMemo(() => findLesson(active.lessonId ?? '') ?? null, [active.lessonId])
   const template = useMemo(
     () => TEMPLATES.find((t) => t.id === active.templateId) ?? null,
@@ -55,10 +57,11 @@ export default function App() {
   // Jawaban AI adaptif: mengikuti bahasa yang diketik user (aturan di
   // BASE_SYSTEM_PROMPT / persona mentor), bukan dipaksa oleh toggle bahasa UI.
   const system = useMemo(() => {
+    if (scenario) return buildClientSystem(scenario, language)
     if (lesson) return buildLessonSystem(lesson, language)
     if (template) return `${BASE_SYSTEM_PROMPT}\n\n${template.system}`
     return BASE_SYSTEM_PROMPT
-  }, [lesson, template, language])
+  }, [scenario, lesson, template, language])
 
   const { streaming, error, send, stop } = useChat({
     provider,
@@ -93,11 +96,11 @@ export default function App() {
   // key sudah siap, kirim pesan pembuka agar mentor langsung mulai mengajar.
   useEffect(() => {
     if (!pendingKickoff || !ready || streaming) return
-    if (!active.lessonId || active.turns.length > 0) return
+    if ((!active.lessonId && !active.scenarioId) || active.turns.length > 0) return
     const text = pendingKickoff
     setPendingKickoff(null)
     send(text)
-  }, [pendingKickoff, ready, streaming, active.lessonId, active.turns.length, send])
+  }, [pendingKickoff, ready, streaming, active.lessonId, active.scenarioId, active.turns.length, send])
 
   const pickTemplate = (id: string) => {
     setActiveTemplate(id)
@@ -116,6 +119,17 @@ export default function App() {
     setPendingKickoff(buildLessonStarter(l, language))
     // Materi yang dimulai dianggap sudah dipelajari untuk pelacakan progres.
     markDone(id)
+    if (!ready) setShowSettings(true)
+  }
+
+  const startScenario = (id: string) => {
+    const s = findScenario(id)
+    if (!s) return
+    newConversation(null, null, id)
+    setInput('')
+    setShowLearn(false)
+    setDrawer(false)
+    setPendingKickoff(buildClientKickoff(s, language))
     if (!ready) setShowSettings(true)
   }
 
@@ -143,9 +157,11 @@ export default function App() {
 
   const title = active.turns.length
     ? active.title
-    : lesson
-      ? t('app.learnPrefix', { title: lesson.title[language] })
-      : template?.title ?? ''
+    : scenario
+      ? t('sim.titlePrefix', { skill: scenario.skill[language] })
+      : lesson
+        ? t('app.learnPrefix', { title: lesson.title[language] })
+        : template?.title ?? ''
 
   return (
     <I18nContext.Provider value={{ lang: language, t }}>
@@ -197,13 +213,16 @@ export default function App() {
           {active.turns.length === 0 ? (
             <Welcome />
           ) : (
-            active.turns.map((t, i) => (
-              <MessageBubble
-                key={t.id}
-                turn={t}
-                streaming={streaming && i === active.turns.length - 1}
-              />
-            ))
+            active.turns.map((turn, i) => {
+              if (scenario && i === 0 && turn.role === 'user') return null
+              return (
+                <MessageBubble
+                  key={turn.id}
+                  turn={turn}
+                  streaming={streaming && i === active.turns.length - 1}
+                />
+              )
+            })
           )}
           {error && <div className="chat__error">{error}</div>}
         </div>
@@ -217,11 +236,13 @@ export default function App() {
           templates={TEMPLATES}
           onPickTemplate={pickTemplate}
           placeholder={
-            lesson
-              ? t('composer.lesson')
-              : template
-                ? t('composer.template', { title: template.title })
-                : t('composer.default')
+            scenario
+              ? t('composer.sim')
+              : lesson
+                ? t('composer.lesson')
+                : template
+                  ? t('composer.template', { title: template.title })
+                  : t('composer.default')
           }
         />
       </main>
@@ -231,6 +252,7 @@ export default function App() {
           completed={completedSet}
           onToggleDone={toggleDone}
           onStartLesson={startLesson}
+          onStartScenario={startScenario}
           onClose={() => setShowLearn(false)}
         />
       )}

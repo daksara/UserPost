@@ -96,18 +96,18 @@ export function useConversations() {
 
   /** Buat percakapan baru — pakai ulang yang aktif bila masih kosong. */
   const newConversation = useCallback(
-    (templateId: string | null = null, lessonId: string | null = null) => {
+    (templateId: string | null = null, lessonId: string | null = null, scenarioId: string | null = null) => {
       setState((s) => {
         const current = s.conversations.find((c) => c.id === s.activeId)
         if (current && isEmpty(current)) {
           return {
             activeId: current.id,
             conversations: s.conversations.map((c) =>
-              c.id === current.id ? { ...c, templateId, lessonId, updatedAt: Date.now() } : c,
+              c.id === current.id ? { ...c, templateId, lessonId, scenarioId, updatedAt: Date.now() } : c,
             ),
           }
         }
-        const fresh = makeConversation(templateId, lessonId)
+        const fresh = makeConversation(templateId, lessonId, scenarioId)
         return {
           activeId: fresh.id,
           conversations: [fresh, ...s.conversations].slice(0, MAX_CONVERSATIONS),

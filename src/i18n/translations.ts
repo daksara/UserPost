@@ -81,6 +81,13 @@ const id = {
   'learn.start': 'Mulai belajar',
   'learn.repeat': 'Ulangi',
   'learn.done': 'Selesai',
+  'learn.tabLessons': 'Materi',
+  'learn.tabSim': 'Latihan Klien',
+  'learn.simIntro': 'Latih menghadapi klien sungguhan. AI berperan sebagai klien sesuai skenario; balas seperti situasi nyata.',
+  'learn.simStart': 'Mulai latihan',
+  'learn.simDifficulty': 'Tingkat {n}/5',
+  'sim.titlePrefix': 'Latihan: {skill}',
+  'composer.sim': 'Balas kliennya seperti situasi nyata…',
 } as const
 
 const en: Record<keyof typeof id, string> = {
@@ -161,6 +168,13 @@ const en: Record<keyof typeof id, string> = {
   'learn.start': 'Start learning',
   'learn.repeat': 'Repeat',
   'learn.done': 'Done',
+  'learn.tabLessons': 'Lessons',
+  'learn.tabSim': 'Client Practice',
+  'learn.simIntro': 'Practice handling real clients. The AI plays a client per the scenario; reply like a real situation.',
+  'learn.simStart': 'Start practice',
+  'learn.simDifficulty': 'Level {n}/5',
+  'sim.titlePrefix': 'Practice: {skill}',
+  'composer.sim': 'Reply to the client like a real situation…',
 }
 
 export type MsgKey = keyof typeof id
