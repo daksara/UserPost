@@ -4,7 +4,7 @@
 // env (VITE_GROQ_API_KEY / VITE_GEMINI_API_KEY) saat build.
 import { useCallback, useEffect, useState } from 'react'
 import type { Provider } from '../ai/types'
-import { PROVIDERS } from '../ai/types'
+import { DEPRECATED_MODELS, PROVIDERS } from '../ai/types'
 import { USE_PROXY } from '../ai/providers'
 
 const STORAGE_KEY = 'pendar-settings'
@@ -30,6 +30,17 @@ function defaults(): Settings {
   }
 }
 
+/** Ganti model tersimpan yang sudah dihentikan provider dengan default valid. */
+function migrateModels(models: Record<Provider, string>): Record<Provider, string> {
+  const out = { ...models }
+  for (const p of Object.keys(PROVIDERS) as Provider[]) {
+    if (DEPRECATED_MODELS[p].includes(out[p])) {
+      out[p] = PROVIDERS[p].fallbackModels[0].id
+    }
+  }
+  return out
+}
+
 function load(): Settings {
   const base = defaults()
   try {
@@ -37,7 +48,7 @@ function load(): Settings {
     return {
       provider: saved.provider === 'gemini' ? 'gemini' : base.provider,
       apiKeys: { ...base.apiKeys, ...(saved.apiKeys || {}) },
-      models: { ...base.models, ...(saved.models || {}) },
+      models: migrateModels({ ...base.models, ...(saved.models || {}) }),
     }
   } catch {
     return base
