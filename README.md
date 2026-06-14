@@ -71,7 +71,7 @@ CI (GitHub Actions) menjalankan ketiganya pada tiap push dan pull request.
 - Pemilih model dinamis — hanya menampilkan model chat yang relevan
 - 8 template tugas freelance (proposal, balas klien, penawaran harga,
   ringkas brief, follow-up, caption sosmed, perbaiki/terjemah, deskripsi jasa)
-- Regenerasi jawaban, salin sekali klik, hentikan generasi, mulai chat baru
+- Salin sekali klik, hentikan generasi, mulai chat baru
 - Composer dengan textarea auto-grow dan auto-scroll cerdas (tidak terenggut
   saat membaca riwayat lama)
 - Tema gelap/terang, responsif (sidebar jadi drawer di mobile), installable PWA
@@ -82,7 +82,7 @@ Pendar punya dua mode transport ke provider AI:
 - **Mode A — Bring-your-own-key (default).** Tiap user menempel API key sendiri
   di Pengaturan; key disimpan di `localStorage` dan dikirim langsung dari
   browser ke Groq/Gemini. Cocok untuk **alat pribadi**. Risiko: siapa pun yang
-  mengakses browser itu bisa membaca key.
+  mengakses browser itu bisa membaca key. Jangan isi `VITE_GROQ_API_KEY`/`VITE_GEMINI_API_KEY` untuk deploy publik: nilai berprefiks `VITE_` ikut ter-bundle ke JS klien dan terlihat semua pengunjung — pakai Mode B.
 - **Mode B — Proxy server (disarankan untuk publik/multi-user).** Build dengan
   `VITE_USE_PROXY=1`; front-end memanggil `/api/proxy` dan **server** yang
   menyisipkan key dari env (`GROQ_API_KEY` / `GEMINI_API_KEY`). Key **tidak
