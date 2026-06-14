@@ -136,7 +136,7 @@ export const SCENARIO_QUIZZES: Record<string, QuizQuestion> = {
     correct: 3,
     options: [
       {
-        text: { id: 'Langsung setуju turun 50%.', en: 'Immediately agree to 50% off.' },
+        text: { id: 'Langsung setuju turun 50%.', en: 'Immediately agree to 50% off.' },
         explanation: { id: 'Merendahkan nilai dan sulit dinaikkan lagi.', en: 'Undercuts your value and is hard to raise back.' },
       },
       {
