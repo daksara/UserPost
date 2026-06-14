@@ -187,20 +187,16 @@ export default function App() {
   )
 }
 
-function greeting(): string {
-  const h = new Date().getHours()
-  if (h < 11) return 'Selamat pagi'
-  if (h < 15) return 'Selamat siang'
-  if (h < 18) return 'Selamat sore'
-  return 'Selamat malam'
-}
-
 function Welcome() {
   return (
     <div className="welcome">
       <Logo size={44} />
-      <h1 className="welcome__title">{greeting()}</h1>
-      <p className="welcome__sub">Asisten VA-mu siap. Tulis tugas, atau pilih dari saran di bawah.</p>
+      <h1 className="welcome__title">Hello, I'm Pendar</h1>
+      <p className="welcome__sub">
+        Your AI Co-Pilot for Virtual Assistants. I help you understand, organize,
+        and complete real client work accurately, professionally, and efficiently.
+        What kind of task or project do you need help with today?
+      </p>
     </div>
   )
 }
