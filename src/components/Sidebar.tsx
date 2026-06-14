@@ -5,6 +5,7 @@ import { Logo } from './Logo'
 import type { Conversation } from '../chat/types'
 import type { Theme } from '../hooks/useTheme'
 import type { Language } from '../ai/templates'
+import { useI18n } from '../i18n/i18n'
 
 interface Props {
   conversations: Conversation[]
@@ -33,6 +34,7 @@ export function Sidebar({
   language,
   onLanguage,
 }: Props) {
+  const { t } = useI18n()
   // Hanya tampilkan percakapan yang sudah berisi pesan agar daftar bersih.
   const history = conversations.filter((c) => c.turns.length > 0)
 
@@ -42,30 +44,30 @@ export function Sidebar({
         <Logo size={26} />
         <div>
           <div className="sidebar__name">Pendar</div>
-          <div className="sidebar__tag">AI Co-Pilot Virtual Assistant</div>
+          <div className="sidebar__tag">{t('sidebar.tag')}</div>
         </div>
         <button
           className="sidebar__theme"
           onClick={onToggleTheme}
-          aria-label={theme === 'dark' ? 'Ganti ke tema terang' : 'Ganti ke tema gelap'}
-          title={theme === 'dark' ? 'Tema terang' : 'Tema gelap'}
+          aria-label={theme === 'dark' ? t('sidebar.toLight') : t('sidebar.toDark')}
+          title={theme === 'dark' ? t('sidebar.lightTheme') : t('sidebar.darkTheme')}
         >
           {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
         </button>
       </div>
 
       <button className="pdr-btn pdr-btn--primary sidebar__new" onClick={onNewChat}>
-        + Chat baru
+        {t('sidebar.newChat')}
       </button>
 
       <button className="pdr-btn pdr-btn--ghost sidebar__learn" onClick={onOpenLearn}>
-        <GradCapIcon /> Belajar VA
+        <GradCapIcon /> {t('sidebar.learnVA')}
       </button>
 
-      <div className="sidebar__section">Riwayat</div>
+      <div className="sidebar__section">{t('sidebar.history')}</div>
       <nav className="sidebar__history">
         {history.length === 0 ? (
-          <p className="sidebar__empty">Belum ada percakapan. Mulai dengan menulis pesan.</p>
+          <p className="sidebar__empty">{t('sidebar.historyEmpty')}</p>
         ) : (
           history.map((c) => (
             <div
@@ -78,8 +80,8 @@ export function Sidebar({
               <button
                 className="conv__del"
                 onClick={() => onDelete(c.id)}
-                aria-label={`Hapus percakapan "${c.title}"`}
-                title="Hapus"
+                aria-label={t('sidebar.deleteConv', { title: c.title })}
+                title={t('sidebar.delete')}
               >
                 <TrashIcon />
               </button>
@@ -90,8 +92,8 @@ export function Sidebar({
 
       <div className="sidebar__footer">
         <div className="sidebar__lang">
-          <span className="sidebar__lang-label">Bahasa jawaban</span>
-          <div className="seg seg--sm" role="group" aria-label="Bahasa jawaban AI">
+          <span className="sidebar__lang-label">{t('sidebar.language')}</span>
+          <div className="seg seg--sm" role="group" aria-label={t('sidebar.language')}>
             <button
               className={`seg__item${language === 'id' ? ' seg__item--active' : ''}`}
               onClick={() => onLanguage('id')}
@@ -109,7 +111,7 @@ export function Sidebar({
           </div>
         </div>
         <button className="pdr-nav-btn" onClick={onOpenSettings}>
-          Pengaturan
+          {t('sidebar.settings')}
         </button>
       </div>
     </aside>

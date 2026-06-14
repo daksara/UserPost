@@ -9,6 +9,8 @@ import { Composer } from './components/Composer'
 import { Logo } from './components/Logo'
 import { BASE_SYSTEM_PROMPT, TEMPLATES, languageDirective } from './ai/templates'
 import { buildLessonStarter, buildLessonSystem, findLesson } from './learn/curriculum'
+import { I18nContext, useI18n } from './i18n/i18n'
+import { createT } from './i18n/translations'
 import { useSettings } from './hooks/useSettings'
 import { useConversations } from './hooks/useConversations'
 import { useChat } from './hooks/useChat'
@@ -29,6 +31,7 @@ export default function App() {
     remove,
   } = useConversations()
   const { completedSet, toggleDone, markDone } = useLearning()
+  const t = useMemo(() => createT(language), [language])
 
   const [input, setInput] = useState('')
   const [showSettings, setShowSettings] = useState(false)
@@ -45,7 +48,7 @@ export default function App() {
   )
   const system = useMemo(() => {
     const base = lesson
-      ? buildLessonSystem(lesson)
+      ? buildLessonSystem(lesson, language)
       : template
         ? `${BASE_SYSTEM_PROMPT}\n\n${template.system}`
         : BASE_SYSTEM_PROMPT
@@ -105,7 +108,7 @@ export default function App() {
     setInput('')
     setShowLearn(false)
     setDrawer(false)
-    setPendingKickoff(buildLessonStarter(l))
+    setPendingKickoff(buildLessonStarter(l, language))
     // Materi yang dimulai dianggap sudah dipelajari untuk pelacakan progres.
     markDone(id)
     if (!ready) setShowSettings(true)
@@ -136,10 +139,11 @@ export default function App() {
   const title = active.turns.length
     ? active.title
     : lesson
-      ? `Belajar: ${lesson.title}`
-      : template?.title ?? 'Asisten'
+      ? t('app.learnPrefix', { title: lesson.title[language] })
+      : template?.title ?? t('app.assistant')
 
   return (
+    <I18nContext.Provider value={{ lang: language, t }}>
     <div className="layout">
       {drawer && <div className="scrim" onClick={() => setDrawer(false)} />}
 
@@ -164,23 +168,23 @@ export default function App() {
           <button
             className="pdr-nav-btn chat__menu"
             onClick={() => setDrawer(true)}
-            aria-label="Buka menu"
+            aria-label={t('app.openMenu')}
           >
             <MenuIcon />
           </button>
           <div className="chat__head-title">{title}</div>
           <span className={`chip${ready ? ' chip--ok' : ' chip--warn'}`}>
-            {provider === 'groq' ? 'Groq' : 'Gemini'} · {ready ? model : 'tanpa key'}
+            {provider === 'groq' ? 'Groq' : 'Gemini'} · {ready ? model : t('app.noKey')}
           </span>
         </header>
 
         {!ready && (
           <div className="notice">
-            Belum ada API key.{' '}
+            {t('app.noticeBefore')}
             <button className="pdr-link" onClick={() => setShowSettings(true)}>
-              Buka Pengaturan
-            </button>{' '}
-            untuk menghubungkan Groq atau Gemini.
+              {t('app.noticeLink')}
+            </button>
+            {t('app.noticeAfter')}
           </div>
         )}
 
@@ -209,10 +213,10 @@ export default function App() {
           onPickTemplate={pickTemplate}
           placeholder={
             lesson
-              ? 'Jawab latihan mentor atau tanya apa pun tentang materi…'
+              ? t('composer.lesson')
               : template
-                ? `Lengkapi detail untuk "${template.title}"…`
-                : 'Tulis tugas atau pertanyaanmu…'
+                ? t('composer.template', { title: template.title })
+                : t('composer.default')
           }
         />
       </main>
@@ -238,26 +242,24 @@ export default function App() {
         />
       )}
     </div>
+    </I18nContext.Provider>
   )
 }
 
 function Welcome({ onStartLearning }: { onStartLearning: () => void }) {
+  const { t } = useI18n()
   return (
     <div className="welcome">
       <Logo size={44} />
-      <h1 className="welcome__title">Hello, I'm Pendar</h1>
-      <p className="welcome__sub">
-        Your AI Co-Pilot for Virtual Assistants. I help you understand, organize,
-        and complete real client work accurately, professionally, and efficiently.
-        What kind of task or project do you need help with today?
-      </p>
+      <h1 className="welcome__title">{t('welcome.title')}</h1>
+      <p className="welcome__sub">{t('welcome.sub')}</p>
       <div className="welcome__learn">
         <div className="welcome__learn-text">
-          <strong>Baru jadi VA?</strong> Belajar dari nol sampai expert bersama
-          mentor VA berpengalaman — kurikulum lengkap, tanpa ada yang tertinggal.
+          <strong>{t('welcome.learnLead')}</strong>
+          {t('welcome.learnText')}
         </div>
         <button className="pdr-btn pdr-btn--primary" onClick={onStartLearning}>
-          Mulai belajar jadi VA
+          {t('welcome.learnBtn')}
         </button>
       </div>
     </div>
