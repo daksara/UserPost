@@ -24,6 +24,22 @@ export const USE_PROXY = env.VITE_USE_PROXY === '1' || env.VITE_USE_PROXY === 't
 const GROQ_EXCLUDE = /whisper|tts|guard|embed|moderation/i
 const GEMINI_EXCLUDE = /embedding|aqa|imagen|vision-only/i
 
+export const MAX_STREAM_RETRIES = 2
+
+/** Status sementara yang layak dicoba ulang (rate-limit / error server). Murni & dapat diuji. */
+export function isRetriableStatus(status: number): boolean {
+  return status === 429 || (status >= 500 && status < 600)
+}
+
+/** Backoff sederhana (ms) untuk percobaan ke-`attempt` (1-based). Murni & dapat diuji. */
+export function retryBackoffMs(attempt: number): number {
+  return 300 * 2 ** (attempt - 1)
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 interface ProviderReq {
   provider: Provider
   /** Path setelah base, mis. 'models' atau 'chat/completions'. */
@@ -164,7 +180,21 @@ export async function streamChat(
           body: { ...toGeminiPayload(messages), generationConfig: { temperature } },
         }
 
-  const res = await providerFetch({ provider, path, method: 'POST', body, apiKey, signal })
+  // Coba ulang hanya kegagalan AWAL yang sementara (429/5xx atau error jaringan),
+  // sebelum satu token pun mengalir — stream yang sudah jalan tidak bisa diulang.
+  let res: Response | null = null
+  for (let attempt = 1; attempt <= MAX_STREAM_RETRIES + 1; attempt++) {
+    try {
+      res = await providerFetch({ provider, path, method: 'POST', body, apiKey, signal })
+    } catch (e) {
+      if (signal?.aborted || attempt > MAX_STREAM_RETRIES) throw e
+      await delay(retryBackoffMs(attempt))
+      continue
+    }
+    if (res.ok || !isRetriableStatus(res.status) || attempt > MAX_STREAM_RETRIES || signal?.aborted) break
+    await delay(retryBackoffMs(attempt))
+  }
+  if (!res) throw new Error('Permintaan gagal tanpa respons.')
 
   if (!res.ok) throw await toError(label(provider), res)
   if (!res.body) throw new Error('Streaming tidak didukung browser ini.')
