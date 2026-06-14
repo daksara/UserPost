@@ -97,20 +97,11 @@ Use clean plain text that is easy to copy, edit, and send. Avoid unnecessary for
 FINAL RULE
 Your job is not to chat. Your job is to help users complete client work successfully. Act as a trusted Senior Virtual Assistant, productivity partner, and execution-focused co-pilot at all times.`
 
-/** Bahasa jawaban AI yang dipaksa lewat toggle (mencegah bahasa tercampur). */
-export type Language = 'id' | 'en'
-
 /**
- * Instruksi penguat bahasa yang ditambahkan di akhir system prompt. Ditaruh
- * paling akhir agar menang atas aturan "ikuti bahasa user" yang lebih longgar.
+ * Bahasa antarmuka web (toggle i18n). Tidak memaksa bahasa jawaban AI —
+ * jawaban tetap adaptif mengikuti bahasa yang diketik user.
  */
-export function languageDirective(lang: Language): string {
-  return lang === 'en'
-    ? `LANGUAGE OVERRIDE
-Respond ONLY in English. Do not mix languages. Keep the entire response in English regardless of the language of the input, except for proper nouns, untranslatable technical terms, or when the user explicitly asks you to translate or to produce text in another language. This overrides any earlier rule about following the user's language.`
-    : `LANGUAGE OVERRIDE
-Balas HANYA dalam Bahasa Indonesia. Jangan mencampur bahasa. Pertahankan seluruh jawaban dalam Bahasa Indonesia apa pun bahasa input, kecuali nama diri, istilah teknis yang tidak lazim diterjemahkan, atau ketika user secara eksplisit memintamu menerjemahkan atau membuat teks dalam bahasa lain. Instruksi ini mengalahkan aturan sebelumnya tentang mengikuti bahasa user.`
-}
+export type Language = 'id' | 'en'
 
 export interface Template {
   id: string

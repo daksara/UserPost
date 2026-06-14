@@ -7,7 +7,7 @@ import { SettingsModal } from './components/SettingsModal'
 import { LearnModal } from './components/LearnModal'
 import { Composer } from './components/Composer'
 import { Logo } from './components/Logo'
-import { BASE_SYSTEM_PROMPT, TEMPLATES, languageDirective } from './ai/templates'
+import { BASE_SYSTEM_PROMPT, TEMPLATES } from './ai/templates'
 import { buildLessonStarter, buildLessonSystem, findLesson } from './learn/curriculum'
 import { I18nContext, useI18n } from './i18n/i18n'
 import { createT } from './i18n/translations'
@@ -33,6 +33,12 @@ export default function App() {
   const { completedSet, toggleDone, markDone } = useLearning()
   const t = useMemo(() => createT(language), [language])
 
+  // Selaraskan judul dokumen & atribut lang HTML dengan bahasa antarmuka.
+  useEffect(() => {
+    document.title = t('app.title')
+    document.documentElement.lang = language
+  }, [t, language])
+
   const [input, setInput] = useState('')
   const [showSettings, setShowSettings] = useState(false)
   const [showLearn, setShowLearn] = useState(false)
@@ -46,13 +52,12 @@ export default function App() {
     () => TEMPLATES.find((t) => t.id === active.templateId) ?? null,
     [active.templateId],
   )
+  // Jawaban AI adaptif: mengikuti bahasa yang diketik user (aturan di
+  // BASE_SYSTEM_PROMPT / persona mentor), bukan dipaksa oleh toggle bahasa UI.
   const system = useMemo(() => {
-    const base = lesson
-      ? buildLessonSystem(lesson, language)
-      : template
-        ? `${BASE_SYSTEM_PROMPT}\n\n${template.system}`
-        : BASE_SYSTEM_PROMPT
-    return `${base}\n\n${languageDirective(language)}`
+    if (lesson) return buildLessonSystem(lesson, language)
+    if (template) return `${BASE_SYSTEM_PROMPT}\n\n${template.system}`
+    return BASE_SYSTEM_PROMPT
   }, [lesson, template, language])
 
   const { streaming, error, send, stop } = useChat({

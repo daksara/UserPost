@@ -1,4 +1,6 @@
 import { Component, type ReactNode } from 'react'
+import { getStoredLanguage } from '../i18n/i18n'
+import { createT } from '../i18n/translations'
 
 interface Props { children: ReactNode }
 interface State { error: Error | null }
@@ -16,6 +18,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (!this.state.error) return this.props.children
+    const t = createT(getStoredLanguage())
     return (
       <div style={{
         height: '100dvh', display: 'flex', flexDirection: 'column',
@@ -23,17 +26,17 @@ export class ErrorBoundary extends Component<Props, State> {
         padding: '0 24px', background: 'var(--bg)', textAlign: 'center',
       }}>
         <h2 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-primary)' }}>
-          Something went wrong
+          {t('error.title')}
         </h2>
         <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)', maxWidth: 320 }}>
-          An unexpected error occurred. Reload the app to continue.
+          {t('error.body')}
         </p>
         <button
           className="pdr-btn pdr-btn--primary"
           style={{ maxWidth: 200 }}
           onClick={() => location.reload()}
         >
-          Reload
+          {t('error.reload')}
         </button>
       </div>
     )

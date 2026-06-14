@@ -19,6 +19,12 @@ const id = {
   'sidebar.deleteConv': 'Hapus percakapan "{title}"',
   'sidebar.delete': 'Hapus',
 
+  // Document title & error boundary
+  'app.title': 'Pendar — AI Co-Pilot untuk Virtual Assistant',
+  'error.title': 'Terjadi kesalahan',
+  'error.body': 'Terjadi kesalahan tak terduga. Muat ulang aplikasi untuk melanjutkan.',
+  'error.reload': 'Muat ulang',
+
   // Header & notice
   'app.openMenu': 'Buka menu',
   'app.noKey': 'tanpa key',
@@ -99,6 +105,12 @@ const en: Record<keyof typeof id, string> = {
   'sidebar.darkTheme': 'Dark theme',
   'sidebar.deleteConv': 'Delete conversation "{title}"',
   'sidebar.delete': 'Delete',
+
+  // Document title & error boundary
+  'app.title': 'Pendar — AI Co-Pilot for Virtual Assistants',
+  'error.title': 'Something went wrong',
+  'error.body': 'An unexpected error occurred. Reload the app to continue.',
+  'error.reload': 'Reload',
 
   // Header & notice
   'app.openMenu': 'Open menu',

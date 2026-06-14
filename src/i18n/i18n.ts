@@ -16,3 +16,16 @@ export const I18nContext = createContext<I18n>({ lang: 'id', t: createT('id') })
 export function useI18n(): I18n {
   return useContext(I18nContext)
 }
+
+/**
+ * Baca bahasa tersimpan langsung dari localStorage. Untuk dipakai di luar
+ * pohon React/Provider (mis. ErrorBoundary) yang tak bisa memakai useI18n.
+ */
+export function getStoredLanguage(): Language {
+  try {
+    const saved = JSON.parse(localStorage.getItem('pendar-settings') || '{}')
+    return saved.language === 'en' ? 'en' : 'id'
+  } catch {
+    return 'id'
+  }
+}

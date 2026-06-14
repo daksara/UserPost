@@ -57,8 +57,8 @@ CI (GitHub Actions) menjalankan ketiganya pada tiap push dan pull request.
 
 ## Fitur
 - Antarmuka dwibahasa — toggle Indonesia/English di sidebar mengganti seluruh
-  teks UI; jawaban AI mengikuti bahasa yang sama agar tidak tercampur (pilihan
-  tersimpan di localStorage)
+  teks UI, judul dokumen, dan kurikulum belajar (pilihan tersimpan di
+  localStorage). Jawaban AI tetap adaptif mengikuti bahasa yang diketik user
 - Belajar VA dari pemula hingga expert — kurikulum berjenjang (Pemula,
   Menengah, Mahir, Expert) berisi puluhan materi yang mencakup seluruh skill VA
   plus jalur penghasilan puluhan juta/bulan. Tiap materi diajar langsung oleh
