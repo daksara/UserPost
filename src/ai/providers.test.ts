@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { filterGeminiModels, filterGroqModels, toGeminiPayload } from './providers'
+import {
+  filterGeminiModels,
+  filterGroqModels,
+  isRetriableStatus,
+  retryBackoffMs,
+  toGeminiPayload,
+} from './providers'
 
 describe('filterGroqModels', () => {
   it('keeps active chat models and drops non-chat / inactive ones', () => {
@@ -52,5 +58,24 @@ describe('toGeminiPayload', () => {
   it('omits systemInstruction when there is no system message', () => {
     const payload = toGeminiPayload([{ role: 'user', content: 'Hi' }])
     expect(payload.systemInstruction).toBeUndefined()
+  })
+})
+
+describe('isRetriableStatus', () => {
+  it('retries on 429 and 5xx, not on 4xx/2xx', () => {
+    expect(isRetriableStatus(429)).toBe(true)
+    expect(isRetriableStatus(500)).toBe(true)
+    expect(isRetriableStatus(503)).toBe(true)
+    expect(isRetriableStatus(400)).toBe(false)
+    expect(isRetriableStatus(401)).toBe(false)
+    expect(isRetriableStatus(200)).toBe(false)
+  })
+})
+
+describe('retryBackoffMs', () => {
+  it('grows exponentially per attempt', () => {
+    expect(retryBackoffMs(1)).toBe(300)
+    expect(retryBackoffMs(2)).toBe(600)
+    expect(retryBackoffMs(3)).toBe(1200)
   })
 })
