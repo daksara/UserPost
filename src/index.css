@@ -213,7 +213,8 @@ a:focus-visible,
 }
 
 /* ── Messages (gaya Claude) ─────────────────────────────────────── */
-.msg { display: flex; max-width: 100%; animation: rise .25s ease backwards; }
+.msg { display: flex; max-width: 100%; }
+.msg:last-child { animation: rise .25s ease backwards; }
 .msg--ai { flex-direction: row; gap: 13px; align-items: flex-start; }
 .msg--user { flex-direction: column; align-items: flex-end; }
 
