@@ -106,8 +106,7 @@ export default function App() {
 
   const pickTemplate = (id: string) => {
     setActiveTemplate(id)
-    const t = TEMPLATES.find((x) => x.id === id)
-    if (t) setInput(t.starter)
+    setInput('')
     setDrawer(false)
   }
 
