@@ -9,7 +9,6 @@ import { Composer } from './components/Composer'
 import { Welcome } from './components/Welcome'
 import { BASE_SYSTEM_PROMPT, TEMPLATES } from './ai/templates'
 import { buildLessonStarter, buildLessonSystem, findLesson } from './learn/curriculum'
-import { buildClientSystem, findScenario } from './learn/scenarios'
 import { I18nContext } from './i18n/i18n'
 import { createT } from './i18n/translations'
 import { useSettings } from './hooks/useSettings'
@@ -51,7 +50,6 @@ export default function App() {
   // aktif & siap (lihat efek auto-kickoff di bawah).
   const [pendingKickoff, setPendingKickoff] = useState<string | null>(null)
 
-  const scenario = useMemo(() => findScenario(active.scenarioId ?? '') ?? null, [active.scenarioId])
   const lesson = useMemo(() => findLesson(active.lessonId ?? '') ?? null, [active.lessonId])
   const template = useMemo(
     () => TEMPLATES.find((t) => t.id === active.templateId) ?? null,
@@ -60,11 +58,10 @@ export default function App() {
   // Jawaban AI adaptif: mengikuti bahasa yang diketik user (aturan di
   // BASE_SYSTEM_PROMPT / persona mentor), bukan dipaksa oleh toggle bahasa UI.
   const system = useMemo(() => {
-    if (scenario) return buildClientSystem(scenario, language)
     if (lesson) return buildLessonSystem(lesson, language)
     if (template) return `${BASE_SYSTEM_PROMPT}\n\n${template.system}`
     return BASE_SYSTEM_PROMPT
-  }, [scenario, lesson, template, language])
+  }, [lesson, template, language])
 
   const { streaming, error, send, stop, regenerate } = useChat({
     provider,
@@ -99,11 +96,11 @@ export default function App() {
   // key sudah siap, kirim pesan pembuka agar mentor langsung mulai mengajar.
   useEffect(() => {
     if (!pendingKickoff || !ready || streaming) return
-    if ((!active.lessonId && !active.scenarioId) || active.turns.length > 0) return
+    if (!active.lessonId || active.turns.length > 0) return
     const text = pendingKickoff
     setPendingKickoff(null)
     send(text)
-  }, [pendingKickoff, ready, streaming, active.lessonId, active.scenarioId, active.turns.length, send])
+  }, [pendingKickoff, ready, streaming, active.lessonId, active.turns.length, send])
 
   const pickTemplate = (id: string) => {
     // Isi kolom input dengan teks awal (starter) template agar user tinggal
@@ -153,11 +150,9 @@ export default function App() {
 
   const title = active.turns.length
     ? active.title
-    : scenario
-      ? t('sim.titlePrefix', { skill: scenario.skill[language] })
-      : lesson
-        ? t('app.learnPrefix', { title: lesson.title[language] })
-        : template?.title ?? ''
+    : lesson
+      ? t('app.learnPrefix', { title: lesson.title[language] })
+      : template?.title ?? ''
 
   return (
     <I18nContext.Provider value={{ lang: language, t }}>
@@ -210,7 +205,6 @@ export default function App() {
             <Welcome templates={TEMPLATES} onPick={pickTemplate} />
           ) : (
             active.turns.map((turn, i) => {
-              if (scenario && i === 0 && turn.role === 'user') return null
               const isLast = i === active.turns.length - 1
               // Regenerasi hanya untuk jawaban AI terakhir saat idle & siap.
               const canRegen = isLast && turn.role === 'assistant' && ready && !streaming
@@ -237,13 +231,11 @@ export default function App() {
           onPickTemplate={pickTemplate}
           textareaRef={composerInputRef}
           placeholder={
-            scenario
-              ? t('composer.sim')
-              : lesson
-                ? t('composer.lesson')
-                : template
-                  ? t('composer.template', { title: template.title })
-                  : t('composer.default')
+            lesson
+              ? t('composer.lesson')
+              : template
+                ? t('composer.template', { title: template.title })
+                : t('composer.default')
           }
         />
       </main>
