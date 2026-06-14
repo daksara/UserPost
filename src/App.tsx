@@ -5,6 +5,7 @@ import { Sidebar } from './components/Sidebar'
 import { MessageBubble } from './components/MessageBubble'
 import { SettingsModal } from './components/SettingsModal'
 import { Composer } from './components/Composer'
+import { Logo } from './components/Logo'
 import { BASE_SYSTEM_PROMPT, TEMPLATES } from './ai/templates'
 import { useSettings } from './hooks/useSettings'
 import { useConversations } from './hooks/useConversations'
@@ -142,7 +143,7 @@ export default function App() {
 
         <div className="chat__messages" ref={scrollRef} onScroll={onScroll}>
           {active.turns.length === 0 ? (
-            <Welcome onPick={pickTemplate} />
+            <Welcome />
           ) : (
             active.turns.map((t, i) => (
               <MessageBubble
@@ -154,6 +155,21 @@ export default function App() {
           )}
           {error && <div className="chat__error">{error}</div>}
         </div>
+
+        {active.turns.length === 0 && (
+          <div className="suggestions">
+            {TEMPLATES.map((t) => (
+              <button
+                key={t.id}
+                className="suggestion"
+                onClick={() => pickTemplate(t.id)}
+                title={t.desc}
+              >
+                {t.title}
+              </button>
+            ))}
+          </div>
+        )}
 
         <Composer
           value={input}
@@ -184,25 +200,20 @@ export default function App() {
   )
 }
 
-function Welcome({ onPick }: { onPick: (id: string) => void }) {
+function greeting(): string {
+  const h = new Date().getHours()
+  if (h < 11) return 'Selamat pagi'
+  if (h < 15) return 'Selamat siang'
+  if (h < 18) return 'Selamat sore'
+  return 'Selamat malam'
+}
+
+function Welcome() {
   return (
     <div className="welcome">
-      <h1 className="welcome__title">Apa yang sedang kamu kerjakan?</h1>
-      <p className="welcome__sub">
-        Pilih template untuk mulai cepat, atau langsung tulis di kolom bawah.
-      </p>
-      <div className="welcome__grid">
-        {TEMPLATES.map((t) => (
-          <button
-            key={t.id}
-            className="pdr-card pdr-card--hover welcome__card"
-            onClick={() => onPick(t.id)}
-          >
-            <span className="welcome__card-title">{t.title}</span>
-            <span className="welcome__card-desc">{t.desc}</span>
-          </button>
-        ))}
-      </div>
+      <Logo size={44} />
+      <h1 className="welcome__title">{greeting()}</h1>
+      <p className="welcome__sub">Asisten VA-mu siap. Tulis tugas, atau pilih dari saran di bawah.</p>
     </div>
   )
 }

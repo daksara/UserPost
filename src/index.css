@@ -251,16 +251,24 @@ a:focus-visible,
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
 /* ── Welcome ────────────────────────────────────────────────────── */
-.welcome { margin: auto 0; padding: 24px 4px; text-align: center; }
-.welcome__title { font-family: var(--font-serif); font-size: 1.7rem; font-weight: 500; letter-spacing: -.01em; color: var(--accent); }
-.welcome__sub { font-size: .9rem; color: var(--text-muted); margin-top: 6px; }
-.welcome__grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 10px; margin-top: 22px; text-align: left;
+.welcome { margin: auto 0; padding: 24px 4px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.welcome__title { font-family: var(--font-serif); font-size: 1.95rem; font-weight: 500; letter-spacing: -.01em; color: var(--text-primary); }
+.welcome__sub { font-size: .9rem; color: var(--text-muted); max-width: 360px; }
+
+/* ── Chip saran template (di atas composer) ───────────────── */
+.suggestions {
+  display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none;
+  padding: 2px 20px 0; max-width: 744px; width: 100%; margin: 0 auto;
 }
-.welcome__card { display: flex; flex-direction: column; gap: 3px; cursor: pointer; }
-.welcome__card-title { font-size: .9rem; font-weight: 700; }
-.welcome__card-desc { font-size: .76rem; color: var(--text-muted); }
+.suggestions::-webkit-scrollbar { display: none; }
+.suggestion {
+  flex: 0 0 auto; cursor: pointer; white-space: nowrap;
+  background: var(--bg-input); border: 1px solid var(--border);
+  color: var(--text-muted); border-radius: 999px;
+  padding: 7px 14px; font-size: .82rem;
+  transition: border-color .15s ease, color .15s ease;
+}
+.suggestion:hover { border-color: var(--accent); color: var(--text-primary); }
 
 /* ── Composer ───────────────────────────────────────────────────── */
 .composer {
