@@ -10,8 +10,8 @@ const STORAGE_KEY = 'userpost-theme'
 
 // Warna address bar mobile per tema (sinkron dengan --bg di index.css)
 const THEME_COLORS: Record<Theme, string> = {
-  light: '#f7f6f3',
-  dark: '#0e0e11',
+  light: '#faf9f5',
+  dark: '#262624',
 }
 
 export function getStoredTheme(): Theme {

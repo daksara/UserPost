@@ -15,6 +15,19 @@ export default tseslint.config(
     },
   },
   {
+    // Serverless edge functions (Vercel) — Web/Edge runtime globals
+    files: ['api/**/*.ts'],
+    languageOptions: {
+      globals: {
+        process: 'readonly',
+        fetch: 'readonly',
+        Request: 'readonly',
+        Response: 'readonly',
+        URL: 'readonly',
+      },
+    },
+  },
+  {
     files: ['src/**/*.{ts,tsx}'],
     plugins: {
       'react-hooks': reactHooks,

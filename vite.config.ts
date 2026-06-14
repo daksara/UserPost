@@ -15,8 +15,8 @@ export default defineConfig({
         name: 'Pendar — Asisten AI Freelance',
         short_name: 'Pendar',
         description: 'Asisten AI untuk pekerjaan freelance — proposal, balas klien, penawaran harga, dan lainnya.',
-        theme_color: '#f0a93b',
-        background_color: '#0e0e11',
+        theme_color: '#d97757',
+        background_color: '#262624',
         display: 'standalone',
         start_url: '/',
         icons: [

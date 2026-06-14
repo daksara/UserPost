@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Provider } from '../ai/types'
 import { PROVIDERS } from '../ai/types'
+import { USE_PROXY } from '../ai/providers'
 
 const STORAGE_KEY = 'pendar-settings'
 
@@ -70,7 +71,8 @@ export function useSettings() {
   const provider = settings.provider
   const apiKey = settings.apiKeys[provider]
   const model = settings.models[provider]
-  const ready = apiKey.trim().length > 0
+  // Dalam mode proxy, server yang memegang key — front-end selalu "siap".
+  const ready = USE_PROXY || apiKey.trim().length > 0
 
-  return { settings, provider, apiKey, model, ready, setProvider, setApiKey, setModel }
+  return { settings, provider, apiKey, model, ready, useProxy: USE_PROXY, setProvider, setApiKey, setModel }
 }

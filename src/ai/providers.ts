@@ -1,16 +1,61 @@
 // src/ai/providers.ts
-// Klien AI untuk Groq (OpenAI-compatible) dan Gemini. Semua panggilan
-// dilakukan langsung dari browser memakai API key milik user (disimpan di
-// localStorage). Fungsi murni di-export terpisah agar mudah diuji.
+// Klien AI untuk Groq (OpenAI-compatible) dan Gemini.
+//
+// Dua mode transport:
+//  - Langsung (default): browser memanggil provider memakai API key user yang
+//    tersimpan di localStorage.
+//  - Proxy (VITE_USE_PROXY=1): browser memanggil /api/proxy; server (lihat
+//    api/proxy.ts) yang menyisipkan API key dari env, sehingga key tidak
+//    pernah ada di browser. Cocok untuk deploy publik.
+//
+// Fungsi murni di-export terpisah agar mudah diuji.
 
 import type { ChatMessage, ModelInfo, Provider } from './types'
 
-const GROQ_BASE = 'https://api.groq.com/openai/v1'
-const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta'
+const BASES: Record<Provider, string> = {
+  groq: 'https://api.groq.com/openai/v1',
+  gemini: 'https://generativelanguage.googleapis.com/v1beta',
+}
+
+const env = import.meta.env
+export const USE_PROXY = env.VITE_USE_PROXY === '1' || env.VITE_USE_PROXY === 'true'
 
 // Model non-chat yang tidak relevan untuk asisten teks.
 const GROQ_EXCLUDE = /whisper|tts|guard|embed|moderation/i
 const GEMINI_EXCLUDE = /embedding|aqa|imagen|vision-only/i
+
+interface ProviderReq {
+  provider: Provider
+  /** Path setelah base, mis. 'models' atau 'chat/completions'. */
+  path: string
+  method?: 'GET' | 'POST'
+  body?: unknown
+  apiKey: string
+  signal?: AbortSignal
+}
+
+// Satu titik untuk menjangkau provider — lewat proxy server atau langsung.
+// Dalam mode proxy, key milik user diabaikan; server yang menyisipkan key.
+function providerFetch({ provider, path, method = 'GET', body, apiKey, signal }: ProviderReq) {
+  if (USE_PROXY) {
+    return fetch('/api/proxy', {
+      method: 'POST',
+      signal,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider, path, method, body }),
+    })
+  }
+
+  const headers: Record<string, string> = {}
+  if (method === 'POST') headers['Content-Type'] = 'application/json'
+  let url = `${BASES[provider]}/${path}`
+  if (provider === 'groq') {
+    headers['Authorization'] = `Bearer ${apiKey}`
+  } else {
+    url += `${path.includes('?') ? '&' : '?'}key=${encodeURIComponent(apiKey)}`
+  }
+  return fetch(url, { method, signal, headers, body: method === 'POST' ? JSON.stringify(body) : undefined })
+}
 
 // ── Penyaring model (murni, dapat diuji) ──────────────────────────────
 
@@ -74,19 +119,17 @@ export function toGeminiPayload(messages: ChatMessage[]): GeminiPayload {
 // ── Daftar model (jaringan) ───────────────────────────────────────────
 
 export async function listModels(provider: Provider, apiKey: string): Promise<ModelInfo[]> {
-  if (provider === 'groq') {
-    const res = await fetch(`${GROQ_BASE}/models`, {
-      headers: { Authorization: `Bearer ${apiKey}` },
-    })
-    if (!res.ok) throw await toError('Groq', res)
-    const json = await res.json()
-    return filterGroqModels(json.data ?? [])
-  }
-
-  const res = await fetch(`${GEMINI_BASE}/models?key=${encodeURIComponent(apiKey)}&pageSize=200`)
-  if (!res.ok) throw await toError('Gemini', res)
+  const path = provider === 'groq' ? 'models' : 'models?pageSize=200'
+  const res = await providerFetch({ provider, path, apiKey })
+  if (!res.ok) throw await toError(label(provider), res)
   const json = await res.json()
-  return filterGeminiModels(json.models ?? [])
+  return provider === 'groq'
+    ? filterGroqModels(json.data ?? [])
+    : filterGeminiModels(json.models ?? [])
+}
+
+function label(provider: Provider): string {
+  return provider === 'groq' ? 'Groq' : 'Gemini'
 }
 
 // ── Chat streaming ────────────────────────────────────────────────────
@@ -110,31 +153,20 @@ export async function streamChat(
 ): Promise<void> {
   const { provider, apiKey, model, messages, temperature = 0.7 } = req
 
-  const res =
+  const { path, body } =
     provider === 'groq'
-      ? await fetch(`${GROQ_BASE}/chat/completions`, {
-          method: 'POST',
-          signal,
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({ model, messages, temperature, stream: true }),
-        })
-      : await fetch(
-          `${GEMINI_BASE}/models/${model}:streamGenerateContent?alt=sse&key=${encodeURIComponent(apiKey)}`,
-          {
-            method: 'POST',
-            signal,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              ...toGeminiPayload(messages),
-              generationConfig: { temperature },
-            }),
-          },
-        )
+      ? {
+          path: 'chat/completions',
+          body: { model, messages, temperature, stream: true },
+        }
+      : {
+          path: `models/${model}:streamGenerateContent?alt=sse`,
+          body: { ...toGeminiPayload(messages), generationConfig: { temperature } },
+        }
 
-  if (!res.ok) throw await toError(provider === 'groq' ? 'Groq' : 'Gemini', res)
+  const res = await providerFetch({ provider, path, method: 'POST', body, apiKey, signal })
+
+  if (!res.ok) throw await toError(label(provider), res)
   if (!res.body) throw new Error('Streaming tidak didukung browser ini.')
 
   await readSSE(res.body, (data) => {
@@ -191,7 +223,10 @@ async function toError(label: string, res: Response): Promise<Error> {
   let detail: string
   try {
     const body = await res.json()
-    detail = body?.error?.message || body?.error?.[0]?.message || JSON.stringify(body?.error || body)
+    const err = body?.error
+    detail =
+      (typeof err === 'string' ? err : err?.message || err?.[0]?.message) ||
+      JSON.stringify(err || body)
   } catch {
     detail = await res.text().catch(() => '')
   }
