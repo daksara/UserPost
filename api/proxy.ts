@@ -8,8 +8,10 @@
 //  - Hanya menerima POST.
 //  - Origin browser harus sama dengan origin deploy, atau masuk daftar
 //    ALLOWED_ORIGINS (dipisah koma). Mencegah situs lain memanggil proxy ini.
-//  - Hanya path yang masuk allow-list (daftar model + chat) yang diteruskan;
-//    selain itu ditolak.
+//  - Hanya path yang masuk allow-list (daftar model + chat) yang diteruskan.
+//  - Rate-limit per-IP (opsional) lewat Upstash Redis. Aktif hanya bila
+//    UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN diset; selain itu
+//    dilewati (fail-open) agar app tetap jalan tanpa konfigurasi tambahan.
 //
 // Body request (dari src/ai/providers.ts):
 //   { provider: 'groq'|'gemini', path: string, method: 'GET'|'POST', body?: unknown }
@@ -41,6 +43,11 @@ export function isAllowedPath(provider: string, path: string): boolean {
   return (ALLOWED[provider] ?? []).some((re) => re.test(clean))
 }
 
+/** Kunci jendela rate-limit (fixed window) untuk sebuah IP. Murni & dapat diuji. */
+export function rlWindowKey(ip: string, nowMs: number, windowSec: number): string {
+  return `rl:${ip}:${Math.floor(nowMs / 1000 / windowSec)}`
+}
+
 function json(obj: unknown, status = 200): Response {
   return new Response(JSON.stringify(obj), {
     status,
@@ -66,9 +73,38 @@ function originAllowed(req: Request): boolean {
   }
 }
 
+// Rate-limit per-IP via Upstash Redis REST. Fail-open: bila belum dikonfigurasi
+// atau Redis error, kembalikan false (tidak memblokir) agar UX tidak rusak.
+async function rateLimited(req: Request): Promise<boolean> {
+  const url = process.env.UPSTASH_REDIS_REST_URL
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN
+  if (!url || !token) return false
+
+  const windowSec = Number(process.env.RL_WINDOW || '60')
+  const limit = Number(process.env.RL_MAX || '30')
+  const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'unknown'
+  const key = rlWindowKey(ip, Date.now(), windowSec)
+  const headers = { Authorization: `Bearer ${token}` }
+
+  try {
+    const res = await fetch(`${url}/incr/${encodeURIComponent(key)}`, { headers })
+    const count = Number((await res.json())?.result)
+    if (count === 1) {
+      // Pasang TTL hanya saat hit pertama di jendela ini.
+      await fetch(`${url}/expire/${encodeURIComponent(key)}/${windowSec}`, { headers })
+    }
+    return Number.isFinite(count) && count > limit
+  } catch {
+    return false
+  }
+}
+
 export default async function handler(req: Request): Promise<Response> {
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
   if (!originAllowed(req)) return json({ error: 'Origin tidak diizinkan' }, 403)
+  if (await rateLimited(req)) {
+    return json({ error: 'Terlalu banyak permintaan. Coba lagi sebentar.' }, 429)
+  }
 
   let payload: { provider?: string; path?: string; method?: string; body?: unknown }
   try {
