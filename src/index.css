@@ -491,3 +491,14 @@ a:focus-visible,
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* Belajar VA — tab Materi / Latihan Klien */
+.learn__tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 2px; }
+.learn__tab {
+  background: transparent; border: none; padding: 8px 12px;
+  font-size: .9rem; font-weight: 700; color: var(--text-muted);
+  border-bottom: 2px solid transparent; transition: color .15s ease, border-color .15s ease;
+}
+.learn__tab:hover { color: var(--text-secondary); }
+.learn__tab--active { color: var(--accent); border-bottom-color: var(--accent); }
+.sim-card__meta { font-size: .76rem; color: var(--text-muted); }

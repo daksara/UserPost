@@ -18,6 +18,8 @@ export interface Conversation {
   templateId: string | null
   /** Materi belajar VA yang sedang aktif (null = bukan sesi belajar). */
   lessonId: string | null
+  /** Skenario Latihan Klien yang sedang aktif (null = bukan latihan). */
+  scenarioId: string | null
   turns: ChatTurn[]
   createdAt: number
   updatedAt: number
@@ -46,6 +48,7 @@ export function deriveTitle(text: string): string {
 export function makeConversation(
   templateId: string | null = null,
   lessonId: string | null = null,
+  scenarioId: string | null = null,
 ): Conversation {
   const now = Date.now()
   return {
@@ -53,6 +56,7 @@ export function makeConversation(
     title: DEFAULT_TITLE,
     templateId,
     lessonId,
+    scenarioId,
     turns: [],
     createdAt: now,
     updatedAt: now,
@@ -87,6 +91,7 @@ export function sanitizeConversations(raw: unknown): Conversation[] {
       title: typeof c.title === 'string' && c.title ? c.title : DEFAULT_TITLE,
       templateId: typeof c.templateId === 'string' ? c.templateId : null,
       lessonId: typeof c.lessonId === 'string' ? c.lessonId : null,
+      scenarioId: typeof c.scenarioId === 'string' ? c.scenarioId : null,
       turns,
       createdAt: typeof c.createdAt === 'number' ? c.createdAt : Date.now(),
       updatedAt: typeof c.updatedAt === 'number' ? c.updatedAt : Date.now(),
