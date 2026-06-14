@@ -73,6 +73,18 @@ button { font-family: var(--font); cursor: pointer; color: inherit; }
 input, textarea, select { font-family: var(--font); color: var(--text-primary); }
 input::placeholder, textarea::placeholder { color: var(--text-muted); }
 
+/* Hilangkan kotak biru/abu saat tombol ditekan di mobile (tap highlight) */
+button, a, select, input, textarea, [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+/* Jangan tampilkan outline kotak saat klik/tap; tetap tampilkan ring yang
+   mengikuti bentuk elemen hanya untuk navigasi keyboard (aksesibilitas) */
+:focus { outline: none; }
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* ── Layout ─────────────────────────────────────────────────────── */
 .layout {
   display: grid;
