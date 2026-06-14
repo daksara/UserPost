@@ -28,7 +28,6 @@ const id = {
   // Header & notice
   'app.openMenu': 'Buka menu',
   'app.noKey': 'tanpa key',
-  'app.assistant': 'Asisten',
   'app.learnPrefix': 'Belajar: {title}',
   'app.noticeBefore': 'Belum ada API key. ',
   'app.noticeLink': 'Buka Pengaturan',
@@ -109,7 +108,6 @@ const en: Record<keyof typeof id, string> = {
   // Header & notice
   'app.openMenu': 'Open menu',
   'app.noKey': 'no key',
-  'app.assistant': 'Assistant',
   'app.learnPrefix': 'Learning: {title}',
   'app.noticeBefore': 'No API key yet. ',
   'app.noticeLink': 'Open Settings',

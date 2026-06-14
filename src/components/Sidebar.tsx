@@ -5,6 +5,7 @@ import { Logo } from './Logo'
 import type { Conversation } from '../chat/types'
 import type { Theme } from '../hooks/useTheme'
 import type { Language } from '../ai/templates'
+import type { Provider } from '../ai/types'
 import { useI18n } from '../i18n/i18n'
 
 interface Props {
@@ -15,6 +16,9 @@ interface Props {
   onNewChat: () => void
   onOpenLearn: () => void
   onOpenSettings: () => void
+  provider: Provider
+  model: string
+  ready: boolean
   theme: Theme
   onToggleTheme: () => void
   language: Language
@@ -29,6 +33,9 @@ export function Sidebar({
   onNewChat,
   onOpenLearn,
   onOpenSettings,
+  provider,
+  model,
+  ready,
   theme,
   onToggleTheme,
   language,
@@ -91,6 +98,12 @@ export function Sidebar({
       </nav>
 
       <div className="sidebar__footer">
+        <span
+          className={`chip sidebar__model${ready ? ' chip--ok' : ' chip--warn'}`}
+          title={`${provider === 'groq' ? 'Groq' : 'Gemini'} · ${ready ? model : t('app.noKey')}`}
+        >
+          {provider === 'groq' ? 'Groq' : 'Gemini'} · {ready ? model : t('app.noKey')}
+        </span>
         <div className="sidebar__lang">
           <span className="sidebar__lang-label">{t('sidebar.language')}</span>
           <div className="seg seg--sm" role="group" aria-label={t('sidebar.language')}>
