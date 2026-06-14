@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { isAllowedPath } from '../api/proxy'
+import { isAllowedPath, rlWindowKey } from '../api/proxy'
+
+describe('rlWindowKey', () => {
+  it('membentuk kunci per-IP per-jendela', () => {
+    expect(rlWindowKey('1.2.3.4', 0, 60)).toBe('rl:1.2.3.4:0')
+    expect(rlWindowKey('1.2.3.4', 59_000, 60)).toBe('rl:1.2.3.4:0')
+    expect(rlWindowKey('1.2.3.4', 60_000, 60)).toBe('rl:1.2.3.4:1')
+  })
+
+  it('memisahkan IP berbeda di jendela sama', () => {
+    expect(rlWindowKey('9.9.9.9', 60_000, 60)).not.toBe(rlWindowKey('1.1.1.1', 60_000, 60))
+  })
+})
 
 describe('isAllowedPath', () => {
   it('mengizinkan endpoint model & chat Groq', () => {

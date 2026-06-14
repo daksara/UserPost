@@ -85,6 +85,11 @@ Pendar punya dua mode transport ke provider AI:
   request dari origin lain (default: harus sama dengan origin deploy; atur
   `ALLOWED_ORIGINS` bila front-end dilayani dari domain berbeda).
 
+  Opsional, rate-limit per-IP bisa diaktifkan dengan mengisi
+  `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` (Upstash Redis, gratis).
+  Tanpa keduanya, rate-limit dilewati (fail-open). Ambang batas diatur lewat
+  `RL_MAX` (request) & `RL_WINDOW` (detik); default 30 request / 60 detik.
+
 Catatan keamanan lain: seluruh teks dirender sebagai teks biasa (tanpa
 `dangerouslySetInnerHTML`), jadi tidak ada jalur XSS dari jawaban AI. Kerentanan
 `npm audit` yang ada hanya menyangkut `esbuild`/`vite` saat **dev server**, tidak
