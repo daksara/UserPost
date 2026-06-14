@@ -56,6 +56,12 @@ CI (GitHub Actions) menjalankan ketiganya pada tiap push dan pull request.
 ---
 
 ## Fitur
+- Belajar VA dari pemula hingga expert — kurikulum berjenjang (Pemula,
+  Menengah, Mahir, Expert) berisi puluhan materi yang mencakup seluruh skill VA
+  plus jalur penghasilan puluhan juta/bulan. Tiap materi diajar langsung oleh
+  mentor AI (berperan sebagai VA senior berpengalaman): klik "Mulai belajar" dan
+  mentor otomatis mengajar langkah demi langkah, beri contoh nyata, dan latihan.
+  Progres belajar tersimpan di browser (localStorage)
 - Chat AI streaming dengan Groq atau Gemini
 - Riwayat percakapan persisten — banyak percakapan tersimpan di browser
   (localStorage), judul otomatis dari pesan pertama, pindah/hapus dari sidebar
@@ -115,15 +121,21 @@ src/
     templates.ts    # Template tugas freelance + system prompt
     clean.ts        # Pembersih output (buang markdown/emoji) + test
     providers.test.ts
+  learn/
+    curriculum.ts   # Kurikulum VA (pemula→expert) + persona mentor + builder prompt
+    progress.ts     # Helper murni progres belajar (sanitasi, per-level, persen)
+    curriculum.test.ts
   chat/
     types.ts        # Tipe percakapan + helper murni (judul, sanitasi) + test
   hooks/
     useSettings.ts      # Provider/API key/model tersimpan di localStorage
     useConversations.ts # Riwayat percakapan persisten (banyak chat) di localStorage
     useChat.ts          # Streaming, kirim, regenerasi, batalkan
+    useLearning.ts      # Progres materi belajar VA tersimpan di localStorage
     useTheme.ts         # Tema gelap/terang
   components/
-    Sidebar.tsx     # Riwayat percakapan + aksi (tema, pengaturan)
+    Sidebar.tsx     # Riwayat percakapan + aksi (belajar VA, tema, pengaturan)
+    LearnModal.tsx  # Akademi VA: jelajah kurikulum, progres, mulai sesi belajar
     Composer.tsx    # Kolom tulis: auto-grow + Kirim/Stop/Regenerasi
     MessageBubble.tsx
     SettingsModal.tsx
