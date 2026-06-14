@@ -10,6 +10,11 @@ import type { ChatMessage, Provider } from '../ai/types'
 
 export type { ChatTurn } from '../chat/types'
 
+// Batas jumlah turn (user+asisten) yang dikirim ke provider tiap request.
+// Mencegah percakapan panjang membengkak melewati context window / boros token;
+// pesan system selalu dikirim terpisah di luar batas ini.
+export const MAX_CONTEXT_TURNS = 24
+
 interface UseChatArgs {
   provider: Provider
   apiKey: string
@@ -29,9 +34,11 @@ export function useChat({ provider, apiKey, model, system, turns, setTurns }: Us
   // Inti streaming: kirim `history` ke provider, alirkan token ke turn `aiId`.
   const runStream = useCallback(
     async (history: ChatTurn[], aiId: string) => {
+      // Hanya kirim potongan terakhir agar tetap di dalam context window.
+      const recent = history.slice(-MAX_CONTEXT_TURNS)
       const messages: ChatMessage[] = [
         { role: 'system', content: system },
-        ...history.map((t) => ({ role: t.role, content: t.content })),
+        ...recent.map((t) => ({ role: t.role, content: t.content })),
       ]
 
       const ac = new AbortController()
@@ -45,12 +52,12 @@ export function useChat({ provider, apiKey, model, system, turns, setTurns }: Us
           )
         }, ac.signal)
       } catch (e) {
-        if (!ac.signal.aborted) {
-          setError(e instanceof Error ? e.message : String(e))
-          // Buang turn asisten yang masih kosong agar tak menyisakan bubble hampa.
-          setTurns((prev) => prev.filter((t) => !(t.id === aiId && t.content === '')))
-        }
+        // Hanya tampilkan error bila bukan pembatalan yang disengaja user.
+        if (!ac.signal.aborted) setError(e instanceof Error ? e.message : String(e))
       } finally {
+        // Buang turn asisten yang masih kosong (gagal maupun di-stop sebelum
+        // token pertama) agar tak menyisakan bubble hampa.
+        setTurns((prev) => prev.filter((t) => !(t.id === aiId && t.content === '')))
         setStreaming(false)
         abortRef.current = null
       }
