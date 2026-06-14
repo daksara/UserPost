@@ -276,8 +276,8 @@ a:focus-visible,
   transition: border-color .2s ease, box-shadow .2s ease;
 }
 .composer__input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  border-color: var(--border);
+  box-shadow: var(--shadow-sm);
 }
 .composer__actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .composer__hint { font-size: .74rem; color: var(--text-muted); }
