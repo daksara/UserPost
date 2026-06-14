@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { Provider } from '../ai/types'
 import { PROVIDERS } from '../ai/types'
+import { USE_PROXY } from '../ai/providers'
 import { ModelPicker } from './ModelPicker'
 
 interface Props {
@@ -50,32 +51,42 @@ export function SettingsModal({
           </div>
         </div>
 
-        <div className="field">
-          <div className="field__label-row">
+        {USE_PROXY ? (
+          <div className="field">
             <label className="field__label">API Key — {meta.name}</label>
-            <a className="pdr-link" href={meta.keyUrl} target="_blank" rel="noreferrer">
-              Dapatkan key
-            </a>
+            <p className="field__hint">
+              Dikelola oleh server (mode proxy). Key tidak disimpan di browser —
+              tidak perlu memasukkan apa pun di sini.
+            </p>
           </div>
-          <div className="key-row">
-            <input
-              className="pdr-input"
-              type={show ? 'text' : 'password'}
-              value={apiKeys[provider]}
-              onChange={(e) => onApiKey(provider, e.target.value)}
-              placeholder={`Tempel API key ${meta.name}…`}
-              autoComplete="off"
-              spellCheck={false}
-            />
-            <button className="pdr-nav-btn" onClick={() => setShow((v) => !v)}>
-              {show ? 'Sembunyi' : 'Lihat'}
-            </button>
+        ) : (
+          <div className="field">
+            <div className="field__label-row">
+              <label className="field__label">API Key — {meta.name}</label>
+              <a className="pdr-link" href={meta.keyUrl} target="_blank" rel="noreferrer">
+                Dapatkan key
+              </a>
+            </div>
+            <div className="key-row">
+              <input
+                className="pdr-input"
+                type={show ? 'text' : 'password'}
+                value={apiKeys[provider]}
+                onChange={(e) => onApiKey(provider, e.target.value)}
+                placeholder={`Tempel API key ${meta.name}…`}
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <button className="pdr-nav-btn" onClick={() => setShow((v) => !v)}>
+                {show ? 'Sembunyi' : 'Lihat'}
+              </button>
+            </div>
+            <p className="field__hint">
+              Key disimpan hanya di browser ini (localStorage) dan dikirim langsung
+              ke {meta.name}.
+            </p>
           </div>
-          <p className="field__hint">
-            Key disimpan hanya di browser ini (localStorage) dan dikirim langsung
-            ke {meta.name}.
-          </p>
-        </div>
+        )}
 
         <ModelPicker
           provider={provider}

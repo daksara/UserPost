@@ -63,13 +63,43 @@ CI (GitHub Actions) menjalankan ketiganya pada tiap push dan pull request.
 - Salin jawaban sekali klik, hentikan generasi, mulai chat baru
 - Tema gelap/terang, responsif (sidebar jadi drawer di mobile), installable PWA
 
+## Keamanan & mode koneksi
+Pendar punya dua mode transport ke provider AI:
+
+- **Mode A — Bring-your-own-key (default).** Tiap user menempel API key sendiri
+  di Pengaturan; key disimpan di `localStorage` dan dikirim langsung dari
+  browser ke Groq/Gemini. Cocok untuk **alat pribadi**. Risiko: siapa pun yang
+  mengakses browser itu bisa membaca key.
+- **Mode B — Proxy server (disarankan untuk publik/multi-user).** Build dengan
+  `VITE_USE_PROXY=1`; front-end memanggil `/api/proxy` dan **server** yang
+  menyisipkan key dari env (`GROQ_API_KEY` / `GEMINI_API_KEY`). Key **tidak
+  pernah** ada di browser. `api/proxy.ts` adalah Vercel Edge Function dan
+  meneruskan streaming chat apa adanya.
+
+Catatan keamanan lain: seluruh teks dirender sebagai teks biasa (tanpa
+`dangerouslySetInnerHTML`), jadi tidak ada jalur XSS dari jawaban AI. Kerentanan
+`npm audit` yang ada hanya menyangkut `esbuild`/`vite` saat **dev server**, tidak
+ikut ter-bundle ke hasil produksi.
+
+### Deploy aman ke Vercel (Mode B)
+```bash
+# Environment Variables di dashboard Vercel:
+#   VITE_USE_PROXY = 1            (build-time, dibaca front-end)
+#   GROQ_API_KEY   = ...          (server-only, JANGAN pakai prefix VITE_)
+#   GEMINI_API_KEY = ...          (server-only)
+vercel
+```
+
 ## Struktur proyek
 ```
+api/
+  proxy.ts          # Vercel Edge Function — proxy key-aman ke Groq/Gemini
 src/
   ai/
     types.ts        # Tipe + metadata provider (key url, model fallback)
-    providers.ts    # Klien Groq & Gemini: listModels + streamChat (+ helper murni)
+    providers.ts    # Klien Groq & Gemini: listModels + streamChat (langsung/proxy)
     templates.ts    # Template tugas freelance + system prompt
+    clean.ts        # Pembersih output (buang markdown/emoji) + test
     providers.test.ts
   hooks/
     useSettings.ts  # Provider/API key/model tersimpan di localStorage
@@ -86,7 +116,8 @@ src/
 ```
 
 ## Catatan
-- Semua panggilan AI terjadi di sisi klien. Untuk produksi dengan banyak
-  pengguna, pertimbangkan proxy backend agar API key tidak ada di browser.
+- Default-nya panggilan AI client-side (Mode A). Untuk produksi multi-user,
+  pakai Mode B (proxy) agar API key tidak ada di browser — lihat bagian
+  "Keamanan & mode koneksi".
 - Groq dan Gemini sama-sama mengizinkan panggilan langsung dari browser
   (CORS) memakai key pengguna.

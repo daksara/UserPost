@@ -2,7 +2,7 @@
 // Dropdown model. Memuat daftar model relevan secara dinamis dari provider
 // (butuh API key); jika gagal/kosong, pakai daftar fallback bawaan.
 import { useCallback, useEffect, useState } from 'react'
-import { listModels } from '../ai/providers'
+import { listModels, USE_PROXY } from '../ai/providers'
 import type { ModelInfo, Provider } from '../ai/types'
 import { PROVIDERS } from '../ai/types'
 
@@ -20,7 +20,7 @@ export function ModelPicker({ provider, apiKey, value, onChange }: Props) {
   const [err, setErr] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
-    if (!apiKey.trim()) {
+    if (!USE_PROXY && !apiKey.trim()) {
       setModels(fallback)
       setErr('Masukkan API key untuk memuat daftar model terbaru.')
       return
