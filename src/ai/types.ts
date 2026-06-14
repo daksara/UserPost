@@ -31,6 +31,7 @@ export const PROVIDERS: Record<Provider, ProviderMeta> = {
     name: 'Groq',
     keyUrl: 'https://console.groq.com/keys',
     fallbackModels: [
+      { id: 'openai/gpt-oss-120b', label: 'GPT-OSS 120B' },
       { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B' },
       { id: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B (instant)' },
     ],
