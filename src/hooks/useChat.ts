@@ -76,7 +76,26 @@ export function useChat({ provider, apiKey, model, system, turns, setTurns }: Us
     [turns, streaming, setTurns, runStream],
   )
 
+  // Buat ulang jawaban terakhir: buang turn asisten terakhir lalu stream ulang
+  // dari riwayat sampai pesan user sebelumnya.
+  const regenerate = useCallback(() => {
+    if (streaming) return
+    let lastAi = -1
+    for (let i = turns.length - 1; i >= 0; i--) {
+      if (turns[i].role === 'assistant') {
+        lastAi = i
+        break
+      }
+    }
+    if (lastAi === -1) return
+    setError(null)
+    const history = turns.slice(0, lastAi)
+    const aiTurn: ChatTurn = { id: uid(), role: 'assistant', content: '' }
+    setTurns(() => [...history, aiTurn])
+    void runStream(history, aiTurn.id)
+  }, [turns, streaming, setTurns, runStream])
+
   const stop = useCallback(() => abortRef.current?.abort(), [])
 
-  return { streaming, error, send, stop }
+  return { streaming, error, send, stop, regenerate }
 }
