@@ -161,6 +161,9 @@ export default function App() {
           onNewChat={startNewChat}
           onOpenLearn={() => setShowLearn(true)}
           onOpenSettings={() => setShowSettings(true)}
+          provider={provider}
+          model={model}
+          ready={ready}
           theme={theme}
           onToggleTheme={cycleTheme}
           language={language}
@@ -178,9 +181,6 @@ export default function App() {
             <MenuIcon />
           </button>
           <div className="chat__head-title">{title}</div>
-          <span className={`chip${ready ? ' chip--ok' : ' chip--warn'}`}>
-            {provider === 'groq' ? 'Groq' : 'Gemini'} · {ready ? model : t('app.noKey')}
-          </span>
         </header>
 
         {!ready && (
