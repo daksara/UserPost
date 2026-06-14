@@ -16,8 +16,8 @@ describe('cleanText', () => {
     expect(cleanText('* satu\n• dua')).toBe('- satu\n- dua')
   })
 
-  it('removes emoji', () => {
-    expect(cleanText('Mantap 🚀 kerja bagus ✅')).toBe('Mantap  kerja bagus')
+  it('keeps emoji intact', () => {
+    expect(cleanText('Mantap 🚀 kerja bagus ✅')).toBe('Mantap 🚀 kerja bagus ✅')
   })
 
   it('keeps a plain dash list intact', () => {

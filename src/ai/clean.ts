@@ -1,7 +1,8 @@
 // src/ai/clean.ts
-// Pembersih ringan untuk jawaban AI: buang sisa markdown/hiasan & emoji, lalu
-// normalkan karakter "tak terlihat" (tanda hubung/spasi khusus) agar teks
-// benar-benar bersih dan siap salin-tempel. Isi tetap dipertahankan.
+// Pembersih ringan untuk jawaban AI: buang sisa markdown/hiasan, lalu normalkan
+// karakter "tak terlihat" (tanda hubung/spasi khusus) agar teks benar-benar
+// bersih dan siap salin-tempel. Emoji sengaja dipertahankan: persona guru/dosen
+// boleh memakai sedikit emoji saat mengobrol/mengajar. Isi tetap dipertahankan.
 export function cleanText(input: string): string {
   return input
     // Bold/italic markdown: **x**, __x__, *x*, _x_  -> x
@@ -14,8 +15,6 @@ export function cleanText(input: string): string {
     .replace(/^\s{0,3}#{1,6}\s+/gm, '')
     // Bullet "*" atau bullet-dot di awal baris -> "- "
     .replace(/^\s*[*\u2022]\s+/gm, '- ')
-    // Emoji / piktograf
-    .replace(/\p{Extended_Pictographic}/gu, '')
     // Tanda hubung khusus (hyphen, non-breaking hyphen, figure dash) -> "-"
     .replace(/[\u2010\u2011\u2012]/g, '-')
     // Spasi khusus (non-breaking, figure, thin, narrow no-break) -> spasi biasa
