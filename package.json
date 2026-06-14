@@ -1,7 +1,7 @@
 {
   "name": "pendar",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,12 +12,8 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.101.0",
-    "firebase": "^11.0.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "viem": "^2.52.2",
-    "wagmi": "^3.6.16"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

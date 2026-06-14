@@ -8,21 +8,13 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
-        // Cache app shell assets aggressively; Firestore data stays live
+        // Cache app shell aggressively; AI requests always hit the network
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
-        runtimeCaching: [
-          {
-            // Firebase CDN — cache-first so auth/firestore SDK loads instantly
-            urlPattern: /^https:\/\/www\.gstatic\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: { cacheName: 'gstatic', expiration: { maxAgeSeconds: 86400 * 30 } },
-          },
-        ],
       },
       manifest: {
-        name: 'Pendar — Belajar Web3',
+        name: 'Pendar — Asisten AI Freelance',
         short_name: 'Pendar',
-        description: 'Pendar — belajar web3 dengan langsung praktik on-chain',
+        description: 'Asisten AI untuk pekerjaan freelance — proposal, balas klien, penawaran harga, dan lainnya.',
         theme_color: '#f0a93b',
         background_color: '#0e0e11',
         display: 'standalone',
@@ -38,7 +30,6 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
           react: ['react', 'react-dom'],
         },
       },
