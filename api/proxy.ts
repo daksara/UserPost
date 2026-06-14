@@ -10,6 +10,11 @@
 
 export const config = { runtime: 'edge' }
 
+// Edge runtime menyediakan `process.env` saat jalan, tapi tipe Node tidak
+// dipasang (dan tidak pas untuk edge). Deklarasikan minimal agar typecheck
+// deploy lolos tanpa menarik @types/node.
+declare const process: { env: Record<string, string | undefined> }
+
 const BASES: Record<string, string> = {
   groq: 'https://api.groq.com/openai/v1',
   gemini: 'https://generativelanguage.googleapis.com/v1beta',
