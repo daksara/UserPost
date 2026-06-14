@@ -4,8 +4,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Sidebar } from './components/Sidebar'
 import { MessageBubble } from './components/MessageBubble'
 import { SettingsModal } from './components/SettingsModal'
+import { Composer } from './components/Composer'
 import { BASE_SYSTEM_PROMPT, TEMPLATES } from './ai/templates'
 import { useSettings } from './hooks/useSettings'
+import { useConversations } from './hooks/useConversations'
 import { useChat } from './hooks/useChat'
 import { useTheme } from './hooks/useTheme'
 
@@ -13,36 +15,73 @@ export default function App() {
   const { settings, provider, apiKey, model, ready, setProvider, setApiKey, setModel } =
     useSettings()
   const { theme, cycleTheme } = useTheme()
+  const {
+    conversations,
+    active,
+    setActiveTurns,
+    setActiveTemplate,
+    select,
+    newConversation,
+    remove,
+  } = useConversations()
 
-  const [templateId, setTemplateId] = useState<string | null>(null)
   const [input, setInput] = useState('')
   const [showSettings, setShowSettings] = useState(false)
   const [drawer, setDrawer] = useState(false)
 
-  const template = useMemo(() => TEMPLATES.find((t) => t.id === templateId) ?? null, [templateId])
+  const template = useMemo(
+    () => TEMPLATES.find((t) => t.id === active.templateId) ?? null,
+    [active.templateId],
+  )
   const system = useMemo(
     () => (template ? `${BASE_SYSTEM_PROMPT}\n\n${template.system}` : BASE_SYSTEM_PROMPT),
     [template],
   )
 
-  const { turns, streaming, error, send, stop, reset } = useChat({ provider, apiKey, model, system })
+  const { streaming, error, send, regenerate, stop, canRegenerate } = useChat({
+    provider,
+    apiKey,
+    model,
+    system,
+    turns: active.turns,
+    setTurns: setActiveTurns,
+  })
 
+  // Auto-scroll cerdas: hanya ikut ke bawah bila user sudah dekat dasar,
+  // sehingga membaca riwayat lama tidak terenggut saat token mengalir.
   const scrollRef = useRef<HTMLDivElement>(null)
+  const pinnedRef = useRef(true)
+  const onScroll = () => {
+    const el = scrollRef.current
+    if (!el) return
+    pinnedRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120
+  }
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
-  }, [turns])
+    if (pinnedRef.current) {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
+    }
+  }, [active.turns])
+  // Saat berpindah percakapan, mulai dari bawah.
+  useEffect(() => {
+    pinnedRef.current = true
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
+  }, [active.id])
 
   const pickTemplate = (id: string) => {
-    if (id !== templateId) reset()
-    setTemplateId(id)
+    setActiveTemplate(id)
     const t = TEMPLATES.find((x) => x.id === id)
     if (t) setInput(t.starter)
     setDrawer(false)
   }
 
-  const newChat = () => {
-    reset()
-    setTemplateId(null)
+  const startNewChat = () => {
+    newConversation()
+    setInput('')
+    setDrawer(false)
+  }
+
+  const openConversation = (id: string) => {
+    select(id)
     setInput('')
     setDrawer(false)
   }
@@ -57,12 +96,7 @@ export default function App() {
     send(text)
   }
 
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      submit()
-    }
-  }
+  const title = active.turns.length ? active.title : template?.title ?? 'Asisten'
 
   return (
     <div className="layout">
@@ -70,9 +104,11 @@ export default function App() {
 
       <div className={`layout__side${drawer ? ' layout__side--open' : ''}`}>
         <Sidebar
-          activeTemplate={templateId}
-          onPickTemplate={pickTemplate}
-          onNewChat={newChat}
+          conversations={conversations}
+          activeId={active.id}
+          onSelect={openConversation}
+          onDelete={remove}
+          onNewChat={startNewChat}
           onOpenSettings={() => setShowSettings(true)}
           theme={theme}
           onToggleTheme={cycleTheme}
@@ -81,10 +117,14 @@ export default function App() {
 
       <main className="chat">
         <header className="chat__head">
-          <button className="pdr-nav-btn chat__menu" onClick={() => setDrawer(true)}>
-            ☰
+          <button
+            className="pdr-nav-btn chat__menu"
+            onClick={() => setDrawer(true)}
+            aria-label="Buka menu"
+          >
+            <MenuIcon />
           </button>
-          <div className="chat__head-title">{template ? template.title : 'Asisten'}</div>
+          <div className="chat__head-title">{title}</div>
           <span className={`chip${ready ? ' chip--ok' : ' chip--warn'}`}>
             {provider === 'groq' ? 'Groq' : 'Gemini'} · {ready ? model : 'tanpa key'}
           </span>
@@ -100,43 +140,33 @@ export default function App() {
           </div>
         )}
 
-        <div className="chat__messages" ref={scrollRef}>
-          {turns.length === 0 ? (
+        <div className="chat__messages" ref={scrollRef} onScroll={onScroll}>
+          {active.turns.length === 0 ? (
             <Welcome onPick={pickTemplate} />
           ) : (
-            turns.map((t, i) => (
-              <MessageBubble key={t.id} turn={t} streaming={streaming && i === turns.length - 1} />
+            active.turns.map((t, i) => (
+              <MessageBubble
+                key={t.id}
+                turn={t}
+                streaming={streaming && i === active.turns.length - 1}
+              />
             ))
           )}
           {error && <div className="chat__error">{error}</div>}
         </div>
 
-        <div className="composer">
-          <textarea
-            className="composer__input"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={onKeyDown}
-            rows={3}
-            placeholder={
-              template
-                ? `Lengkapi detail untuk "${template.title}"…`
-                : 'Tulis tugas atau pertanyaanmu…'
-            }
-          />
-          <div className="composer__actions">
-            <span className="composer__hint">Enter kirim · Shift+Enter baris baru</span>
-            {streaming ? (
-              <button className="pdr-btn pdr-btn--ghost" onClick={stop}>
-                Stop
-              </button>
-            ) : (
-              <button className="pdr-btn pdr-btn--primary" onClick={submit} disabled={!input.trim()}>
-                Kirim
-              </button>
-            )}
-          </div>
-        </div>
+        <Composer
+          value={input}
+          onChange={setInput}
+          onSubmit={submit}
+          onStop={stop}
+          onRegenerate={regenerate}
+          streaming={streaming}
+          canRegenerate={canRegenerate}
+          placeholder={
+            template ? `Lengkapi detail untuk "${template.title}"…` : 'Tulis tugas atau pertanyaanmu…'
+          }
+        />
       </main>
 
       {showSettings && (
@@ -174,5 +204,18 @@ function Welcome({ onPick }: { onPick: (id: string) => void }) {
         ))}
       </div>
     </div>
+  )
+}
+
+function MenuIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M4 7h16M4 12h16M4 17h16"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
   )
 }

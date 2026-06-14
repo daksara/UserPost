@@ -1,14 +1,14 @@
 // src/hooks/useChat.ts
-// Mengelola percakapan: kirim pesan, streaming jawaban, batalkan, dan reset.
+// Logika streaming percakapan: kirim pesan, streaming jawaban, regenerasi,
+// batalkan. Pesan (turns) dikelola di luar (useConversations) agar bisa
+// dipersistenkan — hook ini hanya menulis lewat `setTurns`.
 import { useCallback, useRef, useState } from 'react'
 import { streamChat } from '../ai/providers'
+import { uid } from '../chat/types'
+import type { ChatTurn } from '../chat/types'
 import type { ChatMessage, Provider } from '../ai/types'
 
-export interface ChatTurn {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-}
+export type { ChatTurn } from '../chat/types'
 
 interface UseChatArgs {
   provider: Provider
@@ -16,30 +16,19 @@ interface UseChatArgs {
   model: string
   /** Instruksi sistem (base + template aktif). */
   system: string
+  /** Pesan percakapan aktif (dikontrol oleh pemanggil). */
+  turns: ChatTurn[]
+  setTurns: (updater: (prev: ChatTurn[]) => ChatTurn[]) => void
 }
 
-function uid(): string {
-  return globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2)
-}
-
-export function useChat({ provider, apiKey, model, system }: UseChatArgs) {
-  const [turns, setTurns] = useState<ChatTurn[]>([])
+export function useChat({ provider, apiKey, model, system, turns, setTurns }: UseChatArgs) {
   const [streaming, setStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
-  const send = useCallback(
-    async (text: string) => {
-      const content = text.trim()
-      if (!content || streaming) return
-      setError(null)
-
-      const userTurn: ChatTurn = { id: uid(), role: 'user', content }
-      const aiTurn: ChatTurn = { id: uid(), role: 'assistant', content: '' }
-      const history = [...turns, userTurn]
-      setTurns([...history, aiTurn])
-      setStreaming(true)
-
+  // Inti streaming: kirim `history` ke provider, alirkan token ke turn `aiId`.
+  const runStream = useCallback(
+    async (history: ChatTurn[], aiId: string) => {
       const messages: ChatMessage[] = [
         { role: 'system', content: system },
         ...history.map((t) => ({ role: t.role, content: t.content })),
@@ -47,33 +36,62 @@ export function useChat({ provider, apiKey, model, system }: UseChatArgs) {
 
       const ac = new AbortController()
       abortRef.current = ac
+      setStreaming(true)
 
       try {
         await streamChat({ provider, apiKey, model, messages }, (tok) => {
           setTurns((prev) =>
-            prev.map((t) => (t.id === aiTurn.id ? { ...t, content: t.content + tok } : t)),
+            prev.map((t) => (t.id === aiId ? { ...t, content: t.content + tok } : t)),
           )
         }, ac.signal)
       } catch (e) {
         if (!ac.signal.aborted) {
           setError(e instanceof Error ? e.message : String(e))
-          // Buang gelembung asisten kosong agar tidak menyisakan bubble hampa.
-          setTurns((prev) => prev.filter((t) => !(t.id === aiTurn.id && t.content === '')))
+          // Buang turn asisten yang masih kosong agar tak menyisakan bubble hampa.
+          setTurns((prev) => prev.filter((t) => !(t.id === aiId && t.content === '')))
         }
       } finally {
         setStreaming(false)
         abortRef.current = null
       }
     },
-    [turns, streaming, provider, apiKey, model, system],
+    [provider, apiKey, model, system, setTurns],
   )
 
-  const stop = useCallback(() => abortRef.current?.abort(), [])
-  const reset = useCallback(() => {
-    abortRef.current?.abort()
-    setTurns([])
-    setError(null)
-  }, [])
+  const send = useCallback(
+    (text: string) => {
+      const content = text.trim()
+      if (!content || streaming) return
+      setError(null)
 
-  return { turns, streaming, error, send, stop, reset }
+      const userTurn: ChatTurn = { id: uid(), role: 'user', content }
+      const aiTurn: ChatTurn = { id: uid(), role: 'assistant', content: '' }
+      const history = [...turns, userTurn]
+      setTurns(() => [...history, aiTurn])
+      void runStream(history, aiTurn.id)
+    },
+    [turns, streaming, setTurns, runStream],
+  )
+
+  // Ulangi jawaban terakhir: buang turn asisten di ujung, stream ulang dari
+  // pesan user terakhir.
+  const regenerate = useCallback(() => {
+    if (streaming) return
+    let i = turns.length - 1
+    while (i >= 0 && turns[i].role === 'assistant') i--
+    if (i < 0) return
+    setError(null)
+
+    const history = turns.slice(0, i + 1)
+    const aiTurn: ChatTurn = { id: uid(), role: 'assistant', content: '' }
+    setTurns(() => [...history, aiTurn])
+    void runStream(history, aiTurn.id)
+  }, [turns, streaming, setTurns, runStream])
+
+  const stop = useCallback(() => abortRef.current?.abort(), [])
+
+  const canRegenerate =
+    !streaming && turns.length > 0 && turns[turns.length - 1].role === 'assistant'
+
+  return { streaming, error, send, regenerate, stop, canRegenerate }
 }
