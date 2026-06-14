@@ -4,6 +4,7 @@
 // (kenapa benar / kenapa kurang tepat). Tanpa API key, instan, dwibahasa.
 // Logika murni & dapat diuji; UI menyusul terpisah.
 import type { Language } from '../ai/templates'
+import type { LevelId } from './curriculum'
 
 type Loc = Record<Language, string>
 
@@ -463,4 +464,158 @@ export function scoreAnswers(
     if (q.id in answers && isCorrect(q, answers[q.id])) correct++
   }
   return { correct, total: questions.length }
+}
+
+/** Kuis konsep A/B/C/D per level untuk tab Materi (Uji pemahaman). */
+export const LEVEL_QUIZZES: Record<LevelId, QuizQuestion[]> = {
+  pemula: [
+    {
+      id: 'pem-1',
+      prompt: { id: 'Apa yang paling membuat klien mempercayai seorang VA?', en: 'What most makes a client trust a VA?' },
+      correct: 0,
+      options: [
+        { text: { id: 'Keandalan: tepat waktu, jujur soal progres, jaga kerahasiaan.', en: 'Reliability: on time, honest about progress, keeps things confidential.' }, explanation: { id: 'Inti kepercayaan VA adalah dapat diandalkan dan jujur.', en: 'Trust in a VA is built on reliability and honesty.' } },
+        { text: { id: 'Mengerjakan semua permintaan tanpa pernah bertanya.', en: 'Doing every request without ever asking.' }, explanation: { id: 'Tanpa klarifikasi, hasil sering meleset.', en: 'Without clarifying, work often misses the mark.' } },
+        { text: { id: 'Memakai sebanyak mungkin tools canggih.', en: 'Using as many fancy tools as possible.' }, explanation: { id: 'Tools hanya pendukung, bukan dasar kepercayaan.', en: 'Tools only support; they are not the basis of trust.' } },
+        { text: { id: 'Memberi harga termurah di pasar.', en: 'Offering the cheapest price on the market.' }, explanation: { id: 'Harga murah tak menggantikan keandalan.', en: 'Cheap pricing does not replace reliability.' } },
+      ],
+    },
+    {
+      id: 'pem-2',
+      prompt: { id: 'Saat memilih tools kerja, yang paling penting dipahami adalah...', en: 'When choosing work tools, the most important thing to understand is...' },
+      correct: 1,
+      options: [
+        { text: { id: 'Merek tools yang paling populer.', en: 'The most popular tool brand.' }, explanation: { id: 'Popularitas bukan ukuran kecocokan.', en: 'Popularity is not a measure of fit.' } },
+        { text: { id: 'Fungsi tiap tool dan cara menatanya rapi.', en: 'What each tool does and how to keep it organized.' }, explanation: { id: 'Paham fungsi membuat kerja efisien dan rapi.', en: 'Knowing the function keeps work efficient and tidy.' } },
+        { text: { id: 'Semua tombol dan fitur tersembunyi.', en: 'Every button and hidden feature.' }, explanation: { id: 'Tak perlu hafal semua; cukup yang dipakai.', en: 'No need to memorize all; just what you use.' } },
+        { text: { id: 'Tools yang paling mahal pasti terbaik.', en: 'The most expensive tool must be the best.' }, explanation: { id: 'Mahal belum tentu paling cocok.', en: 'Expensive is not always the best fit.' } },
+      ],
+    },
+    {
+      id: 'pem-3',
+      prompt: { id: 'Untuk klien yang membayar per jam, kebiasaan penting VA adalah...', en: 'For an hourly client, an important VA habit is...' },
+      correct: 0,
+      options: [
+        { text: { id: 'Melacak waktu kerja secara akurat.', en: 'Tracking work time accurately.' }, explanation: { id: 'Time tracking menjaga tagihan jujur dan jelas.', en: 'Time tracking keeps billing honest and clear.' } },
+        { text: { id: 'Menebak jam kerja di akhir bulan.', en: 'Guessing the hours at month end.' }, explanation: { id: 'Menebak berisiko salah dan tak adil.', en: 'Guessing risks error and unfairness.' } },
+        { text: { id: 'Bekerja tanpa mencatat waktu sama sekali.', en: 'Working without logging any time.' }, explanation: { id: 'Tanpa catatan, billing per jam tak bisa dipercaya.', en: 'Without logs, hourly billing is untrustworthy.' } },
+        { text: { id: 'Membulatkan jam selalu ke atas.', en: 'Always rounding hours up.' }, explanation: { id: 'Itu tidak jujur dan merusak hubungan.', en: 'That is dishonest and harms the relationship.' } },
+      ],
+    },
+  ],
+  menengah: [
+    {
+      id: 'men-1',
+      prompt: { id: 'Balasan email klien yang baik sebaiknya...', en: 'A good client email reply should...' },
+      correct: 1,
+      options: [
+        { text: { id: 'Sepanjang mungkin agar terkesan serius.', en: 'Be as long as possible to seem serious.' }, explanation: { id: 'Panjang tak sama dengan jelas.', en: 'Long is not the same as clear.' } },
+        { text: { id: 'Menaruh tujuan di depan dan langkah berikutnya jelas.', en: 'Put the purpose up front with clear next steps.' }, explanation: { id: 'Jelas dan ringkas memudahkan klien.', en: 'Clear and concise helps the client act.' } },
+        { text: { id: 'Tanpa salam atau penutup.', en: 'Skip any greeting or closing.' }, explanation: { id: 'Sapaan menjaga nada profesional.', en: 'A greeting keeps a professional tone.' } },
+        { text: { id: 'Menunda jawaban inti sampai paragraf terakhir.', en: 'Bury the main answer in the last paragraph.' }, explanation: { id: 'Klien sibuk butuh inti di awal.', en: 'A busy client needs the point first.' } },
+      ],
+    },
+    {
+      id: 'men-2',
+      prompt: { id: 'Notula meeting yang berguna harus memuat...', en: 'Useful meeting notes must include...' },
+      correct: 1,
+      options: [
+        { text: { id: 'Transkrip kata demi kata.', en: 'A word-for-word transcript.' }, explanation: { id: 'Transkrip mentah sulit ditindaklanjuti.', en: 'A raw transcript is hard to act on.' } },
+        { text: { id: 'Ringkasan, keputusan, dan action item dengan pemilik dan tenggat.', en: 'A summary, decisions, and action items with owners and deadlines.' }, explanation: { id: 'Itu membuat hasil rapat bisa dieksekusi.', en: 'That makes the meeting outcome executable.' } },
+        { text: { id: 'Opini pribadi VA tentang peserta.', en: 'The VA personal opinions about attendees.' }, explanation: { id: 'Tidak profesional dan tak relevan.', en: 'Unprofessional and irrelevant.' } },
+        { text: { id: 'Hal yang dikarang bila lupa.', en: 'Made-up items when you forget.' }, explanation: { id: 'Mengarang merusak kepercayaan.', en: 'Fabricating breaks trust.' } },
+      ],
+    },
+    {
+      id: 'men-3',
+      prompt: { id: 'Saat meriset dan merangkum data untuk klien, VA wajib...', en: 'When researching and summarizing data for a client, a VA must...' },
+      correct: 0,
+      options: [
+        { text: { id: 'Mencatat sumber dan memisahkan fakta dari asumsi.', en: 'Record sources and separate facts from assumptions.' }, explanation: { id: 'Itu menjaga riset kredibel dan jujur.', en: 'That keeps research credible and honest.' } },
+        { text: { id: 'Menambah angka agar laporan terlihat meyakinkan.', en: 'Add numbers to make the report look convincing.' }, explanation: { id: 'Mengarang data adalah pelanggaran serius.', en: 'Fabricating data is a serious breach.' } },
+        { text: { id: 'Menyalin satu sumber tanpa verifikasi.', en: 'Copy one source without verifying.' }, explanation: { id: 'Satu sumber tak terverifikasi berisiko salah.', en: 'One unverified source risks being wrong.' } },
+        { text: { id: 'Menyembunyikan dari mana data berasal.', en: 'Hide where the data came from.' }, explanation: { id: 'Sumber harus transparan agar bisa dicek.', en: 'Sources must be transparent to be checked.' } },
+      ],
+    },
+  ],
+  mahir: [
+    {
+      id: 'mah-1',
+      prompt: { id: 'Kalender konten sosmed yang sehat sebaiknya...', en: 'A healthy social content calendar should...' },
+      correct: 1,
+      options: [
+        { text: { id: 'Hanya berisi konten jualan terus-menerus.', en: 'Be nothing but constant sales posts.' }, explanation: { id: 'Jualan terus membuat audiens jenuh.', en: 'Nonstop selling tires the audience.' } },
+        { text: { id: 'Mencampur edukasi, interaksi, brand, dan ajakan secara seimbang.', en: 'Mix education, engagement, brand, and calls to action in balance.' }, explanation: { id: 'Bauran seimbang menjaga audiens tetap terlibat.', en: 'A balanced mix keeps the audience engaged.' } },
+        { text: { id: 'Memposting sebanyak mungkin tanpa rencana.', en: 'Post as much as possible with no plan.' }, explanation: { id: 'Tanpa rencana, kualitas dan konsistensi turun.', en: 'Without a plan, quality and consistency drop.' } },
+        { text: { id: 'Meniru persis akun pesaing.', en: 'Copy a competitor account exactly.' }, explanation: { id: 'Meniru mentah tak membangun identitas brand.', en: 'Blind copying builds no brand identity.' } },
+      ],
+    },
+    {
+      id: 'mah-2',
+      prompt: { id: 'Tujuan utama menulis SOP adalah...', en: 'The main purpose of writing an SOP is...' },
+      correct: 0,
+      options: [
+        { text: { id: 'Membuat pekerjaan bisa diulang dan didelegasikan dengan konsisten.', en: 'Make work repeatable and delegable with consistency.' }, explanation: { id: 'SOP menjaga kualitas saat tugas berpindah tangan.', en: 'An SOP keeps quality when work changes hands.' } },
+        { text: { id: 'Memperpanjang dokumen agar terlihat sibuk.', en: 'Pad documents to look busy.' }, explanation: { id: 'SOP justru harus ringkas dan jelas.', en: 'An SOP should be concise and clear.' } },
+        { text: { id: 'Menyimpan rahasia agar tak ada yang bisa menggantikan kita.', en: 'Hoard know-how so no one can replace us.' }, explanation: { id: 'Itu menghambat penskalaan dan tim.', en: 'That blocks scaling and team growth.' } },
+        { text: { id: 'Mengganti kebutuhan komunikasi tim.', en: 'Replace the need for team communication.' }, explanation: { id: 'SOP melengkapi, bukan mengganti komunikasi.', en: 'An SOP complements, not replaces, communication.' } },
+      ],
+    },
+    {
+      id: 'mah-3',
+      prompt: { id: 'Caption sosmed yang kuat biasanya...', en: 'A strong social caption usually...' },
+      correct: 1,
+      options: [
+        { text: { id: 'Penuh klaim berlebihan dan janji palsu.', en: 'Is full of hype and false promises.' }, explanation: { id: 'Klaim palsu merusak kepercayaan brand.', en: 'False claims damage brand trust.' } },
+        { text: { id: 'Punya hook pembuka jelas dan satu ide utama.', en: 'Has a clear opening hook and one main idea.' }, explanation: { id: 'Fokus dan hook membuat caption mudah dicerna.', en: 'Focus and a hook make captions easy to grasp.' } },
+        { text: { id: 'Memakai ajakan yang sama persis tiap kali.', en: 'Uses the exact same call to action every time.' }, explanation: { id: 'Variasi mencegah audiens bosan.', en: 'Variety keeps the audience from tuning out.' } },
+        { text: { id: 'Sepanjang mungkin tanpa fokus.', en: 'Is as long as possible with no focus.' }, explanation: { id: 'Tanpa fokus, pesan jadi kabur.', en: 'Without focus the message blurs.' } },
+      ],
+    },
+  ],
+  expert: [
+    {
+      id: 'exp-1',
+      prompt: { id: 'Kenapa VA spesialis biasanya bisa memasang harga lebih tinggi?', en: 'Why can a specialist VA usually charge more?' },
+      correct: 1,
+      options: [
+        { text: { id: 'Karena mereka bekerja lebih lama tiap hari.', en: 'Because they work longer hours each day.' }, explanation: { id: 'Nilai datang dari hasil, bukan jam panjang.', en: 'Value comes from results, not long hours.' } },
+        { text: { id: 'Karena keahlian fokus memberi hasil yang lebih bernilai bagi klien.', en: 'Because focused expertise delivers more valuable results for the client.' }, explanation: { id: 'Spesialis dibayar untuk hasil, bukan waktu.', en: 'Specialists are paid for outcomes, not time.' } },
+        { text: { id: 'Karena memakai banyak tools mahal.', en: 'Because they use many expensive tools.' }, explanation: { id: 'Tools bukan alasan harga premium.', en: 'Tools are not the reason for premium pricing.' } },
+        { text: { id: 'Karena menolak semua negosiasi.', en: 'Because they refuse all negotiation.' }, explanation: { id: 'Harga premium soal nilai, bukan kekakuan.', en: 'Premium pricing is about value, not rigidity.' } },
+      ],
+    },
+    {
+      id: 'exp-2',
+      prompt: { id: 'Cara paling efektif menjaga klien jangka panjang adalah...', en: 'The most effective way to keep clients long term is...' },
+      correct: 0,
+      options: [
+        { text: { id: 'Komunikasi proaktif dan menunjukkan nilai secara rutin.', en: 'Proactive communication and showing value regularly.' }, explanation: { id: 'Klien bertahan saat merasa diurus dan melihat hasil.', en: 'Clients stay when cared for and shown results.' } },
+        { text: { id: 'Menunggu klien komplain baru bertindak.', en: 'Wait for a complaint before acting.' }, explanation: { id: 'Reaktif membuat klien merasa diabaikan.', en: 'Being reactive makes clients feel ignored.' } },
+        { text: { id: 'Selalu menurunkan harga tiap bulan.', en: 'Keep cutting price every month.' }, explanation: { id: 'Diskon terus menggerus nilai dan margin.', en: 'Constant discounts erode value and margin.' } },
+        { text: { id: 'Menghindari kontak agar tidak mengganggu.', en: 'Avoid contact so as not to bother them.' }, explanation: { id: 'Sunyi membuat klien lupa nilai kita.', en: 'Silence makes clients forget your value.' } },
+      ],
+    },
+    {
+      id: 'exp-3',
+      prompt: { id: 'Untuk naik ke penghasilan jauh lebih besar, langkah kuncinya adalah...', en: 'To scale to much higher income, a key step is...' },
+      correct: 1,
+      options: [
+        { text: { id: 'Mengerjakan semuanya sendiri selamanya.', en: 'Do everything yourself forever.' }, explanation: { id: 'Kapasitas solo terbatas oleh jam kerja.', en: 'Solo capacity is capped by your hours.' } },
+        { text: { id: 'Mendelegasikan lewat SOP dan memakai AI untuk menggandakan output.', en: 'Delegate via SOPs and use AI to multiply output.' }, explanation: { id: 'Delegasi dan AI melepas batas jam kerja.', en: 'Delegation and AI lift the hours ceiling.' } },
+        { text: { id: 'Menerima semua klien tanpa seleksi.', en: 'Take every client with no selection.' }, explanation: { id: 'Tanpa seleksi, kualitas dan margin turun.', en: 'Without selection, quality and margin fall.' } },
+        { text: { id: 'Berhenti belajar setelah merasa mahir.', en: 'Stop learning once you feel skilled.' }, explanation: { id: 'Pasar berubah; belajar terus menjaga nilai.', en: 'Markets shift; learning keeps your value.' } },
+      ],
+    },
+  ],
+}
+
+export const TOTAL_LEVEL_QUESTIONS = Object.values(LEVEL_QUIZZES).reduce(
+  (n, qs) => n + qs.length,
+  0,
+)
+
+/** Daftar pertanyaan kuis untuk satu level (kosong bila tak ada). */
+export function levelQuiz(level: LevelId): QuizQuestion[] {
+  return LEVEL_QUIZZES[level] ?? []
 }
