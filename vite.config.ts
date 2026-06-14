@@ -12,9 +12,9 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
       },
       manifest: {
-        name: 'Pendar — Asisten AI Freelance',
+        name: 'Pendar — AI Co-Pilot untuk Virtual Assistant',
         short_name: 'Pendar',
-        description: 'Asisten AI untuk pekerjaan freelance — proposal, balas klien, penawaran harga, dan lainnya.',
+        description: 'AI Co-Pilot untuk Virtual Assistant — bantu pahami, atur, dan selesaikan kerjaan klien dengan akurat dan profesional.',
         theme_color: '#d97757',
         background_color: '#262624',
         display: 'standalone',
