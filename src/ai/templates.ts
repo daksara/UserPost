@@ -48,14 +48,14 @@ export interface Template {
 export const TEMPLATES: Template[] = [
   {
     id: 'proposal',
-    title: 'Proposal proyek',
-    desc: 'Susun proposal penawaran yang meyakinkan',
+    title: 'Proposal',
+    desc: 'Susun proposal yang meyakinkan',
     system:
-      'Buat proposal proyek terstruktur dengan urutan: ringkasan pemahaman ' +
-      'kebutuhan, pendekatan/solusi, lingkup pekerjaan, timeline, lalu ajakan ' +
-      'lanjut. Nada percaya diri namun tidak berlebihan. Dasarkan pada detail ' +
-      'yang user beri; jangan mengarang harga, durasi, atau kredensial yang ' +
-      'tidak disebutkan — pakai placeholder bila perlu.',
+      'Buat proposal terstruktur: ringkasan pemahaman kebutuhan, pendekatan/' +
+      'solusi, lingkup pekerjaan, timeline, lalu ajakan lanjut. Nada percaya ' +
+      'diri namun tidak berlebihan. Dasarkan pada detail yang user beri; jangan ' +
+      'mengarang harga, durasi, atau kredensial yang tidak disebutkan — pakai ' +
+      'placeholder bila perlu.',
     starter:
       'Buatkan proposal untuk klien.\n\n- Jenis proyek: \n- Klien/bisnis: \n- Kebutuhan utama: \n- Estimasi waktu: \n- Anggaran (opsional): ',
   },
@@ -76,16 +76,16 @@ export const TEMPLATES: Template[] = [
   {
     id: 'quote',
     title: 'Penawaran harga',
-    desc: 'Rincian harga & paket jasa',
+    desc: 'Rincian harga & paket',
     system:
-      'Susun penawaran harga yang rapi: rincian item pekerjaan, paket (mis. ' +
+      'Susun penawaran harga yang rapi: rincian item, paket (mis. ' +
       'Basic/Standard/Premium bila relevan), total, dan syarat singkat ' +
       '(revisi, termin pembayaran). Gunakan angka/rate yang user berikan; ' +
-      'JANGAN mengarang nominal harga. Bila harga belum diberikan, pakai ' +
-      'placeholder [harga] dan biarkan total sebagai rumus yang jelas. Jangan ' +
-      'menambah item pekerjaan yang tidak diminta.',
+      'JANGAN mengarang nominal. Bila harga belum diberikan, pakai placeholder ' +
+      '[PRICE] dan biarkan total sebagai rumus yang jelas. Jangan menambah item ' +
+      'yang tidak diminta.',
     starter:
-      'Buatkan penawaran harga.\n\n- Jasa: \n- Lingkup pekerjaan: \n- Kisaran harga / rate: \n- Jumlah revisi: \n- Termin pembayaran: ',
+      'Buatkan penawaran harga.\n\n- Layanan/item: \n- Lingkup pekerjaan: \n- Kisaran harga / rate: \n- Jumlah revisi: \n- Termin pembayaran: ',
   },
   {
     id: 'brief',
@@ -106,7 +106,7 @@ export const TEMPLATES: Template[] = [
     desc: 'Tindak lanjut tanpa terkesan memaksa',
     system:
       'Tulis satu pesan follow-up yang singkat, sopan, dan tidak memaksa untuk ' +
-      'menindaklanjuti penawaran, invoice, atau percakapan yang belum dibalas. ' +
+      'menindaklanjuti pesan, penawaran, atau percakapan yang belum dibalas. ' +
       'Dasarkan pada konteks yang user beri; jangan mengarang detail ' +
       'kesepakatan, nominal, atau tanggal yang tidak disebutkan.',
     starter:
@@ -121,7 +121,7 @@ export const TEMPLATES: Template[] = [
       'pembuka, isi padat, ajakan (CTA), lalu 3-8 hashtag relevan (jangan ' +
       'berlebihan). Sesuaikan panjang dan gaya dengan platform. Jangan ' +
       'mengarang klaim produk, angka, testimoni, harga, atau link — bila perlu ' +
-      'pakai placeholder seperti [link] atau [harga]. CTA mengikuti tujuan ' +
+      'pakai placeholder seperti [LINK] atau [PRICE]. CTA mengikuti tujuan ' +
       'yang user sebut.',
     starter:
       'Buatkan caption media sosial.\n\n- Platform: \n- Topik/produk: \n- Tujuan (awareness/penjualan/dll): \n- Nada (santai/profesional): ',
@@ -140,16 +140,43 @@ export const TEMPLATES: Template[] = [
       'Rapikan atau terjemahkan teks berikut.\n\nTeks:\n[tempel teks di sini]',
   },
   {
-    id: 'gig',
-    title: 'Deskripsi jasa',
-    desc: 'Gig Fiverr/Upwork yang menjual',
+    id: 'research',
+    title: 'Riset online',
+    desc: 'Rangkum temuan jadi poin actionable',
     system:
-      'Tulis deskripsi jasa (gig) yang menjual untuk marketplace freelance: ' +
-      'judul menarik, manfaat untuk klien, apa yang didapat, alasan memilih ' +
-      'kamu, dan CTA. Gunakan hanya keunggulan yang user beri; jangan mengarang ' +
-      'pengalaman, portofolio, jumlah klien, rating, garansi, atau angka. ' +
-      'Hindari klaim berlebihan dan janji yang tidak bisa dibuktikan.',
+      'Bantu riset: rangkum menjadi poin ringkas dan actionable sesuai tujuan ' +
+      'user — fakta kunci, opsi/pembanding, lalu rekomendasi singkat. Hanya ' +
+      'gunakan informasi yang user beri atau bahan/sumber yang user tempel; ' +
+      'jangan mengarang data, angka, statistik, harga, atau sumber. Bila butuh ' +
+      'sumber yang belum ada, sebutkan apa yang perlu dicek — jangan menebak. ' +
+      'Tandai hal yang masih belum pasti.',
     starter:
-      'Buatkan deskripsi jasa untuk marketplace freelance.\n\n- Jenis jasa: \n- Keunggulanku: \n- Yang didapat klien: \n- Platform (Fiverr/Upwork/dll): ',
+      'Bantu aku riset.\n\n- Topik/pertanyaan: \n- Tujuan riset: \n- Bahan/sumber (tempel bila ada): ',
+  },
+  {
+    id: 'report',
+    title: 'Laporan',
+    desc: 'Susun laporan rapi dari data',
+    system:
+      'Susun laporan ringkas dan profesional dari data/poin yang user beri: ' +
+      'ringkasan, temuan utama, lalu kesimpulan/rekomendasi. Hanya pakai angka ' +
+      'dan fakta yang user berikan; JANGAN mengarang metrik, angka, atau hasil. ' +
+      'Bila ada data yang kurang, pakai placeholder dan sebutkan singkat di ' +
+      'akhir bagian mana yang perlu dilengkapi.',
+    starter:
+      'Buatkan laporan.\n\n- Jenis laporan: \n- Periode: \n- Data/poin utama (tempel): \n- Untuk siapa: ',
+  },
+  {
+    id: 'community',
+    title: 'Balas komunitas',
+    desc: 'Respon komentar/DM komunitas',
+    system:
+      'Tulis respon manajemen komunitas (komentar, DM, atau pesan member) yang ' +
+      'ramah, on-brand, dan sesuai konteks. Jawab hanya berdasarkan pesan dan ' +
+      'poin yang user beri; jangan mengarang kebijakan, janji, jadwal, atau ' +
+      'detail produk. Untuk keluhan, bersikap empatik lalu arahkan ke langkah ' +
+      'berikutnya. Cocokkan bahasa dan nada dengan pesan aslinya.',
+    starter:
+      'Bantu balas pesan komunitas.\n\nPesan:\n[tempel pesan/komentar di sini]\n\nKonteks/brand: \nPoin yang ingin disampaikan: ',
   },
 ]
