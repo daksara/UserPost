@@ -255,20 +255,32 @@ a:focus-visible,
 .welcome__title { font-family: var(--font-serif); font-size: 1.95rem; font-weight: 500; letter-spacing: -.01em; color: var(--text-primary); }
 .welcome__sub { font-size: .9rem; color: var(--text-muted); max-width: 360px; }
 
-/* ── Chip saran template (di atas composer) ───────────────── */
-.suggestions {
-  display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none;
-  padding: 2px 20px 0; max-width: 744px; width: 100%; margin: 0 auto;
-}
-.suggestions::-webkit-scrollbar { display: none; }
-.suggestion {
-  flex: 0 0 auto; cursor: pointer; white-space: nowrap;
+/* ── Tombol + dan menu template (di composer) ──────────────────── */
+.composer__tools { position: relative; display: flex; align-items: center; gap: 10px; min-width: 0; }
+.composer__plus {
+  flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
   background: var(--bg-input); border: 1px solid var(--border);
-  color: var(--text-muted); border-radius: 999px;
-  padding: 7px 14px; font-size: .82rem;
+  color: var(--text-muted); font-size: 1.25rem; line-height: 1; cursor: pointer;
   transition: border-color .15s ease, color .15s ease;
 }
-.suggestion:hover { border-color: var(--accent); color: var(--text-primary); }
+.composer__plus:hover { border-color: var(--accent); color: var(--text-primary); }
+.tmpl-menu__scrim { position: fixed; inset: 0; z-index: 30; }
+.tmpl-menu {
+  position: absolute; bottom: calc(100% + 8px); left: 0; z-index: 40;
+  width: 280px; max-width: calc(100vw - 40px); max-height: 320px; overflow-y: auto;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-lg); padding: 6px;
+}
+.tmpl-menu__head { font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); padding: 6px 10px 4px; }
+.tmpl-menu__item {
+  display: flex; flex-direction: column; gap: 1px; width: 100%; text-align: left;
+  padding: 8px 10px; border-radius: var(--radius-sm); cursor: pointer;
+  background: transparent; border: none; transition: background .12s ease;
+}
+.tmpl-menu__item:hover { background: var(--bg-input); }
+.tmpl-menu__title { font-size: .88rem; font-weight: 600; color: var(--text-primary); }
+.tmpl-menu__desc { font-size: .76rem; color: var(--text-muted); }
 
 /* ── Composer ───────────────────────────────────────────────────── */
 .composer {

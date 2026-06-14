@@ -156,21 +156,6 @@ export default function App() {
           {error && <div className="chat__error">{error}</div>}
         </div>
 
-        {active.turns.length === 0 && (
-          <div className="suggestions">
-            {TEMPLATES.map((t) => (
-              <button
-                key={t.id}
-                className="suggestion"
-                onClick={() => pickTemplate(t.id)}
-                title={t.desc}
-              >
-                {t.title}
-              </button>
-            ))}
-          </div>
-        )}
-
         <Composer
           value={input}
           onChange={setInput}
@@ -179,6 +164,8 @@ export default function App() {
           onRegenerate={regenerate}
           streaming={streaming}
           canRegenerate={canRegenerate}
+          templates={TEMPLATES}
+          onPickTemplate={pickTemplate}
           placeholder={
             template ? `Lengkapi detail untuk "${template.title}"…` : 'Tulis tugas atau pertanyaanmu…'
           }
