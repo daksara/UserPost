@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isAllowedPath, rlWindowKey } from '../api/proxy'
+import { bodyTooLarge, isAllowedPath, rlWindowKey } from '../api/proxy'
 
 describe('rlWindowKey', () => {
   it('membentuk kunci per-IP per-jendela', () => {
@@ -35,5 +35,17 @@ describe('isAllowedPath', () => {
     expect(isAllowedPath('gemini', 'models/x:streamGenerateContent/../../etc')).toBe(false)
     expect(isAllowedPath('gemini', 'https://evil.example/models')).toBe(false)
     expect(isAllowedPath('unknown', 'models')).toBe(false)
+  })
+})
+
+describe('bodyTooLarge', () => {
+  it('melewatkan body kecil & kosong', () => {
+    expect(bodyTooLarge(undefined, 100)).toBe(false)
+    expect(bodyTooLarge({ a: 1 }, 100)).toBe(false)
+  })
+
+  it('menolak body melebihi batas', () => {
+    const big = { messages: 'x'.repeat(500) }
+    expect(bodyTooLarge(big, 100)).toBe(true)
   })
 })

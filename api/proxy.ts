@@ -48,6 +48,16 @@ export function rlWindowKey(ip: string, nowMs: number, windowSec: number): strin
   return `rl:${ip}:${Math.floor(nowMs / 1000 / windowSec)}`
 }
 
+/** True bila body request melebihi `maxBytes` (perkiraan dari panjang JSON). Murni & dapat diuji. */
+export function bodyTooLarge(body: unknown, maxBytes: number): boolean {
+  if (body == null) return false
+  try {
+    return JSON.stringify(body).length > maxBytes
+  } catch {
+    return true
+  }
+}
+
 function json(obj: unknown, status = 200): Response {
   return new Response(JSON.stringify(obj), {
     status,
@@ -121,6 +131,11 @@ export default async function handler(req: Request): Promise<Response> {
   const path = String(payload.path ?? '')
   if (!isAllowedPath(provider, path)) {
     return json({ error: 'Path tidak diizinkan' }, 400)
+  }
+
+  const maxBody = Number(process.env.MAX_BODY_BYTES || '262144')
+  if (bodyTooLarge(payload.body, maxBody)) {
+    return json({ error: 'Body terlalu besar.' }, 413)
   }
 
   const key = provider === 'groq' ? process.env.GROQ_API_KEY : process.env.GEMINI_API_KEY
