@@ -1,14 +1,16 @@
 // src/components/MessageBubble.tsx
 import { useState } from 'react'
 import type { ChatTurn } from '../hooks/useChat'
+import { cleanText } from '../ai/clean'
 
 export function MessageBubble({ turn, streaming }: { turn: ChatTurn; streaming: boolean }) {
   const [copied, setCopied] = useState(false)
   const isUser = turn.role === 'user'
+  const text = isUser ? turn.content : cleanText(turn.content)
 
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(turn.content)
+      await navigator.clipboard.writeText(text)
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     } catch {
@@ -18,9 +20,8 @@ export function MessageBubble({ turn, streaming }: { turn: ChatTurn; streaming: 
 
   return (
     <div className={`msg${isUser ? ' msg--user' : ''}`}>
-      <div className="msg__role">{isUser ? 'Kamu' : 'Pendar'}</div>
       <div className="msg__bubble">
-        {turn.content}
+        {text}
         {streaming && !isUser && <span className="msg__caret" />}
       </div>
       {!isUser && turn.content && (
