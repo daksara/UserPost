@@ -323,8 +323,8 @@ a:focus-visible,
   transition: border-color .2s ease, box-shadow .2s ease;
 }
 .composer__box:focus-within {
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
-  box-shadow: var(--shadow-sm), 0 0 0 3px var(--ring);
+  border-color: color-mix(in srgb, var(--text-muted) 45%, var(--border));
+  box-shadow: var(--shadow-sm);
 }
 .composer__input {
   width: 100%; resize: none; min-height: 40px; max-height: 240px;
