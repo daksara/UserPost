@@ -19,6 +19,10 @@
   --accent:       #d97757;
   --accent-soft:  #f6e9e2;
   --accent-dark:  #c2613f;
+  --accent-light: #e08f74;
+  --ring:         color-mix(in srgb, var(--accent) 35%, transparent);
+  --accent-glow:  color-mix(in srgb, var(--accent) 38%, transparent);
+  --ease-spring:  cubic-bezier(.34, 1.56, .64, 1);
   --border:       #e6e3d8;
   --green:        #4a8f6b;
   --red:          #bc4b3c;
@@ -72,6 +76,22 @@ body {
 button { font-family: var(--font); cursor: pointer; color: inherit; }
 input, textarea, select { font-family: var(--font); color: var(--text-primary); }
 input::placeholder, textarea::placeholder { color: var(--text-muted); }
+
+/* ── Fokus & tap (premium) ──────────────────────────────────────── */
+/* Hilangkan kotak highlight biru bawaan saat tap di mobile. */
+button, a, input, textarea, select, [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+/* Outline persegi bawaan diganti ring lembut yang mengikuti sudut tombol,
+   hanya muncul untuk navigasi keyboard (focus-visible), bukan saat klik. */
+:focus { outline: none; }
+:focus-visible { outline: none; }
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+.seg__item:focus-visible {
+  box-shadow: 0 0 0 3px var(--ring);
+}
 
 /* ── Layout ─────────────────────────────────────────────────────── */
 .layout {
@@ -305,18 +325,51 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
 
 /* ── Utilities ──────────────────────────────────────────────────── */
 .pdr-btn {
+  position: relative; overflow: hidden;
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
   border: 1px solid transparent; border-radius: var(--radius-sm);
   padding: 11px 17px; font-size: .9rem; font-weight: 700; line-height: 1;
-  transition: transform .14s ease, box-shadow .22s ease, background-color .2s ease,
-              border-color .2s ease, color .2s ease, opacity .2s ease, filter .2s ease;
+  transition: transform .18s var(--ease-spring), box-shadow .24s ease,
+              background-color .2s ease, border-color .2s ease, color .2s ease,
+              opacity .2s ease, filter .2s ease;
 }
 .pdr-btn:disabled { opacity: .45; cursor: default; }
-.pdr-btn:active:not(:disabled) { transform: scale(.97); }
-.pdr-btn--primary { background: var(--accent); color: #fff; }
-.pdr-btn--primary:hover:not(:disabled) { background: var(--accent-dark); }
+
+/* Sentuhan cahaya yang menyapu saat hover (efek "pendar"). */
+.pdr-btn::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(120deg, transparent 30%,
+    color-mix(in srgb, #fff 28%, transparent) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform .6s ease; pointer-events: none;
+}
+.pdr-btn:hover:not(:disabled)::after { transform: translateX(120%); }
+
+/* Primary: gradien aksen + glow, mengangkat saat hover, menekan saat klik. */
+.pdr-btn--primary {
+  color: #fff;
+  background: linear-gradient(180deg, var(--accent-light) 0%, var(--accent) 52%, var(--accent-dark) 100%);
+  box-shadow: 0 1px 2px rgba(0,0,0,.12), 0 8px 18px -8px var(--accent-glow);
+}
+.pdr-btn--primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.04) saturate(1.05);
+  box-shadow: 0 2px 5px rgba(0,0,0,.16), 0 14px 26px -10px var(--accent-glow);
+}
+.pdr-btn--primary:active:not(:disabled) {
+  transform: translateY(0) scale(.985);
+  box-shadow: 0 1px 2px rgba(0,0,0,.16), 0 5px 12px -8px var(--accent-glow);
+}
+.pdr-btn--primary:focus-visible {
+  box-shadow: 0 0 0 3px var(--ring), 0 8px 18px -8px var(--accent-glow);
+}
+
 .pdr-btn--ghost { background: transparent; color: var(--text-secondary); border-color: var(--border); }
-.pdr-btn--ghost:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.pdr-btn--ghost:hover:not(:disabled) {
+  border-color: var(--accent); color: var(--accent); background: var(--accent-soft);
+  transform: translateY(-1px);
+}
+.pdr-btn--ghost:active:not(:disabled) { transform: translateY(0) scale(.97); }
 
 .pdr-nav-btn {
   border: none; border-radius: var(--radius-xs); padding: 7px 13px;
@@ -347,11 +400,13 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
   border-radius: var(--radius-md); padding: 14px;
   transition: transform .2s ease, box-shadow .25s ease, border-color .2s ease;
 }
+.pdr-card--hover { transition: transform .2s var(--ease-spring), box-shadow .25s ease, border-color .2s ease; }
 .pdr-card--hover:hover {
   transform: translateY(-2px);
   border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
   box-shadow: var(--shadow-md);
 }
+.pdr-card--hover:active { transform: translateY(-1px) scale(.99); }
 
 /* ── Responsive: sidebar jadi drawer di layar kecil ─────────────── */
 @media (max-width: 760px) {
