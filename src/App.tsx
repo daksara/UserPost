@@ -16,6 +16,7 @@ import { useSettings } from './hooks/useSettings'
 import { useConversations } from './hooks/useConversations'
 import { useChat } from './hooks/useChat'
 import { useLearning } from './hooks/useLearning'
+import { useQuizScores } from './hooks/useQuizScores'
 import { useTheme } from './hooks/useTheme'
 
 export default function App() {
@@ -32,6 +33,7 @@ export default function App() {
     remove,
   } = useConversations()
   const { completedSet, toggleDone, markDone } = useLearning()
+  const { scores: quizScores, recordScore } = useQuizScores()
   const t = useMemo(() => createT(language), [language])
 
   // Selaraskan judul dokumen & atribut lang HTML dengan bahasa antarmuka.
@@ -253,6 +255,8 @@ export default function App() {
           onToggleDone={toggleDone}
           onStartLesson={startLesson}
           onStartScenario={startScenario}
+          quizScores={quizScores}
+          onQuizDone={recordScore}
           onClose={() => setShowLearn(false)}
         />
       )}
