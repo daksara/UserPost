@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { deriveTitle, isEmpty, makeConversation, sanitizeConversations } from './types'
+import { buildRequestMessages, deriveTitle, isEmpty, makeConversation, sanitizeConversations } from './types'
 
 describe('deriveTitle', () => {
   it('uses the first non-empty line, trimmed', () => {
@@ -55,5 +55,28 @@ describe('sanitizeConversations', () => {
       { id: 'new', turns: [], updatedAt: 9 },
     ])
     expect(out.map((c) => c.id)).toEqual(['new', 'old'])
+  })
+})
+
+describe('buildRequestMessages', () => {
+  const turns = [
+    { id: '1', role: 'user' as const, content: 'a' },
+    { id: '2', role: 'assistant' as const, content: 'b' },
+    { id: '3', role: 'user' as const, content: 'c' },
+  ]
+
+  it('prepends the system message', () => {
+    const out = buildRequestMessages('SYS', turns, 24)
+    expect(out[0]).toEqual({ role: 'system', content: 'SYS' })
+    expect(out).toHaveLength(4)
+  })
+
+  it('keeps only the last maxTurns turns', () => {
+    const out = buildRequestMessages('SYS', turns, 2)
+    expect(out.map((m) => m.content)).toEqual(['SYS', 'b', 'c'])
+  })
+
+  it('returns just the system message when maxTurns is 0', () => {
+    expect(buildRequestMessages('SYS', turns, 0)).toEqual([{ role: 'system', content: 'SYS' }])
   })
 })
