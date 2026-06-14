@@ -11,6 +11,7 @@ interface Props {
   onSelect: (id: string) => void
   onDelete: (id: string) => void
   onNewChat: () => void
+  onOpenLearn: () => void
   onOpenSettings: () => void
   theme: Theme
   onToggleTheme: () => void
@@ -22,6 +23,7 @@ export function Sidebar({
   onSelect,
   onDelete,
   onNewChat,
+  onOpenLearn,
   onOpenSettings,
   theme,
   onToggleTheme,
@@ -49,6 +51,10 @@ export function Sidebar({
 
       <button className="pdr-btn pdr-btn--primary sidebar__new" onClick={onNewChat}>
         + Chat baru
+      </button>
+
+      <button className="pdr-btn pdr-btn--ghost sidebar__learn" onClick={onOpenLearn}>
+        <GradCapIcon /> Belajar VA
       </button>
 
       <div className="sidebar__section">Riwayat</div>
@@ -83,6 +89,26 @@ export function Sidebar({
         </button>
       </div>
     </aside>
+  )
+}
+
+function GradCapIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 4 2 9l10 5 10-5-10-5Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M6 11.5V16c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-4.5"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   )
 }
 

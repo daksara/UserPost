@@ -14,6 +14,8 @@ export interface Conversation {
   title: string
   /** Template freelance yang sedang aktif (null = chat bebas). */
   templateId: string | null
+  /** Materi belajar VA yang sedang aktif (null = bukan sesi belajar). */
+  lessonId: string | null
   turns: ChatTurn[]
   createdAt: number
   updatedAt: number
@@ -39,9 +41,20 @@ export function deriveTitle(text: string): string {
   return cleaned.length > 48 ? `${cleaned.slice(0, 47).trimEnd()}…` : cleaned
 }
 
-export function makeConversation(templateId: string | null = null): Conversation {
+export function makeConversation(
+  templateId: string | null = null,
+  lessonId: string | null = null,
+): Conversation {
   const now = Date.now()
-  return { id: uid(), title: DEFAULT_TITLE, templateId, turns: [], createdAt: now, updatedAt: now }
+  return {
+    id: uid(),
+    title: DEFAULT_TITLE,
+    templateId,
+    lessonId,
+    turns: [],
+    createdAt: now,
+    updatedAt: now,
+  }
 }
 
 /** True jika percakapan belum punya pesan apa pun. */
@@ -71,6 +84,7 @@ export function sanitizeConversations(raw: unknown): Conversation[] {
       id: c.id,
       title: typeof c.title === 'string' && c.title ? c.title : DEFAULT_TITLE,
       templateId: typeof c.templateId === 'string' ? c.templateId : null,
+      lessonId: typeof c.lessonId === 'string' ? c.lessonId : null,
       turns,
       createdAt: typeof c.createdAt === 'number' ? c.createdAt : Date.now(),
       updatedAt: typeof c.updatedAt === 'number' ? c.updatedAt : Date.now(),

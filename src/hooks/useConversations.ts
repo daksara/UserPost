@@ -95,24 +95,27 @@ export function useConversations() {
   const select = useCallback((id: string) => setState((s) => ({ ...s, activeId: id })), [])
 
   /** Buat percakapan baru — pakai ulang yang aktif bila masih kosong. */
-  const newConversation = useCallback((templateId: string | null = null) => {
-    setState((s) => {
-      const current = s.conversations.find((c) => c.id === s.activeId)
-      if (current && isEmpty(current)) {
-        return {
-          activeId: current.id,
-          conversations: s.conversations.map((c) =>
-            c.id === current.id ? { ...c, templateId, updatedAt: Date.now() } : c,
-          ),
+  const newConversation = useCallback(
+    (templateId: string | null = null, lessonId: string | null = null) => {
+      setState((s) => {
+        const current = s.conversations.find((c) => c.id === s.activeId)
+        if (current && isEmpty(current)) {
+          return {
+            activeId: current.id,
+            conversations: s.conversations.map((c) =>
+              c.id === current.id ? { ...c, templateId, lessonId, updatedAt: Date.now() } : c,
+            ),
+          }
         }
-      }
-      const fresh = makeConversation(templateId)
-      return {
-        activeId: fresh.id,
-        conversations: [fresh, ...s.conversations].slice(0, MAX_CONVERSATIONS),
-      }
-    })
-  }, [])
+        const fresh = makeConversation(templateId, lessonId)
+        return {
+          activeId: fresh.id,
+          conversations: [fresh, ...s.conversations].slice(0, MAX_CONVERSATIONS),
+        }
+      })
+    },
+    [],
+  )
 
   const remove = useCallback((id: string) => {
     setState((s) => {
