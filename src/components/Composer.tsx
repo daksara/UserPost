@@ -15,6 +15,8 @@ interface Props {
   placeholder: string
   templates: Template[]
   onPickTemplate: (id: string) => void
+  /** Ref opsional ke textarea agar pemanggil bisa memfokuskannya. */
+  textareaRef?: React.RefObject<HTMLTextAreaElement>
 }
 
 const MAX_HEIGHT = 240
@@ -28,9 +30,11 @@ export function Composer({
   placeholder,
   templates,
   onPickTemplate,
+  textareaRef,
 }: Props) {
   const { t } = useI18n()
-  const ref = useRef<HTMLTextAreaElement>(null)
+  const internalRef = useRef<HTMLTextAreaElement>(null)
+  const ref = textareaRef ?? internalRef
   const [menuOpen, setMenuOpen] = useState(false)
 
   // Tumbuhkan textarea mengikuti tinggi konten (sampai batas), lalu scroll.

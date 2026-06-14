@@ -43,6 +43,7 @@ export default function App() {
   }, [t, language])
 
   const [input, setInput] = useState('')
+  const composerInputRef = useRef<HTMLTextAreaElement>(null)
   const [showSettings, setShowSettings] = useState(false)
   const [showLearn, setShowLearn] = useState(false)
   const [drawer, setDrawer] = useState(false)
@@ -105,9 +106,14 @@ export default function App() {
   }, [pendingKickoff, ready, streaming, active.lessonId, active.scenarioId, active.turns.length, send])
 
   const pickTemplate = (id: string) => {
+    // Isi kolom input dengan teks awal (starter) template agar user tinggal
+    // melengkapi — tanpa ini, memilih template terasa "tidak terjadi apa-apa".
+    const tpl = TEMPLATES.find((x) => x.id === id)
     setActiveTemplate(id)
-    setInput('')
+    setInput(tpl?.starter ?? '')
     setDrawer(false)
+    // Fokuskan composer agar perpindahan dari kartu/menu ke input terasa jelas.
+    requestAnimationFrame(() => composerInputRef.current?.focus())
   }
 
   const startLesson = (id: string) => {
@@ -229,6 +235,7 @@ export default function App() {
           streaming={streaming}
           templates={TEMPLATES}
           onPickTemplate={pickTemplate}
+          textareaRef={composerInputRef}
           placeholder={
             scenario
               ? t('composer.sim')
