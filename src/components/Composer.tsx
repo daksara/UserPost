@@ -10,9 +10,7 @@ interface Props {
   onChange: (v: string) => void
   onSubmit: () => void
   onStop: () => void
-  onRegenerate: () => void
   streaming: boolean
-  canRegenerate: boolean
   placeholder: string
   templates: Template[]
   onPickTemplate: (id: string) => void
@@ -25,9 +23,7 @@ export function Composer({
   onChange,
   onSubmit,
   onStop,
-  onRegenerate,
   streaming,
-  canRegenerate,
   placeholder,
   templates,
   onPickTemplate,
@@ -99,11 +95,6 @@ export function Composer({
           <span className="composer__hint">Enter kirim · Shift+Enter baris baru</span>
         </div>
         <div className="composer__buttons">
-          {!streaming && canRegenerate && (
-            <button className="pdr-btn pdr-btn--ghost" onClick={onRegenerate}>
-              Regenerasi
-            </button>
-          )}
           {streaming ? (
             <button className="pdr-btn pdr-btn--ghost" onClick={onStop}>
               Stop
