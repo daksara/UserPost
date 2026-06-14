@@ -195,7 +195,7 @@ export default function App() {
 
         <div className="chat__messages" ref={scrollRef} onScroll={onScroll}>
           {active.turns.length === 0 ? (
-            <Welcome onStartLearning={() => setShowLearn(true)} />
+            <Welcome />
           ) : (
             active.turns.map((t, i) => (
               <MessageBubble
@@ -251,22 +251,12 @@ export default function App() {
   )
 }
 
-function Welcome({ onStartLearning }: { onStartLearning: () => void }) {
+function Welcome() {
   const { t } = useI18n()
   return (
     <div className="welcome">
       <Logo size={44} />
       <h1 className="welcome__title">{t('welcome.title')}</h1>
-      <p className="welcome__sub">{t('welcome.sub')}</p>
-      <div className="welcome__learn">
-        <div className="welcome__learn-text">
-          <strong>{t('welcome.learnLead')}</strong>
-          {t('welcome.learnText')}
-        </div>
-        <button className="pdr-btn pdr-btn--primary" onClick={onStartLearning}>
-          {t('welcome.learnBtn')}
-        </button>
-      </div>
     </div>
   )
 }

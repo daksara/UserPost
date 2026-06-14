@@ -50,12 +50,6 @@ const id = {
 
   // Welcome
   'welcome.title': 'Halo, saya Pendar',
-  'welcome.sub':
-    'AI Co-Pilot Anda untuk Virtual Assistant. Saya membantu Anda memahami, menata, dan menyelesaikan pekerjaan klien secara akurat, profesional, dan efisien. Tugas atau proyek apa yang ingin Anda kerjakan hari ini?',
-  'welcome.learnLead': 'Baru jadi VA?',
-  'welcome.learnText':
-    ' Belajar dari nol sampai expert bersama mentor VA berpengalaman — kurikulum lengkap, tanpa ada yang tertinggal.',
-  'welcome.learnBtn': 'Mulai belajar jadi VA',
 
   // Settings modal
   'settings.title': 'Pengaturan',
@@ -137,12 +131,6 @@ const en: Record<keyof typeof id, string> = {
 
   // Welcome
   'welcome.title': "Hi, I'm Pendar",
-  'welcome.sub':
-    'Your AI Co-Pilot for Virtual Assistants. I help you understand, organize, and complete real client work accurately, professionally, and efficiently. What kind of task or project do you need help with today?',
-  'welcome.learnLead': 'New to being a VA?',
-  'welcome.learnText':
-    ' Learn from zero to expert with an experienced VA mentor — a complete curriculum, with nothing left behind.',
-  'welcome.learnBtn': 'Start learning to be a VA',
 
   // Settings modal
   'settings.title': 'Settings',
