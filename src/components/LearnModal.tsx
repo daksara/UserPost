@@ -1,30 +1,36 @@
 // src/components/LearnModal.tsx
 // Belajar Virtual Assistant: dua tab - Materi (kurikulum diajar mentor AI, plus
 // kuis "Uji pemahaman" A/B/C/D per level) dan Latihan Klien (kuis pilih balasan
-// terbaik; roleplay ketik opsional).
+// terbaik; roleplay ketik opsional). Skor kuis terbaik ditandai sebagai badge.
 import { useEffect, useRef, useState } from 'react'
 import { LEVELS, TOTAL_LESSONS, lessonsByLevel } from '../learn/curriculum'
 import type { LevelId } from '../learn/curriculum'
 import { findScenario, scenariosByLevel } from '../learn/scenarios'
 import { scenarioQuiz, levelQuiz } from '../learn/quiz'
 import { levelProgress, overallPercent } from '../learn/progress'
+import { isMastered } from '../learn/scores'
+import type { QuizScores } from '../learn/scores'
 import { useI18n } from '../i18n/i18n'
 import { ClientQuiz } from './ClientQuiz'
 import { LevelQuiz } from './LevelQuiz'
 
 interface Props {
   completed: Set<string>
+  quizScores: QuizScores
   onToggleDone: (id: string) => void
   onStartLesson: (id: string) => void
   onStartScenario: (id: string) => void
+  onQuizDone: (key: string, correct: number, total: number) => void
   onClose: () => void
 }
 
 export function LearnModal({
   completed,
+  quizScores,
   onToggleDone,
   onStartLesson,
   onStartScenario,
+  onQuizDone,
   onClose,
 }: Props) {
   const { lang, t } = useI18n()
@@ -54,6 +60,13 @@ export function LearnModal({
 
   const activeLevelQuestions = levelQuizId ? levelQuiz(levelQuizId) : []
   const activeLevel = levelQuizId ? LEVELS.find((l) => l.id === levelQuizId) : undefined
+
+  function badge(score: QuizScores[string] | undefined) {
+    if (!score) return null
+    return isMastered(score)
+      ? t('learn.quizMastered')
+      : t('learn.quizBest', { correct: score.correct, total: score.total })
+  }
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -100,6 +113,7 @@ export function LearnModal({
               title={activeLevel.title[lang]}
               questions={activeLevelQuestions}
               onBack={() => setLevelQuizId(null)}
+              onScore={(c, n) => onQuizDone(`level:${activeLevel.id}`, c, n)}
             />
           ) : (
             <>
@@ -126,6 +140,7 @@ export function LearnModal({
               <div className="learn__levels">
                 {LEVELS.map((lvl) => {
                   const prog = byLevel.find((p) => p.level === lvl.id)
+                  const lScore = quizScores[`level:${lvl.id}`]
                   return (
                     <section key={lvl.id} className="learn__level">
                       <div className="learn__level-head">
@@ -137,6 +152,11 @@ export function LearnModal({
                           {prog && (
                             <span className="chip">
                               {prog.done}/{prog.total}
+                            </span>
+                          )}
+                          {lScore && (
+                            <span className={isMastered(lScore) ? 'chip chip--ok' : 'chip'}>
+                              {badge(lScore)}
                             </span>
                           )}
                           <button
@@ -196,6 +216,7 @@ export function LearnModal({
             situation={activeScenario.situation[lang]}
             question={activeQuiz}
             onBack={() => setQuizId(null)}
+            onResult={(c, n) => quizId && onQuizDone(`scenario:${quizId}`, c, n)}
           />
         ) : (
           <>
@@ -212,32 +233,43 @@ export function LearnModal({
                   </div>
 
                   <div className="learn__lessons">
-                    {scenariosByLevel(lvl.id).map((s) => (
-                      <div key={s.id} className="learn-card">
-                        <div className="learn-card__main">
-                          <div className="learn-card__title">{s.skill[lang]}</div>
-                          <div className="sim-card__meta">
-                            {s.clientName} · {s.business[lang]} ·{' '}
-                            {t('learn.simDifficulty', { n: s.difficulty })}
+                    {scenariosByLevel(lvl.id).map((s) => {
+                      const sScore = quizScores[`scenario:${s.id}`]
+                      return (
+                        <div key={s.id} className="learn-card">
+                          <div className="learn-card__main">
+                            <div className="learn-card__title">{s.skill[lang]}</div>
+                            <div className="sim-card__meta">
+                              {s.clientName} · {s.business[lang]} ·{' '}
+                              {t('learn.simDifficulty', { n: s.difficulty })}
+                              {sScore && (
+                                <>
+                                  {' '}·{' '}
+                                  <span className={isMastered(sScore) ? 'sim-card__score' : ''}>
+                                    {badge(sScore)}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                            <div className="learn-card__summary">{s.situation[lang]}</div>
                           </div>
-                          <div className="learn-card__summary">{s.situation[lang]}</div>
+                          <div className="learn-card__actions sim-card__btns">
+                            <button
+                              className="pdr-btn pdr-btn--primary"
+                              onClick={() => setQuizId(s.id)}
+                            >
+                              {t('learn.quizStart')}
+                            </button>
+                            <button
+                              className="pdr-btn pdr-btn--ghost"
+                              onClick={() => onStartScenario(s.id)}
+                            >
+                              {t('learn.roleplay')}
+                            </button>
+                          </div>
                         </div>
-                        <div className="learn-card__actions sim-card__btns">
-                          <button
-                            className="pdr-btn pdr-btn--primary"
-                            onClick={() => setQuizId(s.id)}
-                          >
-                            {t('learn.quizStart')}
-                          </button>
-                          <button
-                            className="pdr-btn pdr-btn--ghost"
-                            onClick={() => onStartScenario(s.id)}
-                          >
-                            {t('learn.roleplay')}
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </section>
               ))}

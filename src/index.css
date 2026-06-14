@@ -538,3 +538,4 @@ a:focus-visible,
 .learn__quiz-btn { font-size: .78rem; padding: 4px 10px; }
 .quiz__progress { font-size: .82rem; color: var(--text-muted); font-weight: 600; }
 .quiz__score { font-size: 1.1rem; font-weight: 800; color: var(--text-primary); }
+.sim-card__score { color: var(--green); font-weight: 600; }

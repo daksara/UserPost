@@ -11,10 +11,12 @@ export function LevelQuiz({
   title,
   questions,
   onBack,
+  onScore,
 }: {
   title: string
   questions: QuizQuestion[]
   onBack: () => void
+  onScore?: (correct: number, total: number) => void
 }) {
   const { lang, t } = useI18n()
   const [step, setStep] = useState(0)
@@ -35,6 +37,7 @@ export function LevelQuiz({
 
   function next() {
     if (isLast) {
+      onScore?.(score, total)
       setDone(true)
       return
     }

@@ -11,14 +11,22 @@ export function ClientQuiz({
   situation,
   question,
   onBack,
+  onResult,
 }: {
   situation: string
   question: QuizQuestion
   onBack: () => void
+  onResult?: (correct: number, total: number) => void
 }) {
   const { lang, t } = useI18n()
   const [chosen, setChosen] = useState<number | null>(null)
   const answered = chosen !== null
+
+  function choose(i: number) {
+    if (answered) return
+    setChosen(i)
+    onResult?.(i === question.correct ? 1 : 0, 1)
+  }
 
   return (
     <div className="quiz">
@@ -42,7 +50,7 @@ export function ClientQuiz({
               key={i}
               className={`quiz__opt${state}`}
               disabled={answered}
-              onClick={() => setChosen(i)}
+              onClick={() => choose(i)}
             >
               <span className="quiz__opt-letter">{LETTERS[i]}</span>
               <span className="quiz__opt-text">{o.text[lang]}</span>
