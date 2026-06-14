@@ -23,4 +23,21 @@ describe('cleanText', () => {
   it('keeps a plain dash list intact', () => {
     expect(cleanText('- satu\n- dua')).toBe('- satu\n- dua')
   })
+
+  it('normalizes special hyphens to a plain dash', () => {
+    // e‑book pakai non-breaking hyphen; real‐time pakai hyphen
+    expect(cleanText('e‑book real‐time')).toBe('e-book real-time')
+  })
+
+  it('normalizes non-breaking and thin spaces to a normal space', () => {
+    expect(cleanText('harga Rp 100 ribu')).toBe('harga Rp 100 ribu')
+  })
+
+  it('trims stray leading whitespace on lines', () => {
+    expect(cleanText('Judul\n   https://contoh.com')).toBe('Judul\nhttps://contoh.com')
+  })
+
+  it('collapses 3+ blank lines and trims edges', () => {
+    expect(cleanText('  a\n\n\n\nb  ')).toBe('a\n\nb')
+  })
 })
