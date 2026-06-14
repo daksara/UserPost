@@ -539,3 +539,7 @@ a:focus-visible,
 .quiz__progress { font-size: .82rem; color: var(--text-muted); font-weight: 600; }
 .quiz__score { font-size: 1.1rem; font-weight: 800; color: var(--text-primary); }
 .sim-card__score { color: var(--green); font-weight: 600; }
+.rp__msg { max-width: 88%; padding: 8px 12px; border-radius: 14px; font-size: .9rem; line-height: 1.45; }
+.rp__client { align-self: flex-start; background: var(--bg-hover); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+.rp__you { align-self: flex-end; background: color-mix(in srgb, var(--accent) 18%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border)); border-bottom-right-radius: 4px; }
+.rp { display: flex; flex-direction: column; }
