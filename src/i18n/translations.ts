@@ -48,7 +48,7 @@ const id = {
   'msg.copied': 'Tersalin',
 
   // Welcome
-  'welcome.title': 'Halo, saya Pendar',
+  'welcome.title': 'Halo, aku Pendar',
 
   // Settings modal
   'settings.title': 'Pengaturan',

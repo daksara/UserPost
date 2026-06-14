@@ -2,6 +2,8 @@
 // Tipe & helper murni untuk percakapan. Dipisah dari React agar mudah diuji
 // dan dipakai ulang oleh hook penyimpanan (useConversations).
 
+import type { ChatMessage } from '../ai/types'
+
 export interface ChatTurn {
   id: string
   role: 'user' | 'assistant'
@@ -91,4 +93,21 @@ export function sanitizeConversations(raw: unknown): Conversation[] {
     })
   }
   return out.sort((a, b) => b.updatedAt - a.updatedAt).slice(0, MAX_CONVERSATIONS)
+}
+
+/**
+ * Susun daftar pesan untuk dikirim ke provider: pesan system di depan, lalu
+ * turn terakhir percakapan dibatasi `maxTurns` agar tetap di dalam context
+ * window. Murni & dapat diuji.
+ */
+export function buildRequestMessages(
+  system: string,
+  turns: ChatTurn[],
+  maxTurns: number,
+): ChatMessage[] {
+  const recent = maxTurns <= 0 ? [] : turns.slice(-maxTurns)
+  return [
+    { role: 'system', content: system },
+    ...recent.map((t) => ({ role: t.role, content: t.content })),
+  ]
 }

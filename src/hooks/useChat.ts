@@ -4,7 +4,7 @@
 // dipersistenkan — hook ini hanya menulis lewat `setTurns`.
 import { useCallback, useRef, useState } from 'react'
 import { streamChat } from '../ai/providers'
-import { uid } from '../chat/types'
+import { buildRequestMessages, uid } from '../chat/types'
 import type { ChatTurn } from '../chat/types'
 import type { ChatMessage, Provider } from '../ai/types'
 
@@ -35,11 +35,7 @@ export function useChat({ provider, apiKey, model, system, turns, setTurns }: Us
   const runStream = useCallback(
     async (history: ChatTurn[], aiId: string) => {
       // Hanya kirim potongan terakhir agar tetap di dalam context window.
-      const recent = history.slice(-MAX_CONTEXT_TURNS)
-      const messages: ChatMessage[] = [
-        { role: 'system', content: system },
-        ...recent.map((t) => ({ role: t.role, content: t.content })),
-      ]
+      const messages: ChatMessage[] = buildRequestMessages(system, history, MAX_CONTEXT_TURNS)
 
       const ac = new AbortController()
       abortRef.current = ac
