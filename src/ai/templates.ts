@@ -49,7 +49,7 @@ export const TEMPLATES: Template[] = [
       'Tulis balasan chat/email ke klien yang profesional, hangat, dan to the ' +
       'point. Pertahankan hubungan baik meski menyampaikan kabar kurang enak.',
     starter:
-      'Bantu balas pesan klien berikut secara profesional:\n\n"""\n[tempel pesan klien di sini]\n"""\n\nPoin yang ingin kusampaikan: ',
+      'Bantu balas pesan klien berikut secara profesional.\n\nPesan klien:\n[tempel pesan klien di sini]\n\nPoin yang ingin kusampaikan: ',
   },
   {
     id: 'quote',
@@ -70,7 +70,7 @@ export const TEMPLATES: Template[] = [
       'Ringkas brief klien menjadi: tujuan, deliverable, poin penting, ' +
       'pertanyaan yang perlu dikonfirmasi, dan daftar tugas (action items).',
     starter:
-      'Ringkas brief klien berikut menjadi poin aksi yang jelas:\n\n"""\n[tempel brief di sini]\n"""',
+      'Ringkas brief klien berikut menjadi poin aksi yang jelas.\n\nBrief:\n[tempel brief di sini]',
   },
   {
     id: 'follow-up',
@@ -101,7 +101,7 @@ export const TEMPLATES: Template[] = [
       'Bila diminta terjemahan, terjemahkan dengan natural antara Indonesia ' +
       'dan Inggris. Tampilkan hasil akhir saja kecuali diminta menjelaskan.',
     starter:
-      'Rapikan / terjemahkan teks berikut:\n\n"""\n[tempel teks di sini]\n"""',
+      'Rapikan atau terjemahkan teks berikut.\n\nTeks:\n[tempel teks di sini]',
   },
   {
     id: 'gig',
