@@ -346,15 +346,6 @@ a:focus-visible,
 /* ── Belajar VA (akademi) ───────────────────────────────────────── */
 .sidebar__learn { width: 100%; }
 
-.welcome__learn {
-  margin-top: 4px; width: 100%; max-width: 420px;
-  display: flex; flex-direction: column; gap: 12px; align-items: stretch;
-  padding: 16px; border-radius: var(--radius-md);
-  background: var(--accent-soft);
-  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
-}
-.welcome__learn-text { font-size: .86rem; color: var(--text-secondary); line-height: 1.5; }
-
 .learn__intro { font-size: .86rem; color: var(--text-secondary); line-height: 1.5; }
 
 .learn__overall { display: flex; flex-direction: column; gap: 8px; }
