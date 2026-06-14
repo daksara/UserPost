@@ -34,7 +34,7 @@ const id = {
   'app.noticeAfter': ' untuk menghubungkan Groq atau Gemini.',
 
   // Composer placeholders
-  'composer.lesson': 'Jawab latihan mentor atau tanya apa pun tentang materi…',
+  'composer.lesson': '',
   'composer.template': 'Lengkapi detail untuk "{title}"…',
   'composer.default': 'Tulis tugas atau pertanyaanmu…',
   'composer.templates': 'Template',
@@ -133,7 +133,7 @@ const en: Record<keyof typeof id, string> = {
   'app.noticeAfter': ' to connect Groq or Gemini.',
 
   // Composer placeholders
-  'composer.lesson': "Answer the mentor's exercise or ask anything about the lesson…",
+  'composer.lesson': '',
   'composer.template': 'Fill in the details for "{title}"…',
   'composer.default': 'Write your task or question…',
   'composer.templates': 'Templates',
