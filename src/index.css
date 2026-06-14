@@ -232,6 +232,17 @@ a:focus-visible,
   font-size: .96rem; line-height: 1.65; white-space: pre-wrap; word-break: break-word;
   color: var(--text-primary); max-width: 100%;
 }
+
+/* Jawaban AI dirender sebagai blok rapi (paragraf + daftar), bukan teks mentah */
+.msg--ai .msg__bubble { white-space: normal; }
+.msg--ai .msg__bubble > * + * { margin-top: .75em; }
+.rt-p { margin: 0; white-space: pre-line; }
+.rt-ul, .rt-ol { margin: 0; padding-left: 1.45em; }
+.rt-ul { list-style: disc; }
+.rt-ol { list-style: decimal; }
+.rt-li { padding-left: .15em; line-height: 1.6; }
+.rt-li + .rt-li { margin-top: .3em; }
+.rt-li::marker { color: var(--text-muted); }
 /* Pesan user: gelembung halus di kanan */
 .msg--user .msg__bubble {
   font-size: .94rem; line-height: 1.55;

@@ -49,7 +49,7 @@ export default function App() {
     return BASE_SYSTEM_PROMPT
   }, [lesson, template])
 
-  const { streaming, error, send, regenerate, stop, canRegenerate } = useChat({
+  const { streaming, error, send, stop } = useChat({
     provider,
     apiKey,
     model,
@@ -199,9 +199,7 @@ export default function App() {
           onChange={setInput}
           onSubmit={submit}
           onStop={stop}
-          onRegenerate={regenerate}
           streaming={streaming}
-          canRegenerate={canRegenerate}
           templates={TEMPLATES}
           onPickTemplate={pickTemplate}
           placeholder={

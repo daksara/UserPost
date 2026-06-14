@@ -80,25 +80,7 @@ export function useChat({ provider, apiKey, model, system, turns, setTurns }: Us
     [turns, streaming, setTurns, runStream],
   )
 
-  // Ulangi jawaban terakhir: buang turn asisten di ujung, stream ulang dari
-  // pesan user terakhir.
-  const regenerate = useCallback(() => {
-    if (streaming) return
-    let i = turns.length - 1
-    while (i >= 0 && turns[i].role === 'assistant') i--
-    if (i < 0) return
-    setError(null)
-
-    const history = turns.slice(0, i + 1)
-    const aiTurn: ChatTurn = { id: uid(), role: 'assistant', content: '' }
-    setTurns(() => [...history, aiTurn])
-    void runStream(history, aiTurn.id)
-  }, [turns, streaming, setTurns, runStream])
-
   const stop = useCallback(() => abortRef.current?.abort(), [])
 
-  const canRegenerate =
-    !streaming && turns.length > 0 && turns[turns.length - 1].role === 'assistant'
-
-  return { streaming, error, send, regenerate, stop, canRegenerate }
+  return { streaming, error, send, stop }
 }
