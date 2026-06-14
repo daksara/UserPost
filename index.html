@@ -23,8 +23,48 @@
         } catch (e) {}
       })();
     </script>
+    <style>
+      /* Splash loading — animasi logo Pendar sebelum app siap, lalu fade-out */
+      #pendar-splash {
+        position: fixed; inset: 0; z-index: 9999;
+        display: flex; align-items: center; justify-content: center;
+        background: #faf9f5; transition: opacity .4s ease;
+      }
+      html[data-theme="dark"] #pendar-splash { background: #262624; }
+      #pendar-splash.pendar-splash--hide { opacity: 0; pointer-events: none; }
+      #pendar-splash svg { width: 76px; height: 76px; }
+      #pendar-splash .p-core, #pendar-splash .p-rays, #pendar-splash .p-diag {
+        transform-box: fill-box; transform-origin: center;
+      }
+      #pendar-splash .p-core { animation: pendar-core 1.4s ease-in-out infinite; }
+      #pendar-splash .p-rays { animation: pendar-rays 1.4s ease-in-out infinite; }
+      #pendar-splash .p-diag { animation: pendar-spin 6s linear infinite; }
+      @keyframes pendar-core { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(.78); opacity: .6; } }
+      @keyframes pendar-rays { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+      @keyframes pendar-spin { to { transform: rotate(360deg); } }
+      @media (prefers-reduced-motion: reduce) {
+        #pendar-splash .p-core, #pendar-splash .p-rays, #pendar-splash .p-diag { animation: none; }
+      }
+    </style>
   </head>
   <body>
+    <div id="pendar-splash" role="status" aria-label="Memuat Pendar">
+      <svg viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <g class="p-rays" stroke="#d97757" stroke-width="12" stroke-linecap="round">
+          <line x1="96" y1="62" x2="96" y2="26"/>
+          <line x1="96" y1="130" x2="96" y2="166"/>
+          <line x1="62" y1="96" x2="26" y2="96"/>
+          <line x1="130" y1="96" x2="166" y2="96"/>
+        </g>
+        <g class="p-diag" stroke="#d97757" stroke-width="9" stroke-linecap="round" opacity="0.5">
+          <line x1="118" y1="74" x2="138" y2="54"/>
+          <line x1="74" y1="74" x2="54" y2="54"/>
+          <line x1="74" y1="118" x2="54" y2="138"/>
+          <line x1="118" y1="118" x2="138" y2="138"/>
+        </g>
+        <circle class="p-core" cx="96" cy="96" r="22" fill="#d97757"/>
+      </svg>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
