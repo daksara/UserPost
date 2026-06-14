@@ -134,7 +134,7 @@ src/
     useLearning.ts      # Progres materi belajar VA tersimpan di localStorage
     useTheme.ts         # Tema gelap/terang
   components/
-    Sidebar.tsx     # Riwayat percakapan + aksi (belajar VA, tema, pengaturan)
+    Sidebar.tsx     # Riwayat percakapan + aksi (belajar VA, bahasa, tema, pengaturan)
     LearnModal.tsx  # Akademi VA: jelajah kurikulum, progres, mulai sesi belajar
     Composer.tsx    # Kolom tulis: auto-grow + Kirim/Stop/Regenerasi
     MessageBubble.tsx

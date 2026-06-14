@@ -4,6 +4,7 @@
 import { Logo } from './Logo'
 import type { Conversation } from '../chat/types'
 import type { Theme } from '../hooks/useTheme'
+import type { Language } from '../ai/templates'
 
 interface Props {
   conversations: Conversation[]
@@ -15,6 +16,8 @@ interface Props {
   onOpenSettings: () => void
   theme: Theme
   onToggleTheme: () => void
+  language: Language
+  onLanguage: (lang: Language) => void
 }
 
 export function Sidebar({
@@ -27,6 +30,8 @@ export function Sidebar({
   onOpenSettings,
   theme,
   onToggleTheme,
+  language,
+  onLanguage,
 }: Props) {
   // Hanya tampilkan percakapan yang sudah berisi pesan agar daftar bersih.
   const history = conversations.filter((c) => c.turns.length > 0)
@@ -37,7 +42,7 @@ export function Sidebar({
         <Logo size={26} />
         <div>
           <div className="sidebar__name">Pendar</div>
-          <div className="sidebar__tag">Asisten AI Freelance</div>
+          <div className="sidebar__tag">AI Co-Pilot Virtual Assistant</div>
         </div>
         <button
           className="sidebar__theme"
@@ -84,6 +89,25 @@ export function Sidebar({
       </nav>
 
       <div className="sidebar__footer">
+        <div className="sidebar__lang">
+          <span className="sidebar__lang-label">Bahasa jawaban</span>
+          <div className="seg seg--sm" role="group" aria-label="Bahasa jawaban AI">
+            <button
+              className={`seg__item${language === 'id' ? ' seg__item--active' : ''}`}
+              onClick={() => onLanguage('id')}
+              aria-pressed={language === 'id'}
+            >
+              Indonesia
+            </button>
+            <button
+              className={`seg__item${language === 'en' ? ' seg__item--active' : ''}`}
+              onClick={() => onLanguage('en')}
+              aria-pressed={language === 'en'}
+            >
+              English
+            </button>
+          </div>
+        </div>
         <button className="pdr-nav-btn" onClick={onOpenSettings}>
           Pengaturan
         </button>

@@ -7,7 +7,7 @@ import { SettingsModal } from './components/SettingsModal'
 import { LearnModal } from './components/LearnModal'
 import { Composer } from './components/Composer'
 import { Logo } from './components/Logo'
-import { BASE_SYSTEM_PROMPT, TEMPLATES } from './ai/templates'
+import { BASE_SYSTEM_PROMPT, TEMPLATES, languageDirective } from './ai/templates'
 import { buildLessonStarter, buildLessonSystem, findLesson } from './learn/curriculum'
 import { useSettings } from './hooks/useSettings'
 import { useConversations } from './hooks/useConversations'
@@ -16,7 +16,7 @@ import { useLearning } from './hooks/useLearning'
 import { useTheme } from './hooks/useTheme'
 
 export default function App() {
-  const { settings, provider, apiKey, model, ready, setProvider, setApiKey, setModel } =
+  const { settings, provider, apiKey, model, language, ready, setProvider, setApiKey, setModel, setLanguage } =
     useSettings()
   const { theme, cycleTheme } = useTheme()
   const {
@@ -44,10 +44,13 @@ export default function App() {
     [active.templateId],
   )
   const system = useMemo(() => {
-    if (lesson) return buildLessonSystem(lesson)
-    if (template) return `${BASE_SYSTEM_PROMPT}\n\n${template.system}`
-    return BASE_SYSTEM_PROMPT
-  }, [lesson, template])
+    const base = lesson
+      ? buildLessonSystem(lesson)
+      : template
+        ? `${BASE_SYSTEM_PROMPT}\n\n${template.system}`
+        : BASE_SYSTEM_PROMPT
+    return `${base}\n\n${languageDirective(language)}`
+  }, [lesson, template, language])
 
   const { streaming, error, send, stop } = useChat({
     provider,
@@ -151,6 +154,8 @@ export default function App() {
           onOpenSettings={() => setShowSettings(true)}
           theme={theme}
           onToggleTheme={cycleTheme}
+          language={language}
+          onLanguage={setLanguage}
         />
       </div>
 
