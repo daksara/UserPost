@@ -1,13 +1,16 @@
 // src/components/LearnModal.tsx
-// Belajar Virtual Assistant: dua tab — Materi (kurikulum diajar mentor AI) dan
-// Latihan Klien (kuis A/B/C/D pilih balasan terbaik; roleplay ketik opsional).
+// Belajar Virtual Assistant: dua tab - Materi (kurikulum diajar mentor AI, plus
+// kuis "Uji pemahaman" A/B/C/D per level) dan Latihan Klien (kuis pilih balasan
+// terbaik; roleplay ketik opsional).
 import { useEffect, useRef, useState } from 'react'
 import { LEVELS, TOTAL_LESSONS, lessonsByLevel } from '../learn/curriculum'
+import type { LevelId } from '../learn/curriculum'
 import { findScenario, scenariosByLevel } from '../learn/scenarios'
-import { scenarioQuiz } from '../learn/quiz'
+import { scenarioQuiz, levelQuiz } from '../learn/quiz'
 import { levelProgress, overallPercent } from '../learn/progress'
 import { useI18n } from '../i18n/i18n'
 import { ClientQuiz } from './ClientQuiz'
+import { LevelQuiz } from './LevelQuiz'
 
 interface Props {
   completed: Set<string>
@@ -28,6 +31,7 @@ export function LearnModal({
   const closeRef = useRef<HTMLButtonElement>(null)
   const [tab, setTab] = useState<'lessons' | 'sim'>('lessons')
   const [quizId, setQuizId] = useState<string | null>(null)
+  const [levelQuizId, setLevelQuizId] = useState<LevelId | null>(null)
 
   useEffect(() => {
     closeRef.current?.focus()
@@ -47,6 +51,9 @@ export function LearnModal({
 
   const activeQuiz = quizId ? scenarioQuiz(quizId) : undefined
   const activeScenario = quizId ? findScenario(quizId) : undefined
+
+  const activeLevelQuestions = levelQuizId ? levelQuiz(levelQuizId) : []
+  const activeLevel = levelQuizId ? LEVELS.find((l) => l.id === levelQuizId) : undefined
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -80,6 +87,7 @@ export function LearnModal({
             onClick={() => {
               setTab('sim')
               setQuizId(null)
+              setLevelQuizId(null)
             }}
           >
             {t('learn.tabSim')}
@@ -87,86 +95,102 @@ export function LearnModal({
         </div>
 
         {tab === 'lessons' ? (
-          <>
-            <p className="learn__intro">{t('learn.intro')}</p>
+          activeLevel && activeLevelQuestions.length > 0 ? (
+            <LevelQuiz
+              title={activeLevel.title[lang]}
+              questions={activeLevelQuestions}
+              onBack={() => setLevelQuizId(null)}
+            />
+          ) : (
+            <>
+              <p className="learn__intro">{t('learn.intro')}</p>
 
-            <div className="learn__overall">
-              <div className="learn__overall-row">
-                <span>{t('learn.overall')}</span>
-                <span>
-                  {t('learn.overallCount', { done: doneCount, total: TOTAL_LESSONS, percent })}
-                </span>
+              <div className="learn__overall">
+                <div className="learn__overall-row">
+                  <span>{t('learn.overall')}</span>
+                  <span>
+                    {t('learn.overallCount', { done: doneCount, total: TOTAL_LESSONS, percent })}
+                  </span>
+                </div>
+                <div
+                  className="learn__bar"
+                  role="progressbar"
+                  aria-valuenow={percent}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                >
+                  <div className="learn__bar-fill" style={{ width: `${percent}%` }} />
+                </div>
               </div>
-              <div
-                className="learn__bar"
-                role="progressbar"
-                aria-valuenow={percent}
-                aria-valuemin={0}
-                aria-valuemax={100}
-              >
-                <div className="learn__bar-fill" style={{ width: `${percent}%` }} />
-              </div>
-            </div>
 
-            <div className="learn__levels">
-              {LEVELS.map((lvl) => {
-                const prog = byLevel.find((p) => p.level === lvl.id)
-                return (
-                  <section key={lvl.id} className="learn__level">
-                    <div className="learn__level-head">
-                      <div>
-                        <h3 className="learn__level-title">{lvl.title[lang]}</h3>
-                        <p className="learn__level-tag">{lvl.tagline[lang]}</p>
-                      </div>
-                      {prog && (
-                        <span className="chip">
-                          {prog.done}/{prog.total}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="learn__lessons">
-                      {lessonsByLevel(lvl.id).map((lesson) => {
-                        const done = completed.has(lesson.id)
-                        return (
-                          <div
-                            key={lesson.id}
-                            className={`learn-card${done ? ' learn-card--done' : ''}`}
+              <div className="learn__levels">
+                {LEVELS.map((lvl) => {
+                  const prog = byLevel.find((p) => p.level === lvl.id)
+                  return (
+                    <section key={lvl.id} className="learn__level">
+                      <div className="learn__level-head">
+                        <div>
+                          <h3 className="learn__level-title">{lvl.title[lang]}</h3>
+                          <p className="learn__level-tag">{lvl.tagline[lang]}</p>
+                        </div>
+                        <div className="learn__level-side">
+                          {prog && (
+                            <span className="chip">
+                              {prog.done}/{prog.total}
+                            </span>
+                          )}
+                          <button
+                            className="pdr-btn pdr-btn--ghost learn__quiz-btn"
+                            onClick={() => setLevelQuizId(lvl.id)}
                           >
-                            <div className="learn-card__main">
-                              <div className="learn-card__title">{lesson.title[lang]}</div>
-                              <div className="learn-card__summary">{lesson.summary[lang]}</div>
-                              <ul className="learn-card__objectives">
-                                {lesson.objectives[lang].map((o, i) => (
-                                  <li key={i}>{o}</li>
-                                ))}
-                              </ul>
+                            {t('learn.levelQuiz')}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="learn__lessons">
+                        {lessonsByLevel(lvl.id).map((lesson) => {
+                          const done = completed.has(lesson.id)
+                          return (
+                            <div
+                              key={lesson.id}
+                              className={`learn-card${done ? ' learn-card--done' : ''}`}
+                            >
+                              <div className="learn-card__main">
+                                <div className="learn-card__title">{lesson.title[lang]}</div>
+                                <div className="learn-card__summary">{lesson.summary[lang]}</div>
+                                <ul className="learn-card__objectives">
+                                  {lesson.objectives[lang].map((o, i) => (
+                                    <li key={i}>{o}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                              <div className="learn-card__actions">
+                                <button
+                                  className="pdr-btn pdr-btn--primary"
+                                  onClick={() => onStartLesson(lesson.id)}
+                                >
+                                  {done ? t('learn.repeat') : t('learn.start')}
+                                </button>
+                                <label className="learn-card__check">
+                                  <input
+                                    type="checkbox"
+                                    checked={done}
+                                    onChange={() => onToggleDone(lesson.id)}
+                                  />
+                                  {t('learn.done')}
+                                </label>
+                              </div>
                             </div>
-                            <div className="learn-card__actions">
-                              <button
-                                className="pdr-btn pdr-btn--primary"
-                                onClick={() => onStartLesson(lesson.id)}
-                              >
-                                {done ? t('learn.repeat') : t('learn.start')}
-                              </button>
-                              <label className="learn-card__check">
-                                <input
-                                  type="checkbox"
-                                  checked={done}
-                                  onChange={() => onToggleDone(lesson.id)}
-                                />
-                                {t('learn.done')}
-                              </label>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </section>
-                )
-              })}
-            </div>
-          </>
+                          )
+                        })}
+                      </div>
+                    </section>
+                  )
+                })}
+              </div>
+            </>
+          )
         ) : activeQuiz && activeScenario ? (
           <ClientQuiz
             situation={activeScenario.situation[lang]}

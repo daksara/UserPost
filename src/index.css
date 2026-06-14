@@ -534,3 +534,7 @@ a:focus-visible,
 .quiz__exp li { font-size: .84rem; color: var(--text-secondary); line-height: 1.5; }
 .quiz__exp--correct { color: var(--text-primary); }
 .sim-card__btns { display: flex; gap: 8px; }
+.learn__level-side { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.learn__quiz-btn { font-size: .78rem; padding: 4px 10px; }
+.quiz__progress { font-size: .82rem; color: var(--text-muted); font-weight: 600; }
+.quiz__score { font-size: 1.1rem; font-weight: 800; color: var(--text-primary); }
