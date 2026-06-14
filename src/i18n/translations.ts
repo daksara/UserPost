@@ -111,8 +111,6 @@ const id = {
   'learn.quizBest': 'Terbaik {correct}/{total}',
   'learn.quizMastered': 'Lulus',
   'learn.simDifficulty': 'Tingkat {n}/5',
-  'sim.titlePrefix': 'Latihan: {skill}',
-  'composer.sim': 'Balas kliennya seperti situasi nyata…',
 } as const
 
 const en: Record<keyof typeof id, string> = {
@@ -223,8 +221,6 @@ const en: Record<keyof typeof id, string> = {
   'learn.quizBest': 'Best {correct}/{total}',
   'learn.quizMastered': 'Passed',
   'learn.simDifficulty': 'Level {n}/5',
-  'sim.titlePrefix': 'Practice: {skill}',
-  'composer.sim': 'Reply to the client like a real situation…',
 }
 
 export type MsgKey = keyof typeof id
