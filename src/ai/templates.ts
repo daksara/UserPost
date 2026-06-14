@@ -202,7 +202,7 @@ export const TEMPLATES: Template[] = [
       'terjemahan, terjemahkan dengan natural antara Indonesia dan Inggris. ' +
       'Tampilkan hasil akhir saja kecuali user minta penjelasan.',
     starter:
-      'Rapikan atau terjemahkan teks berikut.\n\nTeks:\n[tempel teks di sini]',
+      'Rapikan atau terjemahkan teks berikut.\n\n- Aksi (rapikan / terjemah ke ID / terjemah ke EN): \n\nTeks:\n[tempel teks di sini]',
   },
   {
     id: 'research',
