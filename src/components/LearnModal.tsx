@@ -1,11 +1,13 @@
 // src/components/LearnModal.tsx
-// Belajar Virtual Assistant: dua tab — Materi (kurikulum berjenjang yang diajar
-// mentor AI) dan Latihan Klien (AI berperan sebagai klien, learner berlatih).
+// Belajar Virtual Assistant: dua tab — Materi (kurikulum diajar mentor AI) dan
+// Latihan Klien (kuis A/B/C/D pilih balasan terbaik; roleplay ketik opsional).
 import { useEffect, useRef, useState } from 'react'
 import { LEVELS, TOTAL_LESSONS, lessonsByLevel } from '../learn/curriculum'
-import { scenariosByLevel } from '../learn/scenarios'
+import { findScenario, scenariosByLevel } from '../learn/scenarios'
+import { scenarioQuiz } from '../learn/quiz'
 import { levelProgress, overallPercent } from '../learn/progress'
 import { useI18n } from '../i18n/i18n'
+import { ClientQuiz } from './ClientQuiz'
 
 interface Props {
   completed: Set<string>
@@ -25,6 +27,7 @@ export function LearnModal({
   const { lang, t } = useI18n()
   const closeRef = useRef<HTMLButtonElement>(null)
   const [tab, setTab] = useState<'lessons' | 'sim'>('lessons')
+  const [quizId, setQuizId] = useState<string | null>(null)
 
   useEffect(() => {
     closeRef.current?.focus()
@@ -41,6 +44,9 @@ export function LearnModal({
     0,
   )
   const byLevel = levelProgress(completed)
+
+  const activeQuiz = quizId ? scenarioQuiz(quizId) : undefined
+  const activeScenario = quizId ? findScenario(quizId) : undefined
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -71,7 +77,10 @@ export function LearnModal({
             role="tab"
             aria-selected={tab === 'sim'}
             className={`learn__tab${tab === 'sim' ? ' learn__tab--active' : ''}`}
-            onClick={() => setTab('sim')}
+            onClick={() => {
+              setTab('sim')
+              setQuizId(null)
+            }}
           >
             {t('learn.tabSim')}
           </button>
@@ -158,6 +167,12 @@ export function LearnModal({
               })}
             </div>
           </>
+        ) : activeQuiz && activeScenario ? (
+          <ClientQuiz
+            situation={activeScenario.situation[lang]}
+            question={activeQuiz}
+            onBack={() => setQuizId(null)}
+          />
         ) : (
           <>
             <p className="learn__intro">{t('learn.simIntro')}</p>
@@ -183,12 +198,18 @@ export function LearnModal({
                           </div>
                           <div className="learn-card__summary">{s.situation[lang]}</div>
                         </div>
-                        <div className="learn-card__actions">
+                        <div className="learn-card__actions sim-card__btns">
                           <button
                             className="pdr-btn pdr-btn--primary"
+                            onClick={() => setQuizId(s.id)}
+                          >
+                            {t('learn.quizStart')}
+                          </button>
+                          <button
+                            className="pdr-btn pdr-btn--ghost"
                             onClick={() => onStartScenario(s.id)}
                           >
-                            {t('learn.simStart')}
+                            {t('learn.roleplay')}
                           </button>
                         </div>
                       </div>
