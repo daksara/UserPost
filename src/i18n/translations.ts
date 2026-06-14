@@ -7,7 +7,7 @@ const id = {
   // Sidebar
   'sidebar.tag': 'AI Co-Pilot Virtual Assistant',
   'sidebar.newChat': '+ Chat baru',
-  'sidebar.learnVA': 'Belajar VA',
+  'sidebar.learnVA': 'Belajar Virtual Assistant',
   'sidebar.history': 'Riwayat',
   'sidebar.historyEmpty': 'Belum ada percakapan. Mulai dengan menulis pesan.',
   'sidebar.settings': 'Pengaturan',
@@ -87,7 +87,7 @@ const en: Record<keyof typeof id, string> = {
   // Sidebar
   'sidebar.tag': 'AI Co-Pilot for Virtual Assistants',
   'sidebar.newChat': '+ New chat',
-  'sidebar.learnVA': 'Learn VA',
+  'sidebar.learnVA': 'Learn Virtual Assistant',
   'sidebar.history': 'History',
   'sidebar.historyEmpty': 'No conversations yet. Start by writing a message.',
   'sidebar.settings': 'Settings',
