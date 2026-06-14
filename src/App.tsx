@@ -9,7 +9,7 @@ import { Composer } from './components/Composer'
 import { Logo } from './components/Logo'
 import { BASE_SYSTEM_PROMPT, TEMPLATES } from './ai/templates'
 import { buildLessonStarter, buildLessonSystem, findLesson } from './learn/curriculum'
-import { buildClientKickoff, buildClientSystem, findScenario } from './learn/scenarios'
+import { buildClientSystem, findScenario } from './learn/scenarios'
 import { I18nContext, useI18n } from './i18n/i18n'
 import { createT } from './i18n/translations'
 import { useSettings } from './hooks/useSettings'
@@ -120,17 +120,6 @@ export default function App() {
     setPendingKickoff(buildLessonStarter(l, language))
     // Materi yang dimulai dianggap sudah dipelajari untuk pelacakan progres.
     markDone(id)
-    if (!ready) setShowSettings(true)
-  }
-
-  const startScenario = (id: string) => {
-    const s = findScenario(id)
-    if (!s) return
-    newConversation(null, null, id)
-    setInput('')
-    setShowLearn(false)
-    setDrawer(false)
-    setPendingKickoff(buildClientKickoff(s, language))
     if (!ready) setShowSettings(true)
   }
 
@@ -253,7 +242,6 @@ export default function App() {
           completed={completedSet}
           onToggleDone={toggleDone}
           onStartLesson={startLesson}
-          onStartScenario={startScenario}
           quizScores={quizScores}
           onQuizDone={recordScore}
           onClose={() => setShowLearn(false)}
