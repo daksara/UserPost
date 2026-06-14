@@ -145,7 +145,7 @@ export default function App() {
     ? active.title
     : lesson
       ? t('app.learnPrefix', { title: lesson.title[language] })
-      : template?.title ?? t('app.assistant')
+      : template?.title ?? ''
 
   return (
     <I18nContext.Provider value={{ lang: language, t }}>
