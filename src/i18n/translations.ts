@@ -46,9 +46,22 @@ const id = {
   // Message bubble
   'msg.copy': 'Salin',
   'msg.copied': 'Tersalin',
+  'msg.copyCode': 'Salin kode',
+  'msg.regenerate': 'Buat ulang',
 
   // Welcome
   'welcome.title': 'Halo, aku Pendar',
+  'welcome.greetMorning': 'Selamat pagi',
+  'welcome.greetAfternoon': 'Selamat siang',
+  'welcome.greetEvening': 'Selamat sore',
+  'welcome.greetNight': 'Selamat malam',
+  'welcome.name': 'aku Pendar',
+  'welcome.subtitle': 'Mau kukerjakan apa hari ini? Pilih salah satu, atau langsung tulis di bawah.',
+  'welcome.suggestions': 'Mulai cepat',
+
+  // Sidebar search
+  'sidebar.search': 'Cari percakapan…',
+  'sidebar.searchEmpty': 'Tidak ada percakapan yang cocok.',
 
   // Settings modal
   'settings.title': 'Pengaturan',
@@ -145,9 +158,22 @@ const en: Record<keyof typeof id, string> = {
   // Message bubble
   'msg.copy': 'Copy',
   'msg.copied': 'Copied',
+  'msg.copyCode': 'Copy code',
+  'msg.regenerate': 'Regenerate',
 
   // Welcome
   'welcome.title': "Hi, I'm Pendar",
+  'welcome.greetMorning': 'Good morning',
+  'welcome.greetAfternoon': 'Good afternoon',
+  'welcome.greetEvening': 'Good evening',
+  'welcome.greetNight': 'Good evening',
+  'welcome.name': "I'm Pendar",
+  'welcome.subtitle': 'What can I help you with today? Pick one below, or just start typing.',
+  'welcome.suggestions': 'Quick start',
+
+  // Sidebar search
+  'sidebar.search': 'Search conversations…',
+  'sidebar.searchEmpty': 'No conversations match.',
 
   // Settings modal
   'settings.title': 'Settings',

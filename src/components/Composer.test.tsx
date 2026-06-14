@@ -20,13 +20,13 @@ const baseProps = {
 describe('<Composer />', () => {
   it('disables send when input is empty', () => {
     render(<Composer {...baseProps} />)
-    expect(screen.getByText(t('composer.send'))).toBeDisabled()
+    expect(screen.getByLabelText(t('composer.send'))).toBeDisabled()
   })
 
   it('submits on click when there is text', () => {
     const onSubmit = vi.fn()
     render(<Composer {...baseProps} value="hi" onSubmit={onSubmit} />)
-    fireEvent.click(screen.getByText(t('composer.send')))
+    fireEvent.click(screen.getByLabelText(t('composer.send')))
     expect(onSubmit).toHaveBeenCalledOnce()
   })
 
@@ -48,7 +48,7 @@ describe('<Composer />', () => {
   it('shows the stop button while streaming', () => {
     const onStop = vi.fn()
     render(<Composer {...baseProps} streaming onStop={onStop} />)
-    fireEvent.click(screen.getByText(t('composer.stop')))
+    fireEvent.click(screen.getByLabelText(t('composer.stop')))
     expect(onStop).toHaveBeenCalledOnce()
   })
 })

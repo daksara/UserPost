@@ -1,6 +1,7 @@
 // src/components/Sidebar.tsx
 // Panel kiri: logo, tombol chat baru, riwayat percakapan, dan aksi bawah
 // (tema + pengaturan). Template tugas tampil di layar sambutan (Welcome).
+import { useState } from 'react'
 import { Logo } from './Logo'
 import type { Conversation } from '../chat/types'
 import type { Theme } from '../hooks/useTheme'
@@ -42,8 +43,11 @@ export function Sidebar({
   onLanguage,
 }: Props) {
   const { t } = useI18n()
+  const [query, setQuery] = useState('')
   // Hanya tampilkan percakapan yang sudah berisi pesan agar daftar bersih.
   const history = conversations.filter((c) => c.turns.length > 0)
+  const q = query.trim().toLowerCase()
+  const shown = q ? history.filter((c) => c.title.toLowerCase().includes(q)) : history
 
   return (
     <aside className="sidebar">
@@ -72,11 +76,23 @@ export function Sidebar({
       </button>
 
       <div className="sidebar__section">{t('sidebar.history')}</div>
+      {history.length > 0 && (
+        <input
+          className="sidebar__search"
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t('sidebar.search')}
+          aria-label={t('sidebar.search')}
+        />
+      )}
       <nav className="sidebar__history">
         {history.length === 0 ? (
           <p className="sidebar__empty">{t('sidebar.historyEmpty')}</p>
+        ) : shown.length === 0 ? (
+          <p className="sidebar__empty">{t('sidebar.searchEmpty')}</p>
         ) : (
-          history.map((c) => (
+          shown.map((c) => (
             <div
               key={c.id}
               className={`conv${c.id === activeId ? ' conv--active' : ''}`}

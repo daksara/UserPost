@@ -6,11 +6,11 @@ import { MessageBubble } from './components/MessageBubble'
 import { SettingsModal } from './components/SettingsModal'
 import { LearnModal } from './components/LearnModal'
 import { Composer } from './components/Composer'
-import { Logo } from './components/Logo'
+import { Welcome } from './components/Welcome'
 import { BASE_SYSTEM_PROMPT, TEMPLATES } from './ai/templates'
 import { buildLessonStarter, buildLessonSystem, findLesson } from './learn/curriculum'
 import { buildClientSystem, findScenario } from './learn/scenarios'
-import { I18nContext, useI18n } from './i18n/i18n'
+import { I18nContext } from './i18n/i18n'
 import { createT } from './i18n/translations'
 import { useSettings } from './hooks/useSettings'
 import { useConversations } from './hooks/useConversations'
@@ -65,7 +65,7 @@ export default function App() {
     return BASE_SYSTEM_PROMPT
   }, [scenario, lesson, template, language])
 
-  const { streaming, error, send, stop } = useChat({
+  const { streaming, error, send, stop, regenerate } = useChat({
     provider,
     apiKey,
     model,
@@ -201,15 +201,19 @@ export default function App() {
 
         <div className="chat__messages" ref={scrollRef} onScroll={onScroll}>
           {active.turns.length === 0 ? (
-            <Welcome />
+            <Welcome templates={TEMPLATES} onPick={pickTemplate} />
           ) : (
             active.turns.map((turn, i) => {
               if (scenario && i === 0 && turn.role === 'user') return null
+              const isLast = i === active.turns.length - 1
+              // Regenerasi hanya untuk jawaban AI terakhir saat idle & siap.
+              const canRegen = isLast && turn.role === 'assistant' && ready && !streaming
               return (
                 <MessageBubble
                   key={turn.id}
                   turn={turn}
-                  streaming={streaming && i === active.turns.length - 1}
+                  streaming={streaming && isLast}
+                  onRegenerate={canRegen ? regenerate : undefined}
                 />
               )
             })
@@ -261,16 +265,6 @@ export default function App() {
       )}
     </div>
     </I18nContext.Provider>
-  )
-}
-
-function Welcome() {
-  const { t } = useI18n()
-  return (
-    <div className="welcome">
-      <Logo size={44} />
-      <h1 className="welcome__title">{t('welcome.title')}</h1>
-    </div>
   )
 }
 
