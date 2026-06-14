@@ -80,6 +80,11 @@ Pendar punya dua mode transport ke provider AI:
   pernah** ada di browser. `api/proxy.ts` adalah Vercel Edge Function dan
   meneruskan streaming chat apa adanya.
 
+  Proxy dikunci agar tidak jadi *open relay*: hanya menerima `POST`, hanya
+  meneruskan path yang masuk allow-list (daftar model + chat), dan menolak
+  request dari origin lain (default: harus sama dengan origin deploy; atur
+  `ALLOWED_ORIGINS` bila front-end dilayani dari domain berbeda).
+
 Catatan keamanan lain: seluruh teks dirender sebagai teks biasa (tanpa
 `dangerouslySetInnerHTML`), jadi tidak ada jalur XSS dari jawaban AI. Kerentanan
 `npm audit` yang ada hanya menyangkut `esbuild`/`vite` saat **dev server**, tidak
