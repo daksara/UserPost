@@ -56,6 +56,9 @@ CI (GitHub Actions) menjalankan ketiganya pada tiap push dan pull request.
 ---
 
 ## Fitur
+- Antarmuka dwibahasa — toggle Indonesia/English di sidebar mengganti seluruh
+  teks UI, judul dokumen, dan kurikulum belajar (pilihan tersimpan di
+  localStorage). Jawaban AI tetap adaptif mengikuti bahasa yang diketik user
 - Belajar VA dari pemula hingga expert — kurikulum berjenjang (Pemula,
   Menengah, Mahir, Expert) berisi puluhan materi yang mencakup seluruh skill VA
   plus jalur penghasilan puluhan juta/bulan. Tiap materi diajar langsung oleh
@@ -122,9 +125,12 @@ src/
     clean.ts        # Pembersih output (buang markdown/emoji) + test
     providers.test.ts
   learn/
-    curriculum.ts   # Kurikulum VA (pemula→expert) + persona mentor + builder prompt
+    curriculum.ts   # Kurikulum VA dwibahasa (pemula→expert) + persona mentor + builder prompt
     progress.ts     # Helper murni progres belajar (sanitasi, per-level, persen)
     curriculum.test.ts
+  i18n/
+    translations.ts # Kamus teks UI Indonesia/English + helper t()
+    i18n.ts         # Konteks bahasa + hook useI18n
   chat/
     types.ts        # Tipe percakapan + helper murni (judul, sanitasi) + test
   hooks/
@@ -134,7 +140,7 @@ src/
     useLearning.ts      # Progres materi belajar VA tersimpan di localStorage
     useTheme.ts         # Tema gelap/terang
   components/
-    Sidebar.tsx     # Riwayat percakapan + aksi (belajar VA, tema, pengaturan)
+    Sidebar.tsx     # Riwayat percakapan + aksi (belajar VA, bahasa, tema, pengaturan)
     LearnModal.tsx  # Akademi VA: jelajah kurikulum, progres, mulai sesi belajar
     Composer.tsx    # Kolom tulis: auto-grow + Kirim/Stop/Regenerasi
     MessageBubble.tsx

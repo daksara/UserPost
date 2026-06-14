@@ -4,6 +4,7 @@
 import { useEffect, useRef } from 'react'
 import { LEVELS, TOTAL_LESSONS, lessonsByLevel } from '../learn/curriculum'
 import { levelProgress, overallPercent } from '../learn/progress'
+import { useI18n } from '../i18n/i18n'
 
 interface Props {
   completed: Set<string>
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function LearnModal({ completed, onToggleDone, onStartLesson, onClose }: Props) {
+  const { lang, t } = useI18n()
   const closeRef = useRef<HTMLButtonElement>(null)
 
   // Tutup dengan Escape; fokuskan tombol tutup saat modal terbuka.
@@ -38,27 +40,23 @@ export function LearnModal({ completed, onToggleDone, onStartLesson, onClose }: 
         className="modal modal--wide"
         role="dialog"
         aria-modal="true"
-        aria-label="Belajar VA"
+        aria-label={t('sidebar.learnVA')}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal__head">
-          <h2 className="modal__title">Belajar jadi VA — pemula sampai expert</h2>
+          <h2 className="modal__title">{t('learn.title')}</h2>
           <button ref={closeRef} className="pdr-nav-btn" onClick={onClose}>
-            Tutup
+            {t('settings.close')}
           </button>
         </div>
 
-        <p className="learn__intro">
-          Belajar langsung dari mentor AI berperan sebagai Virtual Assistant senior
-          berpengalaman. Pilih materi, mentor akan mengajarimu langkah demi langkah,
-          memberi contoh nyata, dan latihan — tanpa ada pelajaran yang tertinggal.
-        </p>
+        <p className="learn__intro">{t('learn.intro')}</p>
 
         <div className="learn__overall">
           <div className="learn__overall-row">
-            <span>Progres keseluruhan</span>
+            <span>{t('learn.overall')}</span>
             <span>
-              {doneCount}/{TOTAL_LESSONS} materi · {percent}%
+              {t('learn.overallCount', { done: doneCount, total: TOTAL_LESSONS, percent })}
             </span>
           </div>
           <div className="learn__bar" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}>
@@ -73,8 +71,8 @@ export function LearnModal({ completed, onToggleDone, onStartLesson, onClose }: 
               <section key={lvl.id} className="learn__level">
                 <div className="learn__level-head">
                   <div>
-                    <h3 className="learn__level-title">{lvl.title}</h3>
-                    <p className="learn__level-tag">{lvl.tagline}</p>
+                    <h3 className="learn__level-title">{lvl.title[lang]}</h3>
+                    <p className="learn__level-tag">{lvl.tagline[lang]}</p>
                   </div>
                   {prog && (
                     <span className="chip">
@@ -92,10 +90,10 @@ export function LearnModal({ completed, onToggleDone, onStartLesson, onClose }: 
                         className={`learn-card${done ? ' learn-card--done' : ''}`}
                       >
                         <div className="learn-card__main">
-                          <div className="learn-card__title">{lesson.title}</div>
-                          <div className="learn-card__summary">{lesson.summary}</div>
+                          <div className="learn-card__title">{lesson.title[lang]}</div>
+                          <div className="learn-card__summary">{lesson.summary[lang]}</div>
                           <ul className="learn-card__objectives">
-                            {lesson.objectives.map((o, i) => (
+                            {lesson.objectives[lang].map((o, i) => (
                               <li key={i}>{o}</li>
                             ))}
                           </ul>
@@ -105,7 +103,7 @@ export function LearnModal({ completed, onToggleDone, onStartLesson, onClose }: 
                             className="pdr-btn pdr-btn--primary"
                             onClick={() => onStartLesson(lesson.id)}
                           >
-                            {done ? 'Ulangi' : 'Mulai belajar'}
+                            {done ? t('learn.repeat') : t('learn.start')}
                           </button>
                           <label className="learn-card__check">
                             <input
@@ -113,7 +111,7 @@ export function LearnModal({ completed, onToggleDone, onStartLesson, onClose }: 
                               checked={done}
                               onChange={() => onToggleDone(lesson.id)}
                             />
-                            Selesai
+                            {t('learn.done')}
                           </label>
                         </div>
                       </div>

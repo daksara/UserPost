@@ -4,6 +4,7 @@
 // Tombol "+" membuka menu template (mirip Claude).
 import { useEffect, useRef, useState } from 'react'
 import type { Template } from '../ai/templates'
+import { useI18n } from '../i18n/i18n'
 
 interface Props {
   value: string
@@ -28,6 +29,7 @@ export function Composer({
   templates,
   onPickTemplate,
 }: Props) {
+  const { t } = useI18n()
   const ref = useRef<HTMLTextAreaElement>(null)
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -67,9 +69,9 @@ export function Composer({
           <button
             className="composer__plus"
             onClick={() => setMenuOpen((o) => !o)}
-            aria-label="Pilih template"
+            aria-label={t('composer.pickTemplate')}
             aria-expanded={menuOpen}
-            title="Template"
+            title={t('composer.templates')}
           >
             +
           </button>
@@ -77,7 +79,7 @@ export function Composer({
             <>
               <div className="tmpl-menu__scrim" onClick={() => setMenuOpen(false)} />
               <div className="tmpl-menu" role="menu">
-                <div className="tmpl-menu__head">Template</div>
+                <div className="tmpl-menu__head">{t('composer.templates')}</div>
                 {templates.map((t) => (
                   <button
                     key={t.id}
@@ -92,12 +94,12 @@ export function Composer({
               </div>
             </>
           )}
-          <span className="composer__hint">Enter kirim · Shift+Enter baris baru</span>
+          <span className="composer__hint">{t('composer.hint')}</span>
         </div>
         <div className="composer__buttons">
           {streaming ? (
             <button className="pdr-btn pdr-btn--ghost" onClick={onStop}>
-              Stop
+              {t('composer.stop')}
             </button>
           ) : (
             <button
@@ -105,7 +107,7 @@ export function Composer({
               onClick={onSubmit}
               disabled={!value.trim()}
             >
-              Kirim
+              {t('composer.send')}
             </button>
           )}
         </div>

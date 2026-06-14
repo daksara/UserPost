@@ -172,8 +172,16 @@ a:focus-visible,
 .conv:hover .conv__del, .conv--active .conv__del { opacity: 1; }
 .conv__del:hover { color: var(--red); background: var(--red-soft); }
 
-.sidebar__footer { display: flex; gap: 8px; border-top: 1px solid var(--border); padding-top: 12px; }
-.sidebar__footer .pdr-nav-btn { flex: 1; border: 1px solid var(--border); }
+.sidebar__footer { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--border); padding-top: 12px; }
+.sidebar__footer .pdr-nav-btn { width: 100%; border: 1px solid var(--border); }
+
+.sidebar__lang { display: flex; flex-direction: column; gap: 6px; }
+.sidebar__lang-label {
+  font-size: .68rem; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--text-muted);
+}
+.seg--sm { padding: 3px; }
+.seg--sm .seg__item { padding: 6px; font-size: .8rem; }
 
 /* ── Chat column ────────────────────────────────────────────────── */
 .chat { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }

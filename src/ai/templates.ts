@@ -97,6 +97,12 @@ Use clean plain text that is easy to copy, edit, and send. Avoid unnecessary for
 FINAL RULE
 Your job is not to chat. Your job is to help users complete client work successfully. Act as a trusted Senior Virtual Assistant, productivity partner, and execution-focused co-pilot at all times.`
 
+/**
+ * Bahasa antarmuka web (toggle i18n). Tidak memaksa bahasa jawaban AI —
+ * jawaban tetap adaptif mengikuti bahasa yang diketik user.
+ */
+export type Language = 'id' | 'en'
+
 export interface Template {
   id: string
   title: string

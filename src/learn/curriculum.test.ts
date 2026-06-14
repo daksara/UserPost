@@ -16,13 +16,15 @@ describe('curriculum data', () => {
     expect(new Set(ids).size).toBe(ids.length)
   })
 
-  it('gives every lesson a valid level, title, summary, and objectives', () => {
+  it('gives every lesson a valid level, titles, summaries, and objectives in both languages', () => {
     const levelIds = new Set(LEVELS.map((l) => l.id))
     for (const lesson of LESSONS) {
       expect(levelIds.has(lesson.level)).toBe(true)
-      expect(lesson.title.trim()).toBeTruthy()
-      expect(lesson.summary.trim()).toBeTruthy()
-      expect(lesson.objectives.length).toBeGreaterThan(0)
+      for (const lang of ['id', 'en'] as const) {
+        expect(lesson.title[lang].trim()).toBeTruthy()
+        expect(lesson.summary[lang].trim()).toBeTruthy()
+        expect(lesson.objectives[lang].length).toBeGreaterThan(0)
+      }
       expect(lesson.focus.trim()).toBeTruthy()
     }
   })
@@ -47,14 +49,21 @@ describe('lesson prompt builders', () => {
   const lesson = LESSONS[0]
 
   it('embeds the lesson title and objectives in the system prompt', () => {
-    const system = buildLessonSystem(lesson)
+    const system = buildLessonSystem(lesson, 'id')
     expect(system).toContain('Pendar Mentor')
-    expect(system).toContain(lesson.title)
-    for (const obj of lesson.objectives) expect(system).toContain(obj)
+    expect(system).toContain(lesson.title.id)
+    for (const obj of lesson.objectives.id) expect(system).toContain(obj)
   })
 
-  it('builds a learner kickoff message referencing the lesson', () => {
-    expect(buildLessonStarter(lesson)).toContain(lesson.title)
+  it('uses the requested language for the system prompt', () => {
+    const system = buildLessonSystem(lesson, 'en')
+    expect(system).toContain(lesson.title.en)
+    for (const obj of lesson.objectives.en) expect(system).toContain(obj)
+  })
+
+  it('builds a learner kickoff message referencing the lesson in each language', () => {
+    expect(buildLessonStarter(lesson, 'id')).toContain(lesson.title.id)
+    expect(buildLessonStarter(lesson, 'en')).toContain(lesson.title.en)
   })
 })
 

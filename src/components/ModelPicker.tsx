@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { listModels, USE_PROXY } from '../ai/providers'
 import type { ModelInfo, Provider } from '../ai/types'
 import { PROVIDERS } from '../ai/types'
+import { useI18n } from '../i18n/i18n'
 
 interface Props {
   provider: Provider
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export function ModelPicker({ provider, apiKey, value, onChange }: Props) {
+  const { t } = useI18n()
   const fallback = PROVIDERS[provider].fallbackModels
   const [models, setModels] = useState<ModelInfo[]>(fallback)
   const [loading, setLoading] = useState(false)
@@ -22,7 +24,7 @@ export function ModelPicker({ provider, apiKey, value, onChange }: Props) {
   const refresh = useCallback(async () => {
     if (!USE_PROXY && !apiKey.trim()) {
       setModels(fallback)
-      setErr('Masukkan API key untuk memuat daftar model terbaru.')
+      setErr(t('model.enterKey'))
       return
     }
     setLoading(true)
@@ -43,7 +45,7 @@ export function ModelPicker({ provider, apiKey, value, onChange }: Props) {
       setLoading(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [provider, apiKey])
+  }, [provider, apiKey, t])
 
   // Muat ulang saat provider/key berubah.
   useEffect(() => {
@@ -53,9 +55,9 @@ export function ModelPicker({ provider, apiKey, value, onChange }: Props) {
   return (
     <div className="field">
       <div className="field__label-row">
-        <label className="field__label">Model</label>
+        <label className="field__label">{t('model.label')}</label>
         <button type="button" className="pdr-link" onClick={refresh} disabled={loading}>
-          {loading ? 'Memuat…' : 'Muat ulang'}
+          {loading ? t('model.loading') : t('model.reload')}
         </button>
       </div>
       <select
@@ -73,7 +75,7 @@ export function ModelPicker({ provider, apiKey, value, onChange }: Props) {
         {!models.some((m) => m.id === value) && <option value={value}>{value}</option>}
       </select>
       {err && <p className="field__hint field__hint--warn">{err}</p>}
-      {!err && <p className="field__hint">{models.length} model relevan tersedia.</p>}
+      {!err && <p className="field__hint">{t('model.available', { n: models.length })}</p>}
     </div>
   )
 }

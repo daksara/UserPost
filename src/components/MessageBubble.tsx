@@ -3,9 +3,11 @@ import { useState } from 'react'
 import type { ChatTurn } from '../chat/types'
 import { cleanText } from '../ai/clean'
 import { parseBlocks } from '../ai/format'
+import { useI18n } from '../i18n/i18n'
 import { Logo } from './Logo'
 
 export function MessageBubble({ turn, streaming }: { turn: ChatTurn; streaming: boolean }) {
+  const { t } = useI18n()
   const [copied, setCopied] = useState(false)
   const isUser = turn.role === 'user'
   const text = isUser ? turn.content : cleanText(turn.content)
@@ -33,7 +35,7 @@ export function MessageBubble({ turn, streaming }: { turn: ChatTurn; streaming: 
         </div>
         {!isUser && turn.content && (
           <button className="msg__copy pdr-link" onClick={copy}>
-            {copied ? 'Tersalin' : 'Salin'}
+            {copied ? t('msg.copied') : t('msg.copy')}
           </button>
         )}
       </div>

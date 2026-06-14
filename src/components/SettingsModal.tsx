@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Provider } from '../ai/types'
 import { PROVIDERS } from '../ai/types'
 import { USE_PROXY } from '../ai/providers'
+import { useI18n } from '../i18n/i18n'
 import { ModelPicker } from './ModelPicker'
 
 interface Props {
@@ -25,6 +26,7 @@ export function SettingsModal({
   onModel,
   onClose,
 }: Props) {
+  const { t } = useI18n()
   const [show, setShow] = useState(false)
   const meta = PROVIDERS[provider]
   const closeRef = useRef<HTMLButtonElement>(null)
@@ -45,18 +47,18 @@ export function SettingsModal({
         className="modal"
         role="dialog"
         aria-modal="true"
-        aria-label="Pengaturan"
+        aria-label={t('settings.title')}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal__head">
-          <h2 className="modal__title">Pengaturan</h2>
+          <h2 className="modal__title">{t('settings.title')}</h2>
           <button ref={closeRef} className="pdr-nav-btn" onClick={onClose}>
-            Tutup
+            {t('settings.close')}
           </button>
         </div>
 
         <div className="field">
-          <label className="field__label">Penyedia AI</label>
+          <label className="field__label">{t('settings.provider')}</label>
           <div className="seg">
             {(Object.keys(PROVIDERS) as Provider[]).map((p) => (
               <button
@@ -72,18 +74,15 @@ export function SettingsModal({
 
         {USE_PROXY ? (
           <div className="field">
-            <label className="field__label">API Key — {meta.name}</label>
-            <p className="field__hint">
-              Dikelola oleh server (mode proxy). Key tidak disimpan di browser —
-              tidak perlu memasukkan apa pun di sini.
-            </p>
+            <label className="field__label">{t('settings.apiKey', { name: meta.name })}</label>
+            <p className="field__hint">{t('settings.proxyHint')}</p>
           </div>
         ) : (
           <div className="field">
             <div className="field__label-row">
-              <label className="field__label">API Key — {meta.name}</label>
+              <label className="field__label">{t('settings.apiKey', { name: meta.name })}</label>
               <a className="pdr-link" href={meta.keyUrl} target="_blank" rel="noreferrer">
-                Dapatkan key
+                {t('settings.getKey')}
               </a>
             </div>
             <div className="key-row">
@@ -92,18 +91,15 @@ export function SettingsModal({
                 type={show ? 'text' : 'password'}
                 value={apiKeys[provider]}
                 onChange={(e) => onApiKey(provider, e.target.value)}
-                placeholder={`Tempel API key ${meta.name}…`}
+                placeholder={t('settings.keyPlaceholder', { name: meta.name })}
                 autoComplete="off"
                 spellCheck={false}
               />
               <button className="pdr-nav-btn" onClick={() => setShow((v) => !v)}>
-                {show ? 'Sembunyi' : 'Lihat'}
+                {show ? t('settings.hide') : t('settings.show')}
               </button>
             </div>
-            <p className="field__hint">
-              Key disimpan hanya di browser ini (localStorage) dan dikirim langsung
-              ke {meta.name}.
-            </p>
+            <p className="field__hint">{t('settings.keyHint', { name: meta.name })}</p>
           </div>
         )}
 
@@ -115,7 +111,7 @@ export function SettingsModal({
         />
 
         <button className="pdr-btn pdr-btn--primary modal__done" onClick={onClose}>
-          Selesai
+          {t('settings.done')}
         </button>
       </div>
     </div>
