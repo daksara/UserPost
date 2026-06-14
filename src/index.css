@@ -116,9 +116,20 @@ button, a, select, input, textarea, [role="button"] {
 }
 
 .sidebar__brand { display: flex; align-items: center; gap: 10px; }
+.sidebar__brand-text { flex: 1; min-width: 0; }
 .sidebar__name { font-size: 1.05rem; font-weight: 800; letter-spacing: -.02em; }
 .sidebar__tag { font-size: .72rem; color: var(--text-muted); }
 .sidebar__new { width: 100%; }
+
+/* Toggle tema di samping brand */
+.sidebar__theme {
+  flex-shrink: 0; width: 34px; height: 34px; border-radius: var(--radius-xs);
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; border: 1px solid var(--border); color: var(--text-secondary);
+  transition: background .18s ease, color .18s ease, border-color .18s ease, transform .12s ease;
+}
+.sidebar__theme:hover { background: var(--bg-hover); color: var(--accent); border-color: var(--accent); }
+.sidebar__theme:active { transform: scale(.92); }
 
 .sidebar__section {
   font-size: .68rem; font-weight: 700; letter-spacing: .08em;
@@ -146,6 +157,25 @@ button, a, select, input, textarea, [role="button"] {
 
 .sidebar__footer { display: flex; gap: 8px; border-top: 1px solid var(--border); padding-top: 12px; }
 .sidebar__footer .pdr-nav-btn { flex: 1; border: 1px solid var(--border); }
+.sidebar__tip { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.sidebar__tip:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.sidebar__tip svg { color: var(--accent); }
+
+/* Kartu tip DANA */
+.tip-card {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  padding: 20px; background: var(--bg-input); border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.tip-card__label {
+  font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--text-muted);
+}
+.tip-card__num {
+  font-family: var(--font-mono); font-size: 1.5rem; font-weight: 700;
+  letter-spacing: .04em; color: var(--text-primary);
+}
+.tip-card__copy { width: 100%; }
 
 /* ── Chat column ────────────────────────────────────────────────── */
 .chat { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }

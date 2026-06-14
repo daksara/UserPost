@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Sidebar } from './components/Sidebar'
 import { MessageBubble } from './components/MessageBubble'
 import { SettingsModal } from './components/SettingsModal'
+import { TipModal } from './components/TipModal'
 import { BASE_SYSTEM_PROMPT, TEMPLATES } from './ai/templates'
 import { useSettings } from './hooks/useSettings'
 import { useChat } from './hooks/useChat'
@@ -17,6 +18,7 @@ export default function App() {
   const [templateId, setTemplateId] = useState<string | null>(null)
   const [input, setInput] = useState('')
   const [showSettings, setShowSettings] = useState(false)
+  const [showTip, setShowTip] = useState(false)
   const [drawer, setDrawer] = useState(false)
 
   const template = useMemo(() => TEMPLATES.find((t) => t.id === templateId) ?? null, [templateId])
@@ -74,6 +76,7 @@ export default function App() {
           onPickTemplate={pickTemplate}
           onNewChat={newChat}
           onOpenSettings={() => setShowSettings(true)}
+          onOpenTip={() => setShowTip(true)}
           theme={theme}
           onToggleTheme={cycleTheme}
         />
@@ -150,6 +153,8 @@ export default function App() {
           onClose={() => setShowSettings(false)}
         />
       )}
+
+      {showTip && <TipModal onClose={() => setShowTip(false)} />}
     </div>
   )
 }
