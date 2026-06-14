@@ -10,6 +10,10 @@
 
 export const config = { runtime: 'edge' }
 
+// Edge runtime menyediakan process.env saat runtime; deklarasikan tipenya di
+// sini agar tidak perlu @types/node (yang akan menyeret tipe Node global).
+declare const process: { env: Record<string, string | undefined> }
+
 const BASES: Record<string, string> = {
   groq: 'https://api.groq.com/openai/v1',
   gemini: 'https://generativelanguage.googleapis.com/v1beta',
