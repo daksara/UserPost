@@ -1,7 +1,9 @@
 // src/components/Composer.tsx
 // Kolom tulis pesan: textarea yang tumbuh otomatis mengikuti isi, plus aksi
 // Kirim / Stop / Regenerasi. Enter mengirim, Shift+Enter baris baru.
-import { useEffect, useRef } from 'react'
+// Tombol "+" membuka menu template (mirip Claude).
+import { useEffect, useRef, useState } from 'react'
+import type { Template } from '../ai/templates'
 
 interface Props {
   value: string
@@ -12,6 +14,8 @@ interface Props {
   streaming: boolean
   canRegenerate: boolean
   placeholder: string
+  templates: Template[]
+  onPickTemplate: (id: string) => void
 }
 
 const MAX_HEIGHT = 240
@@ -25,8 +29,11 @@ export function Composer({
   streaming,
   canRegenerate,
   placeholder,
+  templates,
+  onPickTemplate,
 }: Props) {
   const ref = useRef<HTMLTextAreaElement>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   // Tumbuhkan textarea mengikuti tinggi konten (sampai batas), lalu scroll.
   useEffect(() => {
@@ -43,6 +50,11 @@ export function Composer({
     }
   }
 
+  const pick = (id: string) => {
+    onPickTemplate(id)
+    setMenuOpen(false)
+  }
+
   return (
     <div className="composer">
       <textarea
@@ -55,7 +67,37 @@ export function Composer({
         placeholder={placeholder}
       />
       <div className="composer__actions">
-        <span className="composer__hint">Enter kirim · Shift+Enter baris baru</span>
+        <div className="composer__tools">
+          <button
+            className="composer__plus"
+            onClick={() => setMenuOpen((o) => !o)}
+            aria-label="Pilih template"
+            aria-expanded={menuOpen}
+            title="Template"
+          >
+            +
+          </button>
+          {menuOpen && (
+            <>
+              <div className="tmpl-menu__scrim" onClick={() => setMenuOpen(false)} />
+              <div className="tmpl-menu" role="menu">
+                <div className="tmpl-menu__head">Template</div>
+                {templates.map((t) => (
+                  <button
+                    key={t.id}
+                    className="tmpl-menu__item"
+                    role="menuitem"
+                    onClick={() => pick(t.id)}
+                  >
+                    <span className="tmpl-menu__title">{t.title}</span>
+                    <span className="tmpl-menu__desc">{t.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          <span className="composer__hint">Enter kirim · Shift+Enter baris baru</span>
+        </div>
         <div className="composer__buttons">
           {!streaming && canRegenerate && (
             <button className="pdr-btn pdr-btn--ghost" onClick={onRegenerate}>
