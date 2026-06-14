@@ -1,13 +1,15 @@
 // src/components/Sidebar.tsx
-// Panel kiri: logo, tombol chat baru, daftar template tugas freelance,
-// dan aksi bawah (tema + pengaturan).
+// Panel kiri: logo, tombol chat baru, riwayat percakapan, dan aksi bawah
+// (tema + pengaturan). Template tugas tampil di layar sambutan (Welcome).
 import { Logo } from './Logo'
-import { TEMPLATES } from '../ai/templates'
+import type { Conversation } from '../chat/types'
 import type { Theme } from '../hooks/useTheme'
 
 interface Props {
-  activeTemplate: string | null
-  onPickTemplate: (id: string) => void
+  conversations: Conversation[]
+  activeId: string
+  onSelect: (id: string) => void
+  onDelete: (id: string) => void
   onNewChat: () => void
   onOpenSettings: () => void
   theme: Theme
@@ -15,13 +17,18 @@ interface Props {
 }
 
 export function Sidebar({
-  activeTemplate,
-  onPickTemplate,
+  conversations,
+  activeId,
+  onSelect,
+  onDelete,
   onNewChat,
   onOpenSettings,
   theme,
   onToggleTheme,
 }: Props) {
+  // Hanya tampilkan percakapan yang sudah berisi pesan agar daftar bersih.
+  const history = conversations.filter((c) => c.turns.length > 0)
+
   return (
     <aside className="sidebar">
       <div className="sidebar__brand">
@@ -36,18 +43,30 @@ export function Sidebar({
         + Chat baru
       </button>
 
-      <div className="sidebar__section">Template tugas</div>
-      <nav className="sidebar__templates">
-        {TEMPLATES.map((t) => (
-          <button
-            key={t.id}
-            className={`tmpl${activeTemplate === t.id ? ' tmpl--active' : ''}`}
-            onClick={() => onPickTemplate(t.id)}
-          >
-            <span className="tmpl__title">{t.title}</span>
-            <span className="tmpl__desc">{t.desc}</span>
-          </button>
-        ))}
+      <div className="sidebar__section">Riwayat</div>
+      <nav className="sidebar__history">
+        {history.length === 0 ? (
+          <p className="sidebar__empty">Belum ada percakapan. Mulai dengan menulis pesan.</p>
+        ) : (
+          history.map((c) => (
+            <div
+              key={c.id}
+              className={`conv${c.id === activeId ? ' conv--active' : ''}`}
+            >
+              <button className="conv__open" onClick={() => onSelect(c.id)} title={c.title}>
+                {c.title}
+              </button>
+              <button
+                className="conv__del"
+                onClick={() => onDelete(c.id)}
+                aria-label={`Hapus percakapan "${c.title}"`}
+                title="Hapus"
+              >
+                <TrashIcon />
+              </button>
+            </div>
+          ))
+        )}
       </nav>
 
       <div className="sidebar__footer">
@@ -59,5 +78,19 @@ export function Sidebar({
         </button>
       </div>
     </aside>
+  )
+}
+
+function TrashIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   )
 }

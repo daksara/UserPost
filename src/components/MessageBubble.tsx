@@ -1,6 +1,6 @@
 // src/components/MessageBubble.tsx
 import { useState } from 'react'
-import type { ChatTurn } from '../hooks/useChat'
+import type { ChatTurn } from '../chat/types'
 import { cleanText } from '../ai/clean'
 import { Logo } from './Logo'
 

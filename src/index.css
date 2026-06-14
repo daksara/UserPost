@@ -113,24 +113,38 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
   text-transform: uppercase; color: var(--text-muted); padding: 0 4px;
 }
 
-.sidebar__templates {
-  display: flex; flex-direction: column; gap: 4px;
+/* ── Riwayat percakapan ─────────────────────────────────────────── */
+.sidebar__history {
+  display: flex; flex-direction: column; gap: 2px;
   overflow-y: auto; flex: 1; margin: 0 -4px; padding: 0 4px;
 }
-
-.tmpl {
-  display: flex; flex-direction: column; gap: 2px;
-  text-align: left; width: 100%;
-  background: transparent; border: 1px solid transparent;
-  border-radius: var(--radius-sm); padding: 9px 11px;
-  transition: background .15s ease, border-color .15s ease, transform .1s ease;
+.sidebar__empty {
+  font-size: .78rem; color: var(--text-muted); line-height: 1.45; padding: 4px;
 }
-.tmpl:hover { background: var(--bg-hover); }
-.tmpl:active { transform: scale(.99); }
-.tmpl--active { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
-.tmpl__title { font-size: .88rem; font-weight: 700; }
-.tmpl--active .tmpl__title { color: var(--accent); }
-.tmpl__desc { font-size: .74rem; color: var(--text-muted); }
+
+.conv {
+  display: flex; align-items: center;
+  border: 1px solid transparent; border-radius: var(--radius-sm);
+  transition: background .15s ease, border-color .15s ease;
+}
+.conv:hover { background: var(--bg-hover); }
+.conv--active { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+.conv__open {
+  flex: 1; min-width: 0; text-align: left;
+  background: transparent; border: none;
+  padding: 9px 4px 9px 11px; font-size: .86rem; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.conv--active .conv__open { color: var(--accent); }
+.conv__del {
+  flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 32px; margin-right: 4px;
+  background: transparent; border: none; border-radius: var(--radius-xs);
+  color: var(--text-muted); opacity: 0;
+  transition: opacity .15s ease, color .15s ease, background .15s ease;
+}
+.conv:hover .conv__del, .conv--active .conv__del { opacity: 1; }
+.conv__del:hover { color: var(--red); background: var(--red-soft); }
 
 .sidebar__footer { display: flex; gap: 8px; border-top: 1px solid var(--border); padding-top: 12px; }
 .sidebar__footer .pdr-nav-btn { flex: 1; border: 1px solid var(--border); }
@@ -241,6 +255,7 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
 }
 .composer__actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .composer__hint { font-size: .74rem; color: var(--text-muted); }
+.composer__buttons { display: flex; align-items: center; gap: 8px; }
 
 /* ── Modal ──────────────────────────────────────────────────────── */
 .modal-overlay {

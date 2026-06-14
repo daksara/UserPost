@@ -57,10 +57,14 @@ CI (GitHub Actions) menjalankan ketiganya pada tiap push dan pull request.
 
 ## Fitur
 - Chat AI streaming dengan Groq atau Gemini
+- Riwayat percakapan persisten — banyak percakapan tersimpan di browser
+  (localStorage), judul otomatis dari pesan pertama, pindah/hapus dari sidebar
 - Pemilih model dinamis — hanya menampilkan model chat yang relevan
 - 8 template tugas freelance (proposal, balas klien, penawaran harga,
   ringkas brief, follow-up, caption sosmed, perbaiki/terjemah, deskripsi jasa)
-- Salin jawaban sekali klik, hentikan generasi, mulai chat baru
+- Regenerasi jawaban, salin sekali klik, hentikan generasi, mulai chat baru
+- Composer dengan textarea auto-grow dan auto-scroll cerdas (tidak terenggut
+  saat membaca riwayat lama)
 - Tema gelap/terang, responsif (sidebar jadi drawer di mobile), installable PWA
 
 ## Keamanan & mode koneksi
@@ -101,12 +105,16 @@ src/
     templates.ts    # Template tugas freelance + system prompt
     clean.ts        # Pembersih output (buang markdown/emoji) + test
     providers.test.ts
+  chat/
+    types.ts        # Tipe percakapan + helper murni (judul, sanitasi) + test
   hooks/
-    useSettings.ts  # Provider/API key/model tersimpan di localStorage
-    useChat.ts      # Kirim pesan, streaming, batalkan, reset
-    useTheme.ts     # Tema gelap/terang
+    useSettings.ts      # Provider/API key/model tersimpan di localStorage
+    useConversations.ts # Riwayat percakapan persisten (banyak chat) di localStorage
+    useChat.ts          # Streaming, kirim, regenerasi, batalkan
+    useTheme.ts         # Tema gelap/terang
   components/
-    Sidebar.tsx     # Daftar template + aksi
+    Sidebar.tsx     # Riwayat percakapan + aksi (tema, pengaturan)
+    Composer.tsx    # Kolom tulis: auto-grow + Kirim/Stop/Regenerasi
     MessageBubble.tsx
     SettingsModal.tsx
     ModelPicker.tsx # Dropdown model dinamis

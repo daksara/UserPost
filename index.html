@@ -14,7 +14,7 @@
       // Terapkan tema tersimpan sebelum render untuk mencegah flicker (FOUC)
       (function () {
         try {
-          var t = localStorage.getItem('userpost-theme');
+          var t = localStorage.getItem('pendar-theme') || localStorage.getItem('userpost-theme');
           // Default dark kecuali user memilih light secara eksplisit
           var theme = t === 'light' ? 'light' : 'dark';
           document.documentElement.setAttribute('data-theme', theme);

@@ -1,6 +1,6 @@
 // src/components/SettingsModal.tsx
 // Panel pengaturan: pilih provider (Groq/Gemini), masukkan API key, pilih model.
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Provider } from '../ai/types'
 import { PROVIDERS } from '../ai/types'
 import { USE_PROXY } from '../ai/providers'
@@ -27,13 +27,32 @@ export function SettingsModal({
 }: Props) {
   const [show, setShow] = useState(false)
   const meta = PROVIDERS[provider]
+  const closeRef = useRef<HTMLButtonElement>(null)
+
+  // Tutup dengan Escape; fokuskan tombol tutup saat modal terbuka.
+  useEffect(() => {
+    closeRef.current?.focus()
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Pengaturan"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="modal__head">
           <h2 className="modal__title">Pengaturan</h2>
-          <button className="pdr-nav-btn" onClick={onClose}>Tutup</button>
+          <button ref={closeRef} className="pdr-nav-btn" onClick={onClose}>
+            Tutup
+          </button>
         </div>
 
         <div className="field">

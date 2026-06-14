@@ -28,7 +28,11 @@ export class ErrorBoundary extends Component<Props, State> {
         <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)', maxWidth: 320 }}>
           An unexpected error occurred. Reload the app to continue.
         </p>
-        <button className="auth-btn" style={{ maxWidth: 200 }} onClick={() => location.reload()}>
+        <button
+          className="pdr-btn pdr-btn--primary"
+          style={{ maxWidth: 200 }}
+          onClick={() => location.reload()}
+        >
           Reload
         </button>
       </div>
