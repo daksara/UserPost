@@ -643,6 +643,7 @@ h5.md-h, h6.md-h { font-size: .96rem; }
 @media (max-width: 480px) {
   .welcome__suggestions { grid-template-columns: 1fr; }
   .welcome { margin: 0 auto; padding-top: 20px; }
+  .welcome__title { font-size: 1.15rem; }
 }
 
 /* ── Sidebar: search percakapan ─────────────────────────────────── */
