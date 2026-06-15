@@ -200,6 +200,7 @@ a:focus-visible,
 .chat__head-title { font-size: .98rem; font-weight: 700; flex: 1; }
 
 .chip {
+  display: inline-flex; align-items: center; gap: 5px;
   font-size: .72rem; font-weight: 700; padding: 4px 10px;
   border-radius: var(--radius-full); white-space: nowrap;
   border: 1px solid var(--border); color: var(--text-secondary);
@@ -441,7 +442,8 @@ a:focus-visible,
 
 .seg { display: flex; gap: 4px; background: var(--bg-input); border-radius: var(--radius-sm); padding: 4px; }
 .seg__item {
-  flex: 1; border: none; background: transparent; border-radius: var(--radius-xs);
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  border: none; background: transparent; border-radius: var(--radius-xs);
   padding: 8px; font-size: .86rem; font-weight: 700; color: var(--text-muted);
   transition: background .18s ease, color .18s ease;
 }
