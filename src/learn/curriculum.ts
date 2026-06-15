@@ -70,16 +70,16 @@ export const LEVELS: Level[] = [
     id: 'pemula',
     title: { id: 'Pemula', en: 'Beginner' },
     tagline: {
-      id: 'Fondasi: kenali profesi VA, mindset, dan alat dasar.',
-      en: 'Foundations: understand the VA profession, mindset, and basic tools.',
+      id: 'Fondasi: kenali profesi Virtual Assistant, mindset, dan alat dasar.',
+      en: 'Foundations: understand the Virtual Assistant profession, mindset, and basic tools.',
     },
   },
   {
     id: 'menengah',
     title: { id: 'Menengah', en: 'Intermediate' },
     tagline: {
-      id: 'Skill inti VA yang dipakai untuk pekerjaan klien sehari-hari.',
-      en: 'Core VA skills used for everyday client work.',
+      id: 'Skill inti Virtual Assistant yang dipakai untuk pekerjaan klien sehari-hari.',
+      en: 'Core Virtual Assistant skills used for everyday client work.',
     },
   },
   {
@@ -94,8 +94,8 @@ export const LEVELS: Level[] = [
     id: 'expert',
     title: { id: 'Expert', en: 'Expert' },
     tagline: {
-      id: 'Bisnis VA: dapat klien, harga premium, skala, penghasilan besar.',
-      en: 'VA business: win clients, premium pricing, scale, high income.',
+      id: 'Bisnis Virtual Assistant: dapat klien, harga premium, skala, penghasilan besar.',
+      en: 'Virtual Assistant business: win clients, premium pricing, scale, high income.',
     },
   },
 ]
@@ -107,19 +107,19 @@ export const LESSONS: Lesson[] = [
     level: 'pemula',
     title: { id: 'Apa itu Virtual Assistant', en: 'What is a Virtual Assistant' },
     summary: {
-      id: 'Pahami peran VA, jenis layanan, dan peluang penghasilannya.',
-      en: 'Understand the VA role, types of services, and income opportunity.',
+      id: 'Pahami peran Virtual Assistant, jenis layanan, dan peluang penghasilannya.',
+      en: 'Understand the Virtual Assistant role, types of services, and income opportunity.',
     },
     objectives: {
       id: [
         'Menjelaskan apa itu Virtual Assistant dan apa yang dikerjakan',
-        'Mengenali jenis-jenis layanan VA dan klien yang membutuhkannya',
-        'Memahami peluang penghasilan VA secara realistis',
+        'Mengenali jenis-jenis layanan Virtual Assistant dan klien yang membutuhkannya',
+        'Memahami peluang penghasilan Virtual Assistant secara realistis',
       ],
       en: [
         'Explain what a Virtual Assistant is and what they do',
-        'Recognize the types of VA services and the clients who need them',
-        'Understand the VA income opportunity realistically',
+        'Recognize the types of Virtual Assistant services and the clients who need them',
+        'Understand the Virtual Assistant income opportunity realistically',
       ],
     },
     focus:
@@ -151,7 +151,7 @@ export const LESSONS: Lesson[] = [
   {
     id: 'tools-dasar',
     level: 'pemula',
-    title: { id: 'Tools wajib VA', en: 'Essential VA tools' },
+    title: { id: 'Tools wajib Virtual Assistant', en: 'Essential Virtual Assistant tools' },
     summary: {
       id: 'Kuasai alat dasar: email, kalender, Google Workspace, Notion/Trello.',
       en: 'Master the basics: email, calendar, Google Workspace, Notion/Trello.',
@@ -665,18 +665,18 @@ export const LESSONS: Lesson[] = [
     level: 'expert',
     title: { id: 'Naik kelas: agensi & bangun tim', en: 'Level up: agency & building a team' },
     summary: {
-      id: 'Dari solo jadi agensi: delegasi, rekrut, dan kelola tim VA.',
-      en: 'From solo to agency: delegate, recruit, and manage a VA team.',
+      id: 'Dari solo jadi agensi: delegasi, rekrut, dan kelola tim Virtual Assistant.',
+      en: 'From solo to agency: delegate, recruit, and manage a Virtual Assistant team.',
     },
     objectives: {
       id: [
         'Mendelegasikan pekerjaan dengan SOP yang jelas',
-        'Merekrut dan melatih VA lain',
+        'Merekrut dan melatih Virtual Assistant lain',
         'Mengelola tim dan menjaga kualitas',
       ],
       en: [
         'Delegate work with clear SOPs',
-        'Recruit and train other VAs',
+        'Recruit and train other Virtual Assistants',
         'Manage a team and maintain quality',
       ],
     },
@@ -698,12 +698,12 @@ export const LESSONS: Lesson[] = [
       id: [
         'Menyusun bauran klien retainer untuk penghasilan stabil',
         'Menaikkan nilai per jam lewat spesialisasi dan hasil',
-        'Membangun beberapa sumber penghasilan dari keahlian VA',
+        'Membangun beberapa sumber penghasilan dari keahlian Virtual Assistant',
       ],
       en: [
         'Build a retainer client mix for stable income',
         'Raise your hourly value through specialization and results',
-        'Build multiple income streams from VA skills',
+        'Build multiple income streams from Virtual Assistant skills',
       ],
     },
     focus:
@@ -768,6 +768,6 @@ Teach this lesson now using your teaching flow. Stay on this topic until the lea
 export function buildLessonStarter(lesson: Lesson, lang: Language): string {
   const title = lesson.title[lang]
   return lang === 'en'
-    ? `I want to learn the lesson "${title}". Please teach me from scratch, step by step, give real examples from VA work, then give me one short exercise to do.`
-    : `Aku ingin belajar materi "${title}". Tolong ajari aku dari nol, langkah demi langkah, beri contoh nyata dari pekerjaan VA, lalu beri satu latihan singkat untuk kukerjakan.`
+    ? `I want to learn the lesson "${title}". Please teach me from scratch, step by step, give real examples from Virtual Assistant work, then give me one short exercise to do.`
+    : `Aku ingin belajar materi "${title}". Tolong ajari aku dari nol, langkah demi langkah, beri contoh nyata dari pekerjaan Virtual Assistant, lalu beri satu latihan singkat untuk kukerjakan.`
 }
