@@ -21,9 +21,9 @@ function GroqIcon({ size }: { size: number }) {
       aria-hidden
       style={{ flexShrink: 0 }}
     >
-      {/* Bentuk arc terbuka khas logo Groq */}
+      {/* Arc 3/4 + bar horizontal — bentuk G logo Groq */}
       <path
-        d="M20 12a8 8 0 1 0-5.657 7.657"
+        d="M17.5 6.5A8 8 0 1 0 17.5 17.5M20 12h-6"
         stroke="currentColor"
         strokeWidth="2.5"
         strokeLinecap="round"

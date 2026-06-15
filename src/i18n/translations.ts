@@ -86,7 +86,7 @@ const id = {
   'model.available': '{n} model relevan tersedia.',
 
   // Learn modal
-  'learn.title': 'Belajar jadi VA — pemula sampai expert',
+  'learn.title': 'Belajar jadi Virtual Assistant — pemula sampai expert',
   'learn.intro':
     'Belajar langsung dari mentor AI yang berperan sebagai Virtual Assistant senior berpengalaman. Pilih materi, mentor akan mengajarimu langkah demi langkah, memberi contoh nyata, dan latihan — tanpa ada pelajaran yang tertinggal.',
   'learn.overall': 'Progres keseluruhan',
@@ -196,7 +196,7 @@ const en: Record<keyof typeof id, string> = {
   'model.available': '{n} relevant models available.',
 
   // Learn modal
-  'learn.title': 'Learn to be a VA — beginner to expert',
+  'learn.title': 'Learn to be a Virtual Assistant — beginner to expert',
   'learn.intro':
     'Learn directly from an AI mentor playing the role of an experienced senior Virtual Assistant. Pick a lesson and the mentor will teach you step by step, give real examples, and exercises — with nothing left behind.',
   'learn.overall': 'Overall progress',

@@ -176,8 +176,8 @@ a:focus-visible,
 .sidebar__footer .pdr-nav-btn { width: 100%; border: 1px solid var(--border); }
 
 .sidebar__model {
-  align-self: flex-start; max-width: 100%;
-  overflow: hidden; text-overflow: ellipsis;
+  align-self: flex-start;
+  padding: 6px 8px;
 }
 
 .sidebar__lang { display: flex; flex-direction: column; gap: 6px; }
@@ -642,6 +642,7 @@ h5.md-h, h6.md-h { font-size: .96rem; }
 
 @media (max-width: 480px) {
   .welcome__suggestions { grid-template-columns: 1fr; }
+  .welcome { margin: 0 auto; padding-top: 20px; }
 }
 
 /* ── Sidebar: search percakapan ─────────────────────────────────── */
