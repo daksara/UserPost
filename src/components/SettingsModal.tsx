@@ -6,6 +6,7 @@ import { PROVIDERS } from '../ai/types'
 import { USE_PROXY } from '../ai/providers'
 import { useI18n } from '../i18n/i18n'
 import { ModelPicker } from './ModelPicker'
+import { ProviderIcon } from './ProviderIcon'
 
 interface Props {
   provider: Provider
@@ -66,6 +67,7 @@ export function SettingsModal({
                 className={`seg__item${provider === p ? ' seg__item--active' : ''}`}
                 onClick={() => onProvider(p)}
               >
+                <ProviderIcon provider={p} size={13} />
                 {PROVIDERS[p].name}
               </button>
             ))}

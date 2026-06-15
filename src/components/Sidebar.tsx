@@ -8,6 +8,7 @@ import type { Theme } from '../hooks/useTheme'
 import type { Language } from '../ai/templates'
 import type { Provider } from '../ai/types'
 import { useI18n } from '../i18n/i18n'
+import { ProviderIcon } from './ProviderIcon'
 
 interface Props {
   conversations: Conversation[]
@@ -118,6 +119,7 @@ export function Sidebar({
           className={`chip sidebar__model${ready ? ' chip--ok' : ' chip--warn'}`}
           title={`${provider === 'groq' ? 'Groq' : 'Gemini'} · ${ready ? model : t('app.noKey')}`}
         >
+          <ProviderIcon provider={provider} size={12} />
           {provider === 'groq' ? 'Groq' : 'Gemini'} · {ready ? model : t('app.noKey')}
         </span>
         <div className="sidebar__lang">
