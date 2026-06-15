@@ -218,7 +218,13 @@ export default function App() {
               )
             })
           )}
-          {error && <div className="chat__error">{error}</div>}
+          {error && (
+            <div className="chat__error">
+              {error.startsWith('ERR_AUTH:')
+                ? <>{t('error.authKey', { name: error.slice(9) })}{' '}<button className="pdr-link" onClick={() => setShowSettings(true)}>{t('app.noticeLink')}</button></>
+                : error}
+            </div>
+          )}
         </div>
 
         <Composer

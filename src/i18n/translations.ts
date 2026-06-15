@@ -24,6 +24,7 @@ const id = {
   'error.title': 'Terjadi kesalahan',
   'error.body': 'Terjadi kesalahan tak terduga. Muat ulang aplikasi untuk melanjutkan.',
   'error.reload': 'Muat ulang',
+  'error.authKey': 'API key {name} tidak valid atau tidak punya akses.',
 
   // Header & notice
   'app.openMenu': 'Buka menu',
@@ -134,6 +135,7 @@ const en: Record<keyof typeof id, string> = {
   'error.title': 'Something went wrong',
   'error.body': 'An unexpected error occurred. Reload the app to continue.',
   'error.reload': 'Reload',
+  'error.authKey': '{name} API key is invalid or lacks access.',
 
   // Header & notice
   'app.openMenu': 'Open menu',

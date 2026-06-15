@@ -248,7 +248,7 @@ async function readSSE(body: ReadableStream<Uint8Array>, cb: (data: string) => v
 
 async function toError(label: string, res: Response): Promise<Error> {
   if (res.status === 401 || res.status === 403) {
-    return new Error(`${label}: API key tidak valid atau tidak punya akses (${res.status}).`)
+    return new Error(`ERR_AUTH:${label}`)
   }
   let detail: string
   try {
