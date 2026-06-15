@@ -119,8 +119,7 @@ export function Sidebar({
           className={`chip sidebar__model${ready ? ' chip--ok' : ' chip--warn'}`}
           title={`${provider === 'groq' ? 'Groq' : 'Gemini'} · ${ready ? model : t('app.noKey')}`}
         >
-          <ProviderIcon provider={provider} size={12} />
-          {provider === 'groq' ? 'Groq' : 'Gemini'} · {ready ? model : t('app.noKey')}
+          <ProviderIcon provider={provider} size={14} />
         </span>
         <div className="sidebar__lang">
           <span className="sidebar__lang-label">{t('sidebar.language')}</span>

@@ -176,8 +176,8 @@ a:focus-visible,
 .sidebar__footer .pdr-nav-btn { width: 100%; border: 1px solid var(--border); }
 
 .sidebar__model {
-  align-self: flex-start; max-width: 100%;
-  overflow: hidden; text-overflow: ellipsis;
+  align-self: flex-start;
+  padding: 6px 8px;
 }
 
 .sidebar__lang { display: flex; flex-direction: column; gap: 6px; }
