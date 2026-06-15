@@ -17,18 +17,12 @@ function GroqIcon({ size }: { size: number }) {
       width={size}
       height={size}
       viewBox="0 0 24 24"
-      fill="none"
+      fill="currentColor"
       aria-hidden
       style={{ flexShrink: 0 }}
     >
-      {/* Bentuk arc terbuka khas logo Groq */}
-      <path
-        d="M20 12a8 8 0 1 0-5.657 7.657"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        fill="none"
-      />
+      {/* Petir — simbol kecepatan Groq */}
+      <path d="M13 2 4 14h7l-1 8 10-12h-7z" />
     </svg>
   )
 }
